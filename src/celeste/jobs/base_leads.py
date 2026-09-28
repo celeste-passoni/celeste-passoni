@@ -38,6 +38,9 @@ def sql_base(p: dict) -> str:
     condicao_data = (f"DATE(t.created_at) >= DATE_SUB(CURRENT_DATE('America/Sao_Paulo'), INTERVAL {int(f['janela_meses'])} MONTH)"
                      if f.get("janela_meses") else f"DATE(t.created_at) >= '{f['created_at_a_partir_de']}'")
     excluidos = ", ".join(f"'{s}'" for s in p["status_da_clinica_excluidos"])
+    dias_clinica = int(f.get("ignorar_se_contato_clinica_ha_menos_de_dias") or 0)
+    cond_clinica = (f"AND (status_clinica_em IS NULL OR DATE(status_clinica_em) <= DATE_SUB(CURRENT_DATE('America/Sao_Paulo'), INTERVAL {dias_clinica} DAY))"
+                    if dias_clinica else "")
     return f"""
 WITH base AS (
   SELECT t.celular, t.nome, t.created_at, t.primeira_origem, t.cpf,
@@ -54,6 +57,7 @@ WITH base AS (
 )
 SELECT * EXCEPT(rn) FROM base
 WHERE rn = 1 AND (status_clinica IS NULL OR status_clinica NOT IN ({excluidos}))
+{cond_clinica}
 """
 
 
@@ -110,7 +114,8 @@ def carregar(dry_run: bool = False) -> dict:
 
 
 def _primeiro_nome(nome: str) -> str:
-    partes = [x for x in re.split(r"\s+", nome.strip()) if x]
+    limpo = re.sub(r"[^A-Za-zÀ-ÿ' -]", " ", nome)          # tira emojis, números e símbolos
+    partes = [x for x in re.split(r"\s+", limpo.strip()) if len(x) > 1]
     if not partes:
         return ""
     return partes[0].capitalize()

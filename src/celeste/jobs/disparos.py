@@ -120,7 +120,9 @@ def _tarde_livre_hoje(ts: tisaude.TiSaude) -> bool:
 
 def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[int] = None) -> dict:
     p = config.parametros()
-    d = p["disparos"]
+    d = dict(p["disparos"])
+    db = firestore.Client(project=config.PROJETO_GCP)
+    d.update(db.collection("config").document("disparos").get().to_dict() or {})   # o painel sobrescreve ativo/limites
     resumo = {"dry_run": dry_run, "enviados": 0, "candidatos": 0, "pulados": 0, "erros": 0, "detalhe": []}
     if not d.get("ativo") and not dry_run:
         resumo["ignorado"] = "disparos.ativo = false"
@@ -128,7 +130,6 @@ def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[
     if not dentro_do_horario() and not forcar_horario:
         resumo["ignorado"] = "fora do horário de disparo"
         return resumo
-    db = firestore.Client(project=config.PROJETO_GCP)
     agora = datetime.now(timezone.utc)
     ja_hoje = _enviados_hoje(db)
     cota = min(int(d["limite_por_execucao"]), int(d["limite_diario"]) - ja_hoje)

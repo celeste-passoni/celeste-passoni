@@ -221,6 +221,7 @@ leads_perdidos:
     participou_acao_lead_perdidos: "não"
     dentro_2_dias_uteis: "não"
     um_por_celular_mais_recente: true
+    ignorar_se_contato_clinica_ha_menos_de_dias: 14      # a recepção mexeu no status há menos de N dias → a IA espera (0 = desliga)
   status_da_clinica_excluidos:                           # status gravados pelas atendentes que tiram o lead da fila da IA
     - "Não quer"
     - "Número Inválido"

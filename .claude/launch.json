@@ -1,0 +1,16 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "painel",
+      "runtimeExecutable": "C:\Users\Administrativo\AppData\Local\Programs\Python\Python312\python.exe",
+      "runtimeArgs": ["-m", "uvicorn", "celeste.painel.app:app", "--port", "8090", "--app-dir", "src"],
+      "port": 8090,
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "C:\Users\Administrativo\Downloads\vertical-theory-489419-a7-6985a9b3dce3.json",
+        "PAINEL_SENHA": "celeste",
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  ]
+}

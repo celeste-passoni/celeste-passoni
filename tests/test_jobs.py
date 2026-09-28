@@ -24,6 +24,8 @@ def test_normalizar_celular(bruto, esperado):
 def test_primeiro_nome():
     assert base_leads._primeiro_nome("MARIA DA SILVA") == "Maria"
     assert base_leads._primeiro_nome("  ") == ""
+    assert base_leads._primeiro_nome("Laís✨ 22") == "Laís"
+    assert base_leads._primeiro_nome("A. Carlos") == "Carlos"
 
 
 def test_sql_usa_filtros_do_yaml():

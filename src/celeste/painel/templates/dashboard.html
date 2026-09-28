@@ -1,0 +1,55 @@
+{% extends "base.html" %}{% block titulo %}Visão geral{% endblock %}
+{% block corpo %}
+<h1>Visão geral <span class="muted" style="font-size:14px;font-weight:400">· {{ hoje }}</span></h1>
+
+<div class="cards">
+  <div class="card"><div class="n">{{ elegiveis }}</div><div class="l">leads elegíveis na base</div></div>
+  <div class="card"><div class="n">{{ disp_hoje.enviados or 0 }}</div><div class="l">templates enviados hoje</div></div>
+  <div class="card"><div class="n">{{ por_frente.leads_perdidos.respondidas + por_frente.novos_leads.respondidas }}</div><div class="l">conversas com resposta</div></div>
+  <div class="card"><div class="n">{{ por_frente.leads_perdidos.agendados + por_frente.novos_leads.agendados }}</div><div class="l">consultas agendadas</div></div>
+  <div class="card"><div class="n">US$ {{ '%.2f'|format(custo_hoje.custo_usd or 0) }}</div><div class="l">custo IA hoje (teto US$ {{ cap }})</div></div>
+  <div class="card"><div class="n">US$ {{ '%.2f'|format(custo_mes) }}</div><div class="l">custo IA no mês</div></div>
+</div>
+
+<h2>Por frente</h2>
+<div class="duas">
+{% for f, d in por_frente.items() %}
+  <div class="frente">
+    <h3><span class="tag {{ 'lp' if f == 'leads_perdidos' else 'nl' }}">{{ FRENTES[f] }}</span> {% if f == 'novos_leads' %}<span class="muted" style="font-size:12px">(em breve)</span>{% endif %}</h3>
+    <div class="cards" style="grid-template-columns:repeat(5,1fr)">
+      <div><div class="n" style="font-size:20px;font-weight:700">{{ d.conversas }}</div><div class="l muted">conversas</div></div>
+      <div><div class="n" style="font-size:20px;font-weight:700">{{ d.respondidas }}</div><div class="l muted">responderam</div></div>
+      <div><div class="n" style="font-size:20px;font-weight:700">{{ d.agendados }}</div><div class="l muted">agendados</div></div>
+      <div><div class="n" style="font-size:20px;font-weight:700">{{ d.encaminhados }}</div><div class="l muted">à recepção</div></div>
+      <div><div class="n" style="font-size:20px;font-weight:700">{{ d.opt_out }}</div><div class="l muted">SAIR</div></div>
+    </div>
+    {% if d.status %}<p class="muted" style="margin:10px 0 0;font-size:12px">{% for s, n in d.status %}<span class="tag">{{ s }} · {{ n }}</span> {% endfor %}</p>{% endif %}
+  </div>
+{% endfor %}
+</div>
+
+<h2>Controle de disparo (Leads Perdidos)</h2>
+<div class="frente">
+  {% if not disp_cfg.ativo %}<div class="aviso">Disparos <b>desligados</b>. Nada sai até ligar aqui.</div>{% endif %}
+  <form class="inline" method="post" action="/config/disparos">
+    <label><input type="checkbox" name="ativo" {% if disp_cfg.ativo %}checked{% endif %}> Disparos ligados</label>
+    <label>Limite diário <input type="number" name="limite_diario" value="{{ disp_cfg.limite_diario }}" min="0" style="width:80px"></label>
+    <label>Por rodada (30 min) <input type="number" name="limite_por_execucao" value="{{ disp_cfg.limite_por_execucao }}" min="0" style="width:70px"></label>
+    <span class="muted">seg–sex {{ disp_cfg.horario.inicio }}h–{{ disp_cfg.horario.fim }}h</span>
+    <button type="submit">Salvar</button>
+  </form>
+  <p class="muted" style="margin:10px 0 0;font-size:12px">Hoje: {{ disp_hoje.enviados or 0 }} enviados {% if disp_hoje.por_template %}({% for t, n in disp_hoje.por_template.items() %}{{ t }} {{ n }}{{ ', ' if not loop.last }}{% endfor %}){% endif %}</p>
+</div>
+
+<h2>Templates</h2>
+{% if templates %}
+<table><tr><th>Código</th><th>Template</th><th>Enviados</th><th>Responderam</th><th>Taxa</th><th>Agendados</th></tr>
+{% for t in templates %}<tr><td><b>{{ t.codigo }}</b></td><td>{{ t.nome }}</td><td>{{ t.enviados }}</td><td>{{ t.respondidos }}</td><td>{{ t.taxa }}</td><td>{{ t.agendados }}</td></tr>{% endfor %}
+</table>
+{% else %}<p class="muted">Nenhum template enviado ainda.</p>{% endif %}
+
+<h2>Fila por status da IA</h2>
+<table><tr><th>Status</th><th>Leads</th></tr>
+{% for s, n in leads %}<tr><td><a href="/fila?status={{ s }}">{{ s }}</a></td><td>{{ n }}</td></tr>{% endfor %}
+</table>
+{% endblock %}

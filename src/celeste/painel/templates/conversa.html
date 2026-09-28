@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% block titulo %}Conversa{% endblock %}
+{% block corpo %}
+<p><a href="/conversas">← Conversas</a></p>
+<h1>{{ c.nome or '(sem nome)' }} <span class="tag {{ 'lp' if c.frente == 'leads_perdidos' else 'nl' }}">{{ FRENTES.get(c.frente, c.frente) }}</span> <span class="tag">{{ c.status }}</span></h1>
+<div class="duas">
+  <div>
+    <div class="chat">
+    {% for m in msgs %}
+      <div class="balao {{ m.direcao }}">{% if m.direcao == 'lead' and m.tipo in ('audio','voice') %}🎤 {{ m.transcricao or '(áudio sem transcrição)' }}{% elif m.direcao == 'lead' and m.tipo == 'image' %}🖼️ imagem {{ m.texto or '' }}{% elif m.botao %}🔘 {{ m.botao }}{% else %}{{ m.texto }}{% endif %}
+        <div class="meta">{{ m.recebido_em|local }}{% if m.modelo %} · {{ m.modelo }}{% endif %}</div></div>
+    {% endfor %}
+    </div>
+  </div>
+  <div>
+    <div class="frente">
+      <h3>Ficha</h3>
+      <p><b>WhatsApp:</b> •••• {{ (c.contato or '')[-4:] }} · <b>Origem:</b> {{ c.origem or lead.origem or '—' }}<br>
+      <b>Template de origem:</b> {{ c.template_origem or '—' }} · <b>Ciclo:</b> {{ c.ciclo or '—' }}<br>
+      <b>Lead criado na clínica em:</b> {{ lead.lead_created_at|local or '—' }} · <b>Status na clínica:</b> {{ lead.status_clinica or '—' }}<br>
+      <b>Paciente TI Saúde:</b> {{ c.id_paciente_tisaude or '—' }} · <b>Agendamento:</b> {{ c.id_agendamento_tisaude or '—' }}
+      {% if c.agendamento %}<br><b>Consulta:</b> {{ c.agendamento.data }} {{ c.agendamento.hora }} · {{ c.agendamento.profissional }}{% endif %}
+      {% if c.motivo_encaminhamento %}<br><b>Encaminhado por:</b> {{ c.motivo_encaminhamento }}{% endif %}
+      {% if c.proximo_recontato_em %}<br><b>Recontato em:</b> {{ c.proximo_recontato_em }}{% endif %}</p>
+      <p><b>Vídeos enviados:</b> {{ (c.videos_enviados or [])|join(', ') or '—' }}</p>
+      <p><b>Custo da conversa:</b> US$ {{ '%.4f'|format(custo) }} · {{ chamadas|length }} resposta(s) da {{ nome_ia }}</p>
+    </div>
+    <div class="frente" style="margin-top:12px">
+      <h3>Bastidores</h3>
+      <table>{% for ch in chamadas %}
+        <tr><td>{{ ch.em|local }}</td><td>{{ ch.modelo }}</td><td>{{ ch.chamadas }} chamada(s)</td><td>US$ {{ '%.4f'|format(ch.custo_usd) }}</td>
+        <td>{% for f in ch.ferramentas %}<span class="tag {% if f.erro %}alerta{% endif %}">{{ f.nome }}</span> {% endfor %}</td></tr>
+      {% else %}<tr><td class="muted">Sem respostas da IA ainda.</td></tr>{% endfor %}</table>
+    </div>
+  </div>
+</div>
+{% endblock %}

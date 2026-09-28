@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}Painel{% endblock %} · {{ nome_ia }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#12152B;--navy2:#1f2340;--bege:#EFE6D8;--champ:#D9C7A5;--ouro:#B89B5E;--fundo:#F7F3EC;--texto:#1c1c1c;--cinza:#6b6b6b;--linha:#e3dccd;--ok:#2f7d4f;--alerta:#b8532a;--card:#fff}
+*{box-sizing:border-box}body{margin:0;font-family:Montserrat,system-ui,sans-serif;background:var(--fundo);color:var(--texto);font-size:14px}
+header{background:var(--navy);color:var(--bege);padding:0 24px;display:flex;align-items:center;gap:28px;height:56px}
+header .marca{font-family:'Playfair Display',serif;font-size:20px;letter-spacing:.5px}header .marca b{color:var(--champ)}
+header nav a{color:var(--bege);text-decoration:none;opacity:.8;margin-right:18px;font-weight:500}header nav a:hover,header nav a.ativo{opacity:1;border-bottom:2px solid var(--champ);padding-bottom:4px}
+main{max-width:1200px;margin:24px auto;padding:0 16px}
+h1{font-family:'Playfair Display',serif;font-weight:600;font-size:24px;margin:0 0 16px}h2{font-size:15px;text-transform:uppercase;letter-spacing:1px;color:var(--cinza);margin:28px 0 10px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--linha);border-radius:10px;padding:14px 16px}.card .n{font-size:26px;font-weight:700;color:var(--navy)}.card .l{color:var(--cinza);font-size:12px;margin-top:2px}
+.frente{background:var(--card);border:1px solid var(--linha);border-radius:10px;padding:16px}.frente h3{margin:0 0 10px;font-size:16px;color:var(--navy)}
+.duas{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:800px){.duas{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--linha);border-radius:10px;overflow:hidden}th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--linha);vertical-align:top}th{background:var(--bege);font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--navy)}tr:last-child td{border-bottom:0}
+a{color:var(--navy)}.tag{display:inline-block;padding:2px 8px;border-radius:12px;background:var(--bege);font-size:12px;color:var(--navy)}
+.tag.ok{background:#dff0e5;color:var(--ok)}.tag.alerta{background:#f8e3d8;color:var(--alerta)}.tag.lp{background:var(--navy);color:var(--champ)}.tag.nl{background:var(--champ);color:var(--navy)}
+form.inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}input[type=number],select{padding:6px 8px;border:1px solid var(--linha);border-radius:6px;font-family:inherit}
+button{background:var(--navy);color:var(--bege);border:0;border-radius:6px;padding:7px 14px;font-family:inherit;font-weight:600;cursor:pointer}button.leve{background:var(--bege);color:var(--navy)}
+.chat{display:flex;flex-direction:column;gap:6px;max-width:720px}.balao{padding:10px 14px;border-radius:14px;max-width:80%;white-space:pre-wrap;line-height:1.4}
+.balao.lead{background:#fff;border:1px solid var(--linha);align-self:flex-start}.balao.celeste{background:var(--navy);color:var(--bege);align-self:flex-end}.balao.template{background:var(--champ);color:var(--navy);align-self:flex-end;font-style:italic}
+.balao .meta{font-size:11px;opacity:.7;margin-top:4px}.muted{color:var(--cinza)}
+.aviso{background:#fff8e6;border:1px solid #e8d9a8;padding:10px 14px;border-radius:8px;margin-bottom:14px}
+</style>
+</head>
+<body>
+<header>
+  <div class="marca">Passoni <b>· {{ nome_ia }}</b></div>
+  <nav>
+    <a href="/" class="{% if request.url.path == '/' %}ativo{% endif %}">Visão geral</a>
+    <a href="/conversas" class="{% if request.url.path.startswith('/conversas') %}ativo{% endif %}">Conversas</a>
+    <a href="/fila" class="{% if request.url.path == '/fila' %}ativo{% endif %}">Fila de disparos</a>
+    <a href="/encaminhamentos" class="{% if request.url.path == '/encaminhamentos' %}ativo{% endif %}">Encaminhados à recepção</a>
+  </nav>
+</header>
+<main>{% block corpo %}{% endblock %}</main>
+</body>
+</html>
