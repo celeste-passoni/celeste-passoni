@@ -118,6 +118,7 @@ def responder(p: Pedido):
     ref.set({"pendente_resposta": False, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP,
              "total_msgs_celeste": firestore.Increment(enviados), "custo_usd": firestore.Increment(res.custo_usd),
              "aberta": conv.get("aberta", True) and not ctx.encerrar}, merge=True)
+    _espelhar_lead(conv)
     return {"ok": True, "enviado": enviados, "modelo": res.modelo, "custo_usd": round(res.custo_usd, 5)}
 
 
@@ -222,6 +223,20 @@ def _avisar_recepcao(mt: meta.Meta, conv: dict, motivo: str, resumo: str) -> Non
                                              f"Motivo: {motivo.replace('_', ' ')}\nResumo: {resumo}")
         except Exception as e2:
             log.error("aviso à recepção não entregue: %s", e2)
+
+
+def _espelhar_lead(conv: dict) -> None:
+    """Mantém `leads/{celular}` (fila de disparos) coerente com a conversa: status, opt-out, datas de recontato."""
+    campos = {"status_ia": conv.get("status"), "ultima_msg_lead_em": datetime.now(timezone.utc), "conversa_id": conv["id"]}
+    if conv.get("opt_out"):
+        campos["opt_out"] = True
+    if "proximo_recontato_em" in conv:
+        campos["proximo_recontato_em"] = conv["proximo_recontato_em"]
+    if conv.get("status") == "Agendado":
+        campos["elegivel"] = False
+    ref = db.collection("leads").document(conv["contato"])
+    if ref.get().exists:
+        ref.set(campos, merge=True)
 
 
 # ----------------------------------------------------------------- custo e métricas
