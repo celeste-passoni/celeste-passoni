@@ -31,7 +31,7 @@ def test_primeiro_nome():
 def test_sql_usa_filtros_do_yaml():
     from celeste.comum import config
     sql = base_leads.sql_base(config.parametros()["leads_perdidos"])
-    assert "'Não quer'" in sql and "'Número Inválido'" in sql and "2026-01-01" in sql and "ROW_NUMBER()" in sql
+    assert "'Não quer'" in sql and "'Número Inválido'" in sql and "ROW_NUMBER()" in sql and "INTERVAL 14 DAY" in sql
 
 
 def _lead(**k):

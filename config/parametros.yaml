@@ -215,8 +215,8 @@ leads_perdidos:
     tabela_status: "vertical-theory-489419-a7.gold.sistemaweb_perdidos"
     join: "nome + celular_sem_ddd = status.contato"      # como na query da clínica
   filtros:
-    created_at_a_partir_de: "2026-01-01"                 # OU use janela_meses; o painel edita um dos dois
-    janela_meses: null                                   # ex.: 6 → só leads dos últimos 6 meses
+    idade_minima_dias: 90                                # entra na fila da Celeste quando o lead foi criado há ≥ 90 dias...
+    idade_maxima_dias: 120                               # ...e ≤ 120 dias. Quem já entrou na esteira fica até o fim do ciclo.
     agendou: "não"
     participou_acao_lead_perdidos: "não"
     dentro_2_dias_uteis: "não"

@@ -35,8 +35,8 @@ def normalizar_celular(bruto: str | None) -> str | None:
 
 def sql_base(p: dict) -> str:
     f = p["filtros"]
-    condicao_data = (f"DATE(t.created_at) >= DATE_SUB(CURRENT_DATE('America/Sao_Paulo'), INTERVAL {int(f['janela_meses'])} MONTH)"
-                     if f.get("janela_meses") else f"DATE(t.created_at) >= '{f['created_at_a_partir_de']}'")
+    # a janela de idade (90–120 dias) é aplicada em Python, na ENTRADA da fila: quem já recebeu template fica até o fim do ciclo
+    condicao_data = f"DATE(t.created_at) >= DATE_SUB(CURRENT_DATE('America/Sao_Paulo'), INTERVAL {int(f['idade_maxima_dias']) + 400} DAY)"
     excluidos = ", ".join(f"'{s}'" for s in p["status_da_clinica_excluidos"])
     dias_clinica = int(f.get("ignorar_se_contato_clinica_ha_menos_de_dias") or 0)
     cond_clinica = (f"AND (status_clinica_em IS NULL OR DATE(status_clinica_em) <= DATE_SUB(CURRENT_DATE('America/Sao_Paulo'), INTERVAL {dias_clinica} DAY))"
@@ -71,12 +71,19 @@ def carregar(dry_run: bool = False) -> dict:
     novos = atualizados = invalidos = 0
     lote, n_lote = db.batch(), 0
 
-    existentes = {d.id: d.to_dict() for d in db.collection("leads").select(["status_ia", "elegivel"]).stream()}
+    existentes = {d.id: d.to_dict() for d in db.collection("leads").select(["status_ia", "elegivel", "passo"]).stream()}
+    fora_janela = 0
+    idade_min, idade_max = int(p["filtros"]["idade_minima_dias"]), int(p["filtros"]["idade_maxima_dias"])
 
     for r in linhas:
         cel = normalizar_celular(r["celular"])
         if not cel or cel in vistos:
             invalidos += 1
+            continue
+        idade = (agora - r["created_at"]).days
+        ja_na_esteira = int((existentes.get(cel) or {}).get("passo") or 0) > 0
+        if not ja_na_esteira and not (idade_min <= idade <= idade_max):
+            fora_janela += 1          # ainda não chegou aos 90 dias, ou passou dos 120 sem nunca ter entrado
             continue
         vistos.add(cel)
         nome = (r["nome"] or "").strip()
@@ -84,7 +91,7 @@ def carregar(dry_run: bool = False) -> dict:
             "celular": cel, "nome": nome, "primeiro_nome": _primeiro_nome(nome), "frente": "leads_perdidos",
             "lead_created_at": r["created_at"], "origem": r["primeira_origem"], "tem_cpf": bool(r["cpf"]),
             "status_clinica": r["status_clinica"], "contatado_clinica": r["contatado_clinica"],
-            "elegivel": True, "atualizado_em": agora,
+            "elegivel": True, "atualizado_em": agora, "idade_dias": idade,
         }
         if cel not in existentes:
             dados.update({"status_ia": "Não contatado", "passo": 0, "ciclo": 0, "templates_enviados": [],
@@ -107,8 +114,8 @@ def carregar(dry_run: bool = False) -> dict:
                 lote.commit(); lote, n_lote = db.batch(), 0
         if n_lote:
             lote.commit()
-    resumo = {"lidos_bigquery": len(linhas), "elegiveis": len(vistos), "novos": novos, "atualizados": atualizados,
-              "invalidos_ou_duplicados": invalidos, "sairam_da_base": len(sairam), "dry_run": dry_run}
+    resumo = {"lidos_bigquery": len(linhas), "fora_da_janela_de_idade": fora_janela, "elegiveis": len(vistos), "novos": novos,
+              "atualizados": atualizados, "invalidos_ou_duplicados": invalidos, "sairam_da_base": len(sairam), "dry_run": dry_run}
     log.info("carga da base: %s", resumo)
     return resumo
 
