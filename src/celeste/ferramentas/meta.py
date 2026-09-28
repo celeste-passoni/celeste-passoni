@@ -64,6 +64,14 @@ class Meta:
         d = self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "to": para, "type": "video", "video": v})
         return d["messages"][0]["id"]
 
+    def enviar_video_link(self, para: str, url: str, legenda: str = "") -> str:
+        """Envia vídeo por URL pública (a Meta baixa e entrega)."""
+        v = {"link": url}
+        if legenda:
+            v["caption"] = legenda
+        d = self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "to": para, "type": "video", "video": v})
+        return d["messages"][0]["id"]
+
     def marcar_lida(self, wamid: str) -> None:
         try:
             self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "status": "read", "message_id": wamid})

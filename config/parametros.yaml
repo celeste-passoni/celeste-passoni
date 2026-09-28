@@ -269,3 +269,19 @@ frentes:
   consulta_cancelada: { ativa: false, prompt: "prompts/consulta-cancelada-v0.md" }
   inativos:        { ativa: false, prompt: "prompts/inativos-v0.md" }
   orcamento_nao_fechado: { ativa: false, prompt: "prompts/orcamento-nao-fechado-v0.md" }
+
+# ---------------------------------------------------------------------
+# Modelos de IA e preços (US$ por milhão de tokens; API Anthropic, 22/09/2026)
+# ---------------------------------------------------------------------
+modelos:
+  conversa: "claude-opus-5"           # principal
+  conversa_fallback: "claude-sonnet-5" # se o principal falhar (5xx, limite, timeout) após 1 retentativa
+  auxiliar: "claude-haiku-4-5"         # resumos e classificação; nunca fala com o lead
+  esforco: "medium"                    # low | medium | high — profundidade de raciocínio na conversa
+  max_tokens_resposta: 1500
+  max_chamadas_por_resposta: 8         # limite do ciclo de ferramentas por vez do lead
+  precos_usd_por_milhao:
+    claude-opus-5:     { entrada: 5.0,  saida: 25.0, cache_leitura: 0.5,  cache_escrita: 6.25 }
+    claude-sonnet-5:   { entrada: 2.0,  saida: 10.0, cache_leitura: 0.2,  cache_escrita: 2.5 }
+    claude-haiku-4-5:  { entrada: 1.0,  saida: 5.0,  cache_leitura: 0.1,  cache_escrita: 1.25 }
+  cap_diario_usd: 15.0                 # ao estourar, conversas ficam pausadas com alerta
