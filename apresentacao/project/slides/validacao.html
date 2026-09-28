@@ -1,0 +1,19 @@
+<section id="validacao" data-transition="fade" style="background:#12152B; color:#F4F1EC; font-family:Montserrat, Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:28px">
+  <p style="font-size:24px; font-weight:700; letter-spacing:4px; text-transform:uppercase; color:#CFC4B3">Validação da API de agendamento · 21 e 22 de setembro</p>
+  <h2 style="font-family:'Playfair Display', Georgia, serif; font-size:64px; font-weight:600; line-height:1.1; width:1600px">O ciclo completo rodou na agenda real do Dr. Lucas, pela API, com o usuário "Tecnologia - IA"</h2>
+  <table style="font-size:24px; color:#F4F1EC; border:1px solid #3A4275">
+    <tr style="background:#1E2454"><th style="width:26%; text-align:left">Operação</th><th style="width:34%; text-align:left">Endpoint</th><th style="width:40%; text-align:left">Resultado</th></tr>
+    <tr><td>Criar paciente</td><td>POST /paciente/salvar</td><td>paciente de teste id 6436 criado com todos os campos obrigatórios; campos normalizados pelo sistema</td></tr>
+    <tr><td>Horários livres</td><td>GET /rest/agenda/horasDisponiveis</td><td>devolve a grade real do dia já sem os ocupados; conferido com a tela em vários dias</td></tr>
+    <tr><td>Agendar</td><td>POST /agendamento/adicionar</td><td>id 47186713 em 27/10 às 17h, procedimento 264, duração 60 min; horário sumiu da lista de livres</td></tr>
+    <tr><td>Confirmar</td><td>POST /agendamento/editar (status 3)</td><td>confirmado, hora preservada</td></tr>
+    <tr><td>Desmarcar</td><td>POST /agendamento/editar (status -2)</td><td>desmarcado; o horário voltou a aparecer livre</td></tr>
+    <tr><td>Buscar paciente</td><td>GET /pacientes</td><td>por telefone e CPF, para não duplicar cadastro</td></tr>
+  </table>
+  <div style="display:flex; gap:28px">
+    <div style="flex:1; background:#1E2454; border-radius:14px; padding:24px 30px; display:flex; flex-direction:column; gap:6px"><p style="font-size:25px; font-weight:700">Aprendizados que a documentação não dizia</p><p style="font-size:23px; line-height:1.4; color:#E9E4DD">Editar paciente ou agendamento substitui o registro inteiro: a IA sempre reenvia tudo. Alguns campos têm nome diferente do documentado. Encaixes fora da grade aparecem só na agenda.</p></div>
+    <div style="flex:1; background:#1E2454; border-radius:14px; padding:24px 30px; display:flex; flex-direction:column; gap:6px"><p style="font-size:25px; font-weight:700">Proteções no código</p><p style="font-size:23px; line-height:1.4; color:#E9E4DD">Só procedimentos 264 e 5. Horário checado antes e depois de escrever. Cadastro só com todos os campos obrigatórios e CEP válido. Leitura de volta após cada escrita.</p></div>
+  </div>
+  <p style="position:absolute; left:128px; bottom:64px; font-size:24px; color:#CFC4B3">Registros de teste ficam como desmarcados; serão apagados pela interface ao fim dos testes</p>
+  <aside>A integração que sustenta o agendamento automático já funciona em produção, e sabemos exatamente os payloads.</aside>
+</section>

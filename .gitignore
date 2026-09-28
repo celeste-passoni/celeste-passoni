@@ -1,0 +1,9 @@
+.env
+*.env
+tests/*.json
+__pycache__/
+.venv/
+*.pyc
+.pytest_cache/
+tests/relatorio-*.md
+apresentacao/project/**/*.bak

@@ -1,0 +1,40 @@
+<section id="arquitetura" data-transition="fade" style="background:#12152B; color:#F4F1EC; font-family:Montserrat, Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:28px">
+  <p style="font-size:24px; font-weight:700; letter-spacing:4px; text-transform:uppercase; color:#CFC4B3">Como a solução funciona</p>
+  <h2 style="font-family:'Playfair Display', Georgia, serif; font-size:62px; font-weight:600; line-height:1.1; width:1600px">Quatro peças, do WhatsApp do lead até a agenda do TI Saúde</h2>
+  <div style="display:flex; gap:16px; align-items:center">
+    <div style="flex:1; background:#1C2140; border:1px solid #2E3560; border-radius:14px; padding:24px; display:flex; flex-direction:column; gap:8px">
+      <p style="font-size:22px; font-weight:700; color:#CFC4B3; letter-spacing:2px; text-transform:uppercase">1 · O canal</p>
+      <h3 style="font-size:28px; font-weight:700">WhatsApp oficial</h3>
+      <p style="font-size:23px; color:#D9D1CA; line-height:1.35">O número da clínica, exclusivo da IA. Recebe as mensagens dos leads e envia as respostas.</p>
+      <p style="font-size:22px; color:#F4F1EC"><b>Ferramenta:</b> Meta WhatsApp Cloud API (já pronto)</p>
+    </div>
+    <x-connector style="width:30px; color:#CFC4B3"></x-connector>
+    <div style="flex:1; background:#1C2140; border:1px solid #2E3560; border-radius:14px; padding:24px; display:flex; flex-direction:column; gap:8px">
+      <p style="font-size:22px; font-weight:700; color:#CFC4B3; letter-spacing:2px; text-transform:uppercase">2 · A porta de entrada</p>
+      <h3 style="font-size:28px; font-weight:700">Recepção das mensagens</h3>
+      <p style="font-size:23px; color:#D9D1CA; line-height:1.35">Guarda cada mensagem, transcreve os áudios e junta as mensagens seguidas antes de responder. (Nome técnico: gateway.)</p>
+      <p style="font-size:22px; color:#F4F1EC"><b>Ferramenta:</b> Google Cloud Run + Speech-to-Text</p>
+    </div>
+    <x-connector style="width:30px; color:#CFC4B3"></x-connector>
+    <div style="flex:1; background:#1C2140; border:1px solid #2E3560; border-radius:14px; padding:24px; display:flex; flex-direction:column; gap:8px">
+      <p style="font-size:22px; font-weight:700; color:#CFC4B3; letter-spacing:2px; text-transform:uppercase">3 · O cérebro</p>
+      <h3 style="font-size:28px; font-weight:700">Atendente IA</h3>
+      <p style="font-size:23px; color:#D9D1CA; line-height:1.35">Entende a conversa, responde com a voz da Passoni e executa as ações: cadastrar, consultar horários, agendar. (Nome técnico: orquestrador.)</p>
+      <p style="font-size:22px; color:#F4F1EC"><b>Ferramenta:</b> Claude (Anthropic) no Google Cloud Run</p>
+    </div>
+    <x-connector style="width:30px; color:#CFC4B3"></x-connector>
+    <div style="flex:1; background:#1C2140; border:1px solid #2E3560; border-radius:14px; padding:24px; display:flex; flex-direction:column; gap:8px">
+      <p style="font-size:22px; font-weight:700; color:#CFC4B3; letter-spacing:2px; text-transform:uppercase">4 · A agenda</p>
+      <h3 style="font-size:28px; font-weight:700">TI Saúde</h3>
+      <p style="font-size:23px; color:#D9D1CA; line-height:1.35">O sistema da clínica, onde o paciente é cadastrado e a consulta é marcada — igual ao que a recepção faz hoje.</p>
+      <p style="font-size:22px; color:#F4F1EC"><b>Ferramenta:</b> API do TI Saúde (validada em produção)</p>
+    </div>
+  </div>
+  <div style="display:flex; gap:16px">
+    <div style="flex:1; background:#1E2454; border-radius:14px; padding:22px 26px; display:flex; flex-direction:column; gap:6px"><h3 style="font-size:26px; font-weight:700">Memória e relatórios</h3><p style="font-size:22px; color:#D9D1CA; line-height:1.35">Cada conversa, status e agendamento fica guardado (Firestore) e é copiado todo dia para o BigQuery — aparece no mesmo Power BI de hoje.</p></div>
+    <div style="flex:1; background:#1E2454; border-radius:14px; padding:22px 26px; display:flex; flex-direction:column; gap:6px"><h3 style="font-size:26px; font-weight:700">Painel da clínica</h3><p style="font-size:22px; color:#D9D1CA; line-height:1.35">Conversas por frente, disparos, encaminhados à recepção, custos, e os parâmetros (preços, agendas, textos) editáveis sem programador. Login Google.</p></div>
+    <div style="flex:1; background:#1E2454; border-radius:14px; padding:22px 26px; display:flex; flex-direction:column; gap:6px"><h3 style="font-size:26px; font-weight:700">Segurança</h3><p style="font-size:22px; color:#D9D1CA; line-height:1.35">Senhas e chaves em cofre (Secret Manager); fotos e áudios apagados após 90 dias; dados pessoais mascarados nos relatórios.</p></div>
+  </div>
+  <p style="position:absolute; left:128px; bottom:64px; font-size:24px; color:#7B6F5E">Tudo no Google Cloud, no mesmo projeto do BigQuery; serviços gerenciados: sem servidor para manter, paga-se por uso</p>
+  <aside>Ler da esquerda para a direita: o lead escreve no WhatsApp; a porta de entrada prepara a mensagem; o cérebro responde e age; o TI Saúde recebe o cadastro e o agendamento. As três caixas de baixo são o que sustenta isso: memória, painel e segurança. Detalhes no documento de arquitetura.</aside>
+</section>

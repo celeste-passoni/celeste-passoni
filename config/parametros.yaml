@@ -1,0 +1,271 @@
+# =====================================================================
+# PARÂMETROS DA IA DE ATENDIMENTO — PASSONI CLINIC
+# Fonte única da verdade. Tudo que a IA "sabe" sobre a clínica e como
+# ela se comporta vem daqui. A base de conhecimento e os prompts são
+# renderizados a partir destes valores ({{chave}}); mudar aqui = mudar
+# em todas as frentes. Datas no formato AAAA-MM-DD, horas em HH:MM,
+# fuso America/Sao_Paulo.
+# =====================================================================
+
+clinica:
+  nome: "Passoni Clinic"
+  especialidade: "ciência capilar e tricologia"
+  endereco: "Av. República do Líbano, 886 – Moema, São Paulo/SP"
+  referencia_endereco: "em frente ao Parque Ibirapuera"
+  valet_cortesia: true
+  horario_recepcao:
+    dias: "segunda a sexta"
+    inicio: "09:00"
+    fim: "19:00"
+  recesso_fim_de_ano:            # preencher a cada ano; null = sem recesso definido
+    ultimo_dia_atendimento: null # ex.: "2026-12-18"
+    retorno: null                # ex.: "2027-01-12"
+
+# ---------------------------------------------------------------------
+# Profissionais ofertados para PRIMEIRA CONSULTA (o que a IA vende).
+# Outros médicos da clínica (retornos, procedimentos) NÃO entram aqui.
+# ---------------------------------------------------------------------
+consultas:
+  - id: dra_luciana
+    profissional: "Dra. Luciana Passoni"
+    titulo: "referência em tricologia, criadora dos protocolos da clínica"
+    valor: 1200.00
+    valor_texto: "R$ 1.200,00"
+    descricao: >-
+      A consulta é iniciada pelos tricologistas, que realizam a anamnese e a
+      tricoscopia. Em seguida, a Dra. Luciana faz a avaliação médica, define o
+      diagnóstico e indica o tratamento personalizado.
+    agenda:
+      dias: "segunda a sexta"
+      inicio: "12:00"
+      fim: "17:00"
+    ofertar: true
+  - id: dr_lucas
+    profissional: "Dr. Lucas Vieira"
+    titulo: "Diretor Médico da Passoni Clinic e tricologista, treinado pela Dra. Luciana"
+    valor: 800.00
+    valor_texto: "R$ 800,00"
+    descricao: >-
+      Diretor Médico da Passoni Clinic e tricologista, ele realiza toda a
+      consulta, desde a avaliação clínica até o diagnóstico e a definição do
+      tratamento.
+    agenda:
+      dias: "segunda a sexta"
+      inicio: "09:00"
+      fim: "17:00"
+    ofertar: true
+
+consulta_inclui:
+  - "avaliação médica completa e análise do histórico de saúde"
+  - "exame de tricoscopia digital (não invasivo)"
+  - "retorno de cortesia com a equipe de tricologistas em até {{politicas.retorno_cortesia_dias}} dias após a última sessão do tratamento, no período da manhã, sem desmarcações"
+levar_no_dia: "exames realizados no último ano"
+
+politicas:
+  retorno_cortesia_dias: 30
+  antecedencia_minutos: 10            # versão vigente (ago/set 2026); antes era 30
+  consulta_parcela: false
+  formas_pagamento_consulta: ["cartão de crédito", "cartão de débito", "pix", "dinheiro"]
+  tratamento_parcela_max: 10          # "até 10x sem juros no cartão"
+  tratamento_parcela_juros: false
+  aceita_convenio: false
+  emite_nota_fiscal_reembolso: true
+  atendimento_online: false
+  desconto_consulta: false            # valor tabelado, igual para todos
+  tabela_preco_tratamento: false      # personalizado após a consulta
+  referencias_investimento_tratamento: # usar só se o lead insistir; sempre como "ideia", não pacote
+    - 10000
+    - 12000
+    - 15000
+  biopsia:
+    nome: "Punção Incisional Histopatológica Guiada pela Tricoscopia"
+    valor: 8400.00
+    parcelavel: true
+  realiza_transplante: true
+  atende_todas_idades: true
+
+# ---------------------------------------------------------------------
+# Persona e comportamento da IA
+# ---------------------------------------------------------------------
+ia:
+  nome_atendente: "Celeste"
+  cargo: "concierge da Passoni Clinic"
+  idioma: "pt-BR"
+  operacao_24_7: true                 # responde a qualquer hora
+  iniciar_resgates_apenas_em_horario_comercial: true  # resgates/follow-ups só 09:00–19:00 seg–sex
+  emojis_max_por_mensagem: 2
+  baloes_por_resposta: { min: 1, max: 4 }
+  delay_resposta_segundos:            # simula tempo humano (log-normal)
+    minimo: 30
+    mediana: 90
+    maximo: 180
+    fora_horario_comercial: { minimo: 120, mediana: 300, maximo: 900 }
+  agrupamento_mensagens:              # debounce de rajadas
+    espera_padrao_segundos: 25
+    espera_apos_audio_segundos: 60
+    espera_maxima_segundos: 90
+    cancelar_e_regerar_se_chegar_nova_msg: true
+  horarios:
+    fonte_grade: "tisaude_horasDisponiveis"  # grade real por dia da semana vem do TI Saúde (API do Paciente, id do USUÁRIO do profissional);
+                                             # as agendas em consultas[].agenda são só descrição para o lead, não a grade
+    id_usuario_profissional: { dra_luciana: 29110, dr_lucas: 79786 }
+    oferecer_hoje: true                      # inclui o dia atual na busca de horários (ex.: contato de manhã → consulta à tarde)
+    antecedencia_minima_horas: 2             # hoje: só horários a partir de agora + N h
+    dias_a_frente: 14                        # janela de busca
+    opcoes_por_vez: 3                        # quantos horários a Celeste oferece de cada vez
+    priorizar: "mais_cedo"                   # mais_cedo | preferencia_do_lead
+  follow_up_cadencia_dias: [0.2, 1, 3, 7, 15, 30, 60, 90]  # após última msg do lead
+  follow_up_max_tentativas: 8
+  # O número da IA é EXCLUSIVO da IA/automações: ninguém da recepção responde por ele.
+  # Quando o assunto não é da IA, ela ENCAMINHA o lead ao canal humano (MarketZap) e avisa a recepção.
+  recepcao:
+    whatsapp: "5511916069009"                 # número da recepção (MarketZap)
+    link_wa: "https://wa.me/5511916069009"
+    notificar_por: "whatsapp"                 # a IA (número oficial) envia template utility ao número da recepção
+    template_aviso: "aviso_lead_encaminhado"  # a criar na Meta (molde: aviso_interesse_acao_recepcao)
+    aviso_conteudo: ["nome do lead", "telefone (link wa.me)", "motivo", "resumo em 3 linhas", "frente"]
+  encaminhar_recepcao_quando:                 # só estes 4 motivos; todo o resto a IA resolve
+    - "lead já é paciente / tratamento em andamento"
+    - "assunto clínico: receita, exames, medicação, efeito do tratamento"
+    - "reclamação, cancelamento com reembolso"
+    - "pedido explícito para falar com uma pessoa"
+  nao_encaminhar:                             # a IA resolve sozinha, nunca empurra para a recepção
+    - "valor da consulta, convênio, parcelamento"
+    - "horário: oferece só o que existe na grade; sem encaixe"
+    - "remarcar / cancelar consulta agendada pela IA"
+    - "'vou pensar', 'depois', objeções"
+    - "pedidos fora da política (online, desconto, tratamento sem consulta): responde a política e encerra"
+  meta_taxa_encaminhamento_max: 0.05          # alerta no painel se passar
+
+# ---------------------------------------------------------------------
+# Vídeos (re-hospedar; URLs atuais são do S3 do MarketZap)
+# ---------------------------------------------------------------------
+videos:
+  institucional:
+    descricao: "apresenta o trabalho da Dra. Luciana e os tratamentos"
+    quando: "logo após a saudação, no primeiro contato"
+    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/b343637a22a0cdcd2c5dcd2510753f523c73a93f"
+  dra_luciana:
+    descricao: "vídeo da Dra. Luciana"
+    quando: "junto com a apresentação das modalidades"
+    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/30dbba2b0a5d58feeca281d7b278f511ac83be33"
+  dr_lucas:
+    descricao: "vídeo do Dr. Lucas Vieira"
+    quando: "quando o lead considera a opção de R$ 800"
+    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/9b6468f435b2d895ddc134d86b084120c42c52c3"
+  boas_vindas_consulta:
+    descricao: "pós-confirmação / o que esperar no dia"
+    quando: "após confirmar o agendamento"
+    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/12c2ae502ce2c93dfdf7a102bf6e0c017aaa8aa6"
+  como_funciona_consulta:
+    descricao: "explica tricoscopia e tratamento do folículo"
+    quando: "dúvida clínica"
+    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/f6a1daaa8df2d20c4370ab7b9404847297dad43f"
+  casos_sucesso:
+    descricao: "casos de sucesso"
+    quando: "objeção de resultado / 'vale a pena?'"
+    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/f6dd0cb789cac9391ad130b67b35a5c20075faf7"
+  tecnologias:
+    descricao: "tecnologias da clínica"
+    quando: "objeção de preço de tratamento"
+    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/d127fd490ae69dc25d0eaea214c40fe324b9bbb9"
+  sobre_clinica:
+    descricao: "sobre a clínica e currículo da Dra."
+    quando: "lead pergunta quem é a Dra. / credibilidade"
+    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/75c97a7f09f89de0a0138a831161397025a04604"
+
+# ---------------------------------------------------------------------
+# Campos do pré-cadastro (na ordem em que são pedidos)
+# ---------------------------------------------------------------------
+# Todos obrigatórios no TI Saúde (formulário "Novo Paciente"); CPF obrigatório por regra da clínica.
+pre_cadastro_campos:
+  - "Nome completo"                      # gravado em MAIÚSCULAS
+  - "CPF"
+  - "Data de nascimento"
+  - "Sexo (masculino/feminino)"          # dropdown do sistema: Masculino | Feminino
+  - "E-mail"
+  - "Como nos conheceu?"                 # campo "Encaminhado por" — mapear para a lista abaixo
+  - "CEP"                                # validado e expandido via ViaCEP → rua, bairro, cidade, UF (a API não preenche sozinha)
+  - "Número da residência com o complemento"
+pre_cadastro_endereco_via_cep: true      # a IA pede só CEP + número/complemento; rua/bairro/cidade/UF vêm do CEP;
+                                         # se o CEP não existir, pede para conferir; se o ViaCEP estiver fora, pede o endereço completo
+pre_cadastro_observacao: "dados do paciente (não do responsável). Celular = número do WhatsApp com DDD. Convênio sempre PARTICULAR (campo da API: convenio=1). Campo 'medico' (responsável) NÃO é enviado — igual à recepção."
+procedimentos_permitidos:                # o agente NUNCA agenda outro procedimento além destes dois
+  - { id: 264, nome: "PC - CONSULTA EQUIPE MÉDICA", idCalendario: 36, profissional: "Dr. Lucas Vieira", valor: 800 }
+  - { id: 5,   nome: "PC - CONSULTA DRA. LUCIANA",   idCalendario: 1,  profissional: "Dra. Luciana Passoni", valor: 1200 }
+pre_cadastro_menor_de_idade:            # se nascimento indica < 18 anos, coletar também:
+  campos: ["Nome do responsável", "Parentesco (Mãe, Pai, Irmão, Irmã, Tio, Tia, Padrinho, Madrinha, Primo, Prima, Outro)", "CPF do responsável"]
+encaminhado_por:                        # valores do campo "Encaminhado por" (indicado) — lista parcial; clínica vai passar a completa
+  padrao_lead_ia: "CAMPANHA DE MENSAGENS"   # quando o lead veio de disparo/resgate da IA
+  mapeamento:                           # o que o lead diz → valor do sistema
+    "instagram da dra": "INSTAGRAM DRA. LUCIANA"
+    "instagram da clínica": "INSTAGRAM PASSONI CLINIC"
+    "google / pesquisa na internet": "GOOGLE"
+    "tiktok": "TIK TOK"
+    "mensagem / whatsapp da clínica": "CAMPANHA DE MENSAGENS"
+    "indicação de pessoa": "<NOME DE QUEM INDICOU EM MAIÚSCULAS>"
+    "outra clínica / médico": "<NOME DO MÉDICO>"
+
+# ---------------------------------------------------------------------
+# Resgate de Leads Perdidos — base e política (editável no painel)
+# ---------------------------------------------------------------------
+leads_perdidos:
+  fonte:
+    tabela_leads: "vertical-theory-489419-a7.gold.leads"
+    tabela_status: "vertical-theory-489419-a7.gold.sistemaweb_perdidos"
+    join: "nome + celular_sem_ddd = status.contato"      # como na query da clínica
+  filtros:
+    created_at_a_partir_de: "2026-01-01"                 # OU use janela_meses; o painel edita um dos dois
+    janela_meses: null                                   # ex.: 6 → só leads dos últimos 6 meses
+    agendou: "não"
+    participou_acao_lead_perdidos: "não"
+    dentro_2_dias_uteis: "não"
+    um_por_celular_mais_recente: true
+  status_da_clinica_excluidos:                           # status gravados pelas atendentes que tiram o lead da fila da IA
+    - "Não quer"
+    - "Número Inválido"
+    - "Número duplicado"
+  # A IA NÃO escreve nas tabelas da clínica (gold.*). O status abaixo é o dela, no CRM (Firestore),
+  # inspirado na lista que a recepção usa; aparece no painel e no espelho ia_atendimento.
+  status_ia:
+    - "Não contatado"
+    - "Template enviado (1°)"
+    - "Template enviado (2°)"
+    - "Em conversa"
+    - "Agendado"
+    - "Vamos retornar na data solicitada"
+    - "Irá nos retornar"
+    - "Achou caro"
+    - "Quer pelo convênio"
+    - "Mora em outro Estado"
+    - "Mora em outro País"
+    - "Está em outra clínica"
+    - "Receiteiro"                                       # só quer vir pegar receita
+    - "Transferido para humano"
+    - "Não quer (opt-out)"
+    - "Número inválido"
+  recontato_por_status_ia:                               # dias até a IA voltar a abordar (null = não aborda mais)
+    "Não contatado": 0
+    "Template enviado (1°)": 3
+    "Template enviado (2°)": 10
+    "Irá nos retornar": 7
+    "Vamos retornar na data solicitada": "na data"
+    "Achou caro": 30
+    "Quer pelo convênio": 60
+    "Mora em outro Estado": 90
+    "Está em outra clínica": 90
+    "Mora em outro País": null
+    "Receiteiro": null
+    "Não quer (opt-out)": null
+    "Agendado": null
+    "Transferido para humano": null
+
+# ---------------------------------------------------------------------
+# Frentes de atendimento (cada uma com seu prompt)
+# ---------------------------------------------------------------------
+frentes:
+  leads_perdidos:  { ativa: true,  prompt: "prompts/leads-perdidos-v0.md" }
+  novos_leads:     { ativa: false, prompt: "prompts/novos-leads-v0.md" }
+  consulta_cancelada: { ativa: false, prompt: "prompts/consulta-cancelada-v0.md" }
+  inativos:        { ativa: false, prompt: "prompts/inativos-v0.md" }
+  orcamento_nao_fechado: { ativa: false, prompt: "prompts/orcamento-nao-fechado-v0.md" }

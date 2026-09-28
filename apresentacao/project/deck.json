@@ -1,0 +1,44 @@
+{
+  "v": 4,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-09-22T18:30:00Z"
+  },
+  "title": "IA de Atendimento Passoni Clinic",
+  "order": [
+    "cover",
+    "solucao",
+    "arquitetura",
+    "conhecimento",
+    "validacao",
+    "templates",
+    "disparos",
+    "resultados",
+    "prazo"
+  ],
+  "sections": {
+    "s1": {
+      "description": "A solução e sua arquitetura",
+      "start": "cover"
+    },
+    "s2": {
+      "description": "O que já está construído e validado",
+      "start": "conhecimento"
+    },
+    "s3": {
+      "description": "Resultados esperados e prazo",
+      "start": "resultados"
+    }
+  },
+  "faces": {
+    "playfair-display": {
+      "family": "Playfair Display",
+      "href": "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap"
+    },
+    "montserrat": {
+      "family": "Montserrat",
+      "href": "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
+    }
+  },
+  "designSystems": []
+}
