@@ -3,11 +3,16 @@
 # Pré-requisitos: gcloud autenticado no projeto; segredos criados no Secret Manager.
 set -euo pipefail
 PROJETO="vertical-theory-489419-a7"; REGIAO="southamerica-east1"
-IMAGEM="${REGIAO}-docker.pkg.dev/${PROJETO}/celeste/celeste:$(date +%Y%m%d-%H%M%S)"
 ALVO="${1:-todos}"
-
-echo ">> construindo imagem ${IMAGEM}"
-gcloud builds submit --project "$PROJETO" --region "$REGIAO" --tag "$IMAGEM" --quiet .
+# IMAGEM_PRONTA=<tag completa> pula o build e só publica (útil quando o build já existe)
+if [ -n "${IMAGEM_PRONTA:-}" ]; then
+  IMAGEM="$IMAGEM_PRONTA"; echo ">> usando imagem pronta ${IMAGEM}"
+else
+  IMAGEM="${REGIAO}-docker.pkg.dev/${PROJETO}/celeste/celeste:$(date +%Y%m%d-%H%M%S)"
+  echo ">> construindo imagem ${IMAGEM}"
+  # --suppress-logs: a conta de implantação não tem viewer do projeto para transmitir o log; o build segue normalmente
+  gcloud builds submit --project "$PROJETO" --region "$REGIAO" --tag "$IMAGEM" --suppress-logs --quiet .
+fi
 
 deploy_orq() {
   gcloud run deploy celeste-orquestrador --project "$PROJETO" --region "$REGIAO" --image "$IMAGEM" \
