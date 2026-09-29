@@ -27,7 +27,7 @@ URL_ORQUESTRADOR = os.environ.get("URL_ORQUESTRADOR", "")
 SA_TASKS = os.environ.get("SA_TASKS", f"celeste-gateway@{config.PROJETO_GCP}.iam.gserviceaccount.com")
 
 
-@app.get("/healthz")
+@app.get("/status")  # /healthz é interceptado pelo front-end do Google no Cloud Run
 def healthz():
     return {"ok": True, "servico": "gateway"}
 

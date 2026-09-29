@@ -52,7 +52,7 @@ class Pedido(BaseModel):
     versao: str
 
 
-@app.get("/healthz")
+@app.get("/status")  # /healthz é interceptado pelo front-end do Google no Cloud Run
 def healthz():
     return {"ok": True, "servico": "orquestrador"}
 

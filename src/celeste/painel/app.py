@@ -57,7 +57,7 @@ FRENTES = {"leads_perdidos": "Leads Perdidos", "novos_leads": "Novos Leads"}
 tpl.env.globals["FRENTES"] = FRENTES
 
 
-@app.get("/healthz")
+@app.get("/status")  # /healthz é interceptado pelo front-end do Google no Cloud Run
 def healthz():
     return {"ok": True, "servico": "painel"}
 

@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO)
 app = FastAPI(title="Celeste · Jobs")
 
 
-@app.get("/healthz")
+@app.get("/status")  # /healthz é interceptado pelo front-end do Google no Cloud Run
 def healthz():
     return {"ok": True, "servico": "jobs"}
 
