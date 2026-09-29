@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% block titulo %}Conversa{% endblock %}
 {% block corpo %}
 <p><a href="/conversas">← Conversas</a></p>
-<h1>{{ c.nome or '(sem nome)' }} <span class="tag {{ 'lp' if c.frente == 'leads_perdidos' else 'nl' }}">{{ FRENTES.get(c.frente, c.frente) }}</span> <span class="tag">{{ c.status }}</span></h1>
+<h1>{{ c.nome or '(sem nome)' }} <span class="tag {% if c.frente == 'leads_perdidos' %}lp{% elif c.frente %}nl{% endif %}">{{ rotulo_frente(c.frente) }}</span> <span class="tag">{{ c.status }}</span></h1>
 <div class="duas">
   <div>
     <div class="chat">

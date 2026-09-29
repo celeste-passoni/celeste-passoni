@@ -13,7 +13,7 @@
 
 <h2>Por frente</h2>
 <div class="duas">
-{% for f, d in por_frente.items() %}
+{% for f, d in por_frente.items() if f != 'sem_frente' %}
   <div class="frente">
     <h3><span class="tag {{ 'lp' if f == 'leads_perdidos' else 'nl' }}">{{ FRENTES[f] }}</span> {% if f == 'novos_leads' %}<span class="muted" style="font-size:12px">(em breve)</span>{% endif %}</h3>
     <div class="cards" style="grid-template-columns:repeat(5,1fr)">
@@ -27,6 +27,8 @@
   </div>
 {% endfor %}
 </div>
+
+<p class="muted" style="margin-top:10px">Sem frente (não estão na base de leads): <b>{{ por_frente.sem_frente.conversas }}</b> conversa(s), {{ por_frente.sem_frente.respondidas }} respondida(s) · <a href="/conversas?frente=sem_frente">ver</a></p>
 
 <h2>Modo de atendimento</h2>
 <div class="frente">

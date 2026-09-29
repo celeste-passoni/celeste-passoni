@@ -2,7 +2,7 @@
 {% block corpo %}
 <h1>Conversas <span class="muted" style="font-size:14px;font-weight:400">· {{ total }}</span></h1>
 <form class="inline" method="get" style="margin-bottom:14px">
-  <select name="frente"><option value="">Todas as frentes</option>{% for k, v in FRENTES.items() %}<option value="{{ k }}" {% if frente == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+  <select name="frente"><option value="">Todas as frentes</option>{% for k, v in FRENTES.items() %}<option value="{{ k }}" {% if frente == k %}selected{% endif %}>{{ v }}</option>{% endfor %}<option value="sem_frente" {% if frente == 'sem_frente' %}selected{% endif %}>Sem frente</option></select>
   <select name="status"><option value="">Todos os status</option>{% for s in statuses %}<option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
   <label><input type="checkbox" name="abertas" value="1" {% if abertas %}checked{% endif %}> só abertas</label>
   <button type="submit" class="leve">Filtrar</button>
@@ -12,7 +12,7 @@
 {% for c in conversas %}
 <tr>
   <td><a href="/conversas/{{ c.id }}">{{ c.nome or '(sem nome)' }}</a><br><span class="muted">{{ c.contato }}</span></td>
-  <td><span class="tag {{ 'lp' if c.frente == 'leads_perdidos' else 'nl' }}">{{ FRENTES.get(c.frente, c.frente) }}</span></td>
+  <td><span class="tag {% if c.frente == 'leads_perdidos' %}lp{% elif c.frente %}nl{% endif %}">{{ rotulo_frente(c.frente) }}</span></td>
   <td><span class="tag {% if c.status == 'Agendado' %}ok{% elif c.status in ('Encaminhado à recepção', 'Não quer (opt-out)') %}alerta{% endif %}">{{ c.status }}</span>{% if c.revisar %} <span class="tag alerta">revisar</span>{% endif %}</td>
   <td>{{ c.template_origem or '—' }}</td>
   <td>{{ c.ultima_msg_lead_em|local or '—' }}</td>

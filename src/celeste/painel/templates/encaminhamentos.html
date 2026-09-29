@@ -8,7 +8,7 @@
 <tr>
   <td>{{ e.em|local }}</td>
   <td><a href="/conversas/{{ e.conversa_id }}">{{ e.nome }}</a><br><a href="https://wa.me/{{ e.contato }}" target="_blank" class="muted">abrir no WhatsApp</a></td>
-  <td><span class="tag {{ 'lp' if e.frente == 'leads_perdidos' else 'nl' }}">{{ FRENTES.get(e.frente, e.frente) }}</span></td>
+  <td><span class="tag {% if e.frente == 'leads_perdidos' %}lp{% elif e.frente %}nl{% endif %}">{{ rotulo_frente(e.frente) }}</span></td>
   <td>{{ (e.motivo or '').replace('_', ' ') }}</td><td>{{ e.resumo }}</td>
   <td>{% if e.atendido %}<span class="tag ok">atendido</span>{% else %}<form method="post" action="/encaminhamentos/{{ e.id }}/atendido"><button class="leve" type="submit">Marcar atendido</button></form>{% endif %}</td>
 </tr>

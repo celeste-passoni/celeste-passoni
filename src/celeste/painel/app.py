@@ -55,6 +55,7 @@ tpl.env.filters["local"] = _local
 tpl.env.globals["nome_ia"] = config.parametros()["ia"]["nome_atendente"]
 FRENTES = {"leads_perdidos": "Leads Perdidos", "novos_leads": "Novos Leads"}
 tpl.env.globals["FRENTES"] = FRENTES
+tpl.env.globals["rotulo_frente"] = lambda f: FRENTES.get(f) or "Sem frente"
 
 
 @app.get("/status")  # /healthz é interceptado pelo front-end do Google no Cloud Run
@@ -86,6 +87,10 @@ def dashboard(request: Request, _=Depends(autenticar)):
         if d.get("elegivel"):
             elegiveis += 1
             leads[d.get("status_ia") or "Não contatado"] += 1
+    sem_frente = [c for c in conversas if not c.get("frente")]
+    por_frente["sem_frente"] = {"conversas": len(sem_frente), "abertas": sum(1 for c in sem_frente if c.get("aberta")),
+                                "respondidas": sum(1 for c in sem_frente if c.get("ultima_msg_celeste_em")), "agendados": 0,
+                                "encaminhados": 0, "opt_out": 0, "status": []}
     custo_hoje = (db.collection("custos_diarios").document(hoje).get().to_dict() or {})
     custo_mes = sum((c.to_dict() or {}).get("custo_usd", 0) for c in db.collection("custos_diarios").stream() if c.id.startswith(mes))
     disp_hoje = db.collection("disparos_diarios").document(hoje).get().to_dict() or {}
@@ -141,10 +146,11 @@ def salvar_disparos(ativo: str = Form("off"), limite_diario: int = Form(100), li
 # ----------------------------------------------------------------- conversas
 @app.get("/conversas", response_class=HTMLResponse)
 def conversas(request: Request, frente: str = "", status: str = "", abertas: str = "", _=Depends(autenticar)):
-    q = db.collection("conversas")
-    if frente:
-        q = q.where("frente", "==", frente)
-    docs = [dict(c.to_dict(), id=c.id) for c in q.stream()]
+    docs = [dict(c.to_dict(), id=c.id) for c in db.collection("conversas").stream()]
+    if frente == "sem_frente":
+        docs = [c for c in docs if not c.get("frente")]
+    elif frente:
+        docs = [c for c in docs if c.get("frente") == frente]
     if status:
         docs = [c for c in docs if c.get("status") == status]
     if abertas:
