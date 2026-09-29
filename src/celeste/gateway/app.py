@@ -8,7 +8,8 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from google.cloud import firestore, tasks_v2
@@ -59,6 +60,9 @@ def _processar(ev: dict) -> None:
     if ev["kind"] == "status":
         _gravar_status(ev)
         return
+    if _antiga(ev["timestamp"]):
+        log.info("mensagem %s descartada: anterior ao corte", ev.get("wamid"))
+        return
     telefone = ev["de"]
     conv_ref = _conversa_aberta(telefone, ev.get("nome"))
     msg_ref = conv_ref.collection("mensagens").document(ev["wamid"])
@@ -74,6 +78,15 @@ def _processar(ev: dict) -> None:
                   "janela_24h_ate": datetime.now(timezone.utc) + timedelta(hours=24),
                   "pendente_resposta": True}, merge=True)
     _agendar_debounce(conv_ref.id, ev["tipo"])
+
+
+def _antiga(timestamp: int) -> bool:
+    """Mensagens represadas pela Meta com data anterior ao corte configurado não entram no painel."""
+    corte = config.parametros()["ia"].get("ignorar_mensagens_antes_de")
+    if not corte:
+        return False
+    limite = datetime.combine(date.fromisoformat(str(corte)), datetime.min.time(), tzinfo=ZoneInfo(config.FUSO))
+    return datetime.fromtimestamp(int(timestamp), tz=timezone.utc) < limite
 
 
 def _conversa_aberta(telefone: str, nome: str | None):
