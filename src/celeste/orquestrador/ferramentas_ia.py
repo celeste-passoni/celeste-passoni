@@ -160,7 +160,10 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         return {"ok": True, "wamid": wamid}
 
     if nome == "atualizar_status":
-        campos: dict = {"status": e["status"]}
+        status = e["status"]
+        if status == "Vamos retornar na data solicitada" and not e.get("data_retorno"):
+            status = "Irá nos retornar"   # sem data concreta, cai na cadência padrão
+        campos: dict = {"status": status}
         if e.get("data_retorno"):
             campos["proximo_recontato_em"] = e["data_retorno"]
         ctx.atualizar(campos)

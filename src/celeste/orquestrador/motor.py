@@ -89,6 +89,7 @@ class Motor:
             messages[0] = {"role": "user", "content": prompt.contexto_lead(conversa) + "\n\n" + messages[0]["content"]}
         tokens: dict = {}
         custo, chamadas, usadas, modelo = 0.0, 0, [], self.cfg["conversa"]
+        texto_acumulado = ""   # o modelo pode escrever balões ANTES de chamar uma ferramenta; nada se perde
         while True:
             resp, modelo = self._chamar(system, messages)
             chamadas += 1
@@ -96,9 +97,11 @@ class Motor:
             custo += _custo(resp.model or modelo, resp.usage)
             if resp.stop_reason == "refusal":
                 return Resultado([], modelo, custo, tokens, chamadas, usadas, refusal=True)
+            trecho = "".join(b.text for b in resp.content if b.type == "text").strip()
+            if trecho:
+                texto_acumulado = (texto_acumulado + "\n---\n" + trecho) if texto_acumulado else trecho
             if resp.stop_reason != "tool_use" or chamadas >= int(self.cfg["max_chamadas_por_resposta"]):
-                texto = "".join(b.text for b in resp.content if b.type == "text")
-                return Resultado(separar_baloes(texto), modelo, custo, tokens, chamadas, usadas)
+                return Resultado(separar_baloes(texto_acumulado), modelo, custo, tokens, chamadas, usadas)
             messages.append({"role": "assistant", "content": resp.content})
             resultados = []
             for b in resp.content:

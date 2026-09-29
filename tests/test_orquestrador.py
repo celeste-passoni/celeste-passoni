@@ -157,3 +157,29 @@ def test_motor_refusal():
     cliente.beta.messages.create.return_value = _resp("refusal", [])
     res = motor.Motor(cliente=cliente).responder("leads_perdidos", {"id": "c1"}, [{"role": "user", "content": "oi"}], _ctx())
     assert res.refusal and res.baloes == []
+
+
+def test_motor_preserva_texto_antes_da_ferramenta():
+    cliente = MagicMock()
+    tool_use = SimpleNamespace(type="tool_use", id="tu1", name="registrar_opt_out", input={"motivo": "pediu"})
+    cliente.beta.messages.create.side_effect = [
+        _resp("tool_use", [SimpleNamespace(type="text", text="Tudo certo, não mando mais."), tool_use]),
+        _resp("end_turn", [SimpleNamespace(type="text", text="Obrigada!")]),
+    ]
+    res = motor.Motor(cliente=cliente).responder("leads_perdidos", {"id": "c1"}, [{"role": "user", "content": "SAIR"}], _ctx())
+    assert res.baloes == ["Tudo certo, não mando mais.", "Obrigada!"]
+
+
+def test_formato_saida_tem_data_atual():
+    from datetime import datetime
+    s = prompt.formato_saida(datetime(2026, 10, 13, 9, 5))
+    assert "terça-feira, 13/10/2026 09:05" in s
+
+
+def test_status_sem_data_vira_ira_retornar():
+    conv = {"id": "c1"}
+    ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos)
+    ferramentas_ia.executar("atualizar_status", {"status": "Vamos retornar na data solicitada", "data_retorno": ""}, ctx)
+    assert conv["status"] == "Irá nos retornar"
+    ferramentas_ia.executar("atualizar_status", {"status": "Vamos retornar na data solicitada", "data_retorno": "2026-11-03"}, ctx)
+    assert conv["status"] == "Vamos retornar na data solicitada" and conv["proximo_recontato_em"] == "2026-11-03"

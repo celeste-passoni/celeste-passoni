@@ -19,6 +19,7 @@ from google.cloud import firestore
 
 from celeste.comum import config
 from celeste.ferramentas import meta, tisaude
+from celeste.jobs import templates_texto
 
 log = logging.getLogger(__name__)
 FUSO = ZoneInfo(config.FUSO)
@@ -106,16 +107,31 @@ def _enviados_hoje(db) -> int:
     return int(doc.get("enviados", 0))
 
 
+_TARDE: dict = {}
+
+
 def _tarde_livre_hoje(ts: tisaude.TiSaude) -> bool:
+    """Confere se há horário livre hoje à tarde; guarda o primeiro (hora + profissional) para o T5."""
+    _TARDE.clear()
     try:
         hoje = date.today()
-        for prof in ("dra_luciana", "dr_lucas"):
+        for prof in ("dr_lucas", "dra_luciana"):
             for h in ts.buscar_horarios(prof, dias=1, a_partir_de=hoje):
                 if h["data"] == hoje.isoformat() and int(h["hora"][:2]) >= 12:
+                    _TARDE.update({"horario": h["hora"][:5].replace(":00", "h").replace(":", "h"),
+                                   "profissional": config.profissional(prof)["profissional"]})
                     return True
     except Exception as e:
         log.warning("não conferiu tarde livre: %s", e)
     return False
+
+
+def _extras_template(codigo: str, tarde: bool) -> dict:
+    if codigo == "T4":
+        return {"mes": templates_texto.MESES[datetime.now(FUSO).month - 1]}
+    if codigo == "T5":
+        return dict(_TARDE)
+    return {}
 
 
 def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[int] = None) -> dict:
@@ -159,21 +175,22 @@ def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[
             resumo["enviados"] += 1
             resumo["detalhe"].append({"lead": doc.id[-4:].rjust(len(doc.id), "*"), "template": dec.template, "motivo": dec.motivo})
             continue
+        extras = _extras_template(dec.template, tarde)
         try:
-            wamid = mt.enviar_template(lead["celular"], nome_tpl, [lead.get("primeiro_nome") or "tudo bem"])
+            wamid = mt.enviar_template(lead["celular"], nome_tpl, templates_texto.parametros(dec.template, lead.get("primeiro_nome") or "", **extras))
         except Exception as e:
             resumo["erros"] += 1
             log.warning("falha ao enviar %s para lead: %s", dec.template, e)
             db.collection("leads").document(doc.id).set({"ultimo_erro_envio": str(e)[:300], "ultimo_erro_em": agora}, merge=True)
             continue
-        _registrar_envio(db, doc.id, lead, dec, nome_tpl, wamid, agora)
+        _registrar_envio(db, doc.id, lead, dec, nome_tpl, wamid, agora, extras)
         resumo["enviados"] += 1
         time.sleep(random.uniform(*d["intervalo_entre_envios_segundos"]))
     log.info("disparos: %s", resumo)
     return resumo
 
 
-def _registrar_envio(db, lead_id: str, lead: dict, dec: Decisao, nome_tpl: str, wamid: str, agora: datetime) -> None:
+def _registrar_envio(db, lead_id: str, lead: dict, dec: Decisao, nome_tpl: str, wamid: str, agora: datetime, extras: dict) -> None:
     d = config.parametros()["disparos"]
     status = d["status_apos_template"][dec.template]
     conv_id = lead.get("conversa_id")
@@ -188,7 +205,7 @@ def _registrar_envio(db, lead_id: str, lead: dict, dec: Decisao, nome_tpl: str, 
         {"telefone": lead["celular"], "nome": lead.get("nome"), "origem": "leads_perdidos", "opt_out": False, "criado_em": agora}, merge=True)
     conv_ref.collection("mensagens").document(wamid).set({
         "direcao": "template", "tipo": "template", "template": nome_tpl, "codigo": dec.template,
-        "texto": f"[template {dec.template} {nome_tpl} enviado ao lead {lead.get('primeiro_nome') or ''}]",
+        "texto": templates_texto.renderizar(dec.template, lead.get("primeiro_nome") or "", **extras),
         "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
     conv_ref.set({"status": status, "ultimo_template_em": agora, "template_origem": dec.template}, merge=True)
     db.collection("leads").document(lead_id).set({

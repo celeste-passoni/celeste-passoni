@@ -11,7 +11,9 @@ Camadas, nesta ordem:
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from functools import lru_cache
+from zoneinfo import ZoneInfo
 from typing import Any
 
 import yaml
@@ -73,8 +75,19 @@ def contexto_lead(conversa: dict) -> str:
     return "\n".join(linhas)
 
 
-def formato_saida() -> str:
+DIAS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
+
+
+def formato_saida(agora: datetime | None = None) -> str:
+    """Bloco volátil do system (depois do cache): data/hora atual e regras operacionais."""
     p = config.parametros()["ia"]
-    return (f"FORMATO: responda só com as mensagens para o lead, separando cada balão por uma linha contendo apenas ---. "
+    agora = agora or datetime.now(ZoneInfo(config.FUSO))
+    return (f"AGORA: {DIAS[agora.weekday()]}, {agora.strftime('%d/%m/%Y %H:%M')} (horário de São Paulo). "
+            "Use esta data para interpretar 'hoje', 'amanhã', 'semana que vem', 'mês que vem' e para preencher datas nas ferramentas.\n"
+            f"FORMATO: responda só com as mensagens para o lead, separando cada balão por uma linha contendo apenas ---. "
             f"Entre {p['baloes_por_resposta']['min']} e {p['baloes_por_resposta']['max']} balões, no máximo {p['emojis_max_por_mensagem']} emojis por balão. "
-            "Nunca escreva nada além das mensagens (sem títulos, sem explicações).")
+            "Nunca escreva nada além das mensagens (sem títulos, sem explicações).\n"
+            "REGRAS OPERACIONAIS: se disser que vai enviar um vídeo, chame enviar_video na MESMA resposta. "
+            "Se o lead pedir para ser chamado em uma data ou período ('mês que vem', 'depois do dia 15'), converta para uma data concreta "
+            "(AAAA-MM-DD) em atualizar_status; se não houver data, use o status 'Irá nos retornar'. "
+            "Só ofereça horários que vieram de buscar_horarios nesta conversa.")
