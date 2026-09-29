@@ -67,6 +67,8 @@ def responder(p: Pedido):
         return {"ok": True, "ignorado": "tarefa obsoleta"}
     if not conv.get("aberta", True) or conv.get("modo", "ia") != "ia" or conv.get("opt_out"):
         return {"ok": True, "ignorado": "conversa fechada/pausada"}
+    if not conv.get("frente") and not _e_numero_teste(conv.get("contato", "")):
+        return _orientar_recepcao(ref, conv)
     if not _pode_responder(conv.get("contato", "")):
         ref.set({"pendente_resposta": False, "modo_teste_ignorado": True}, merge=True)
         log.info("modo teste: número fora da lista; mensagem gravada sem resposta (conversa %s)", p.conversa_id)
@@ -136,11 +138,45 @@ def responder(p: Pedido):
     return {"ok": True, "enviado": enviados, "modelo": res.modelo, "custo_usd": round(res.custo_usd, 5)}
 
 
+def _cfg_atendimento() -> dict:
+    cfg = dict(config.parametros()["ia"])
+    cfg.update(db.collection("config").document("atendimento").get().to_dict() or {})
+    return cfg
+
+
+def _e_numero_teste(contato: str) -> bool:
+    return contato in {str(n) for n in (_cfg_atendimento().get("numeros_teste") or [])}
+
+
+def _orientar_recepcao(ref, conv: dict) -> dict:
+    """Quem não está na base de leads recebe, uma vez por conversa, a orientação + botão 'Falar com Recepção'. Sem IA, sem custo."""
+    rec = config.parametros()["ia"]["recepcao"]
+    if not rec.get("orientar_nao_leads", True):
+        ref.set({"pendente_resposta": False, "sem_frente_ignorado": True}, merge=True)
+        return {"ok": True, "ignorado": "sem frente; orientação desligada"}
+    if conv.get("orientado_recepcao_em"):
+        ref.set({"pendente_resposta": False}, merge=True)
+        return {"ok": True, "ignorado": "sem frente; já orientado"}
+    _, mt, _ = _svc()
+    try:
+        wamid = mt.enviar_botao_url(conv["contato"], rec["orientacao_texto"], rec["botao_rotulo"], rec["link_wa"])
+    except Exception as e:
+        log.warning("orientação à recepção não enviada (%s): %s", conv.get("id"), e)
+        ref.set({"pendente_resposta": False}, merge=True)
+        return {"ok": False, "erro": "falha ao enviar orientação"}
+    ref.collection("mensagens").document(wamid).set({
+        "direcao": "celeste", "tipo": "interactive", "modelo": "automatico",
+        "texto": f"{rec['orientacao_texto']}\n[botão: {rec['botao_rotulo']} → {rec['link_wa']}]",
+        "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
+    ref.set({"pendente_resposta": False, "status": "Orientado à recepção", "orientado_recepcao_em": firestore.SERVER_TIMESTAMP,
+             "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP, "total_msgs_celeste": firestore.Increment(1)}, merge=True)
+    return {"ok": True, "enviado": 1, "orientado_recepcao": True}
+
+
 def _pode_responder(contato: str) -> bool:
     """teste: só numeros_teste · producao: quem está na base de leads (coleção `leads`) ou em numeros_teste · aberto: todos.
     Override: Firestore config/atendimento {modo, numeros_teste}."""
-    cfg = dict(config.parametros()["ia"])
-    cfg.update(db.collection("config").document("atendimento").get().to_dict() or {})
+    cfg = _cfg_atendimento()
     modo = cfg.get("modo", "teste")
     if modo == "aberto":
         return True
