@@ -165,8 +165,6 @@ def fila(request: Request, status: str = "", _=Depends(autenticar)):
         q = q.where("status_ia", "==", status)
     docs = [dict(l.to_dict(), id=l.id) for l in q.limit(500).stream()]
     docs.sort(key=lambda l: l.get("lead_created_at") or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
-    for l in docs:
-        l["celular_mascarado"] = "•••• " + l["id"][-4:]
     return tpl.TemplateResponse(request, "fila.html", {"leads": docs, "status": status,
                                                        "statuses": config.parametros()["leads_perdidos"]["status_ia"]})
 

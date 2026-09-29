@@ -11,7 +11,7 @@
 <tr><th>Lead</th><th>Frente</th><th>Status</th><th>Template</th><th>Última msg do lead</th><th>Última da {{ nome_ia }}</th><th>Custo</th><th></th></tr>
 {% for c in conversas %}
 <tr>
-  <td><a href="/conversas/{{ c.id }}">{{ c.nome or '(sem nome)' }}</a><br><span class="muted">•••• {{ (c.contato or '')[-4:] }}</span></td>
+  <td><a href="/conversas/{{ c.id }}">{{ c.nome or '(sem nome)' }}</a><br><span class="muted">{{ c.contato }}</span></td>
   <td><span class="tag {{ 'lp' if c.frente == 'leads_perdidos' else 'nl' }}">{{ FRENTES.get(c.frente, c.frente) }}</span></td>
   <td><span class="tag {% if c.status == 'Agendado' %}ok{% elif c.status in ('Encaminhado à recepção', 'Não quer (opt-out)') %}alerta{% endif %}">{{ c.status }}</span>{% if c.revisar %} <span class="tag alerta">revisar</span>{% endif %}</td>
   <td>{{ c.template_origem or '—' }}</td>

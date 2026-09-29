@@ -9,7 +9,7 @@
 <tr><th>Lead</th><th>Origem</th><th>Criado na clínica</th><th>Status na clínica</th><th>Status da IA</th><th>Passo</th><th>Último template</th><th>Conversa</th></tr>
 {% for l in leads %}
 <tr>
-  <td>{{ l.primeiro_nome or '(sem nome)' }} <span class="muted">{{ l.celular_mascarado }}</span></td>
+  <td>{{ l.nome or '(sem nome)' }}<br><span class="muted">{{ l.celular }}</span></td>
   <td>{{ l.origem or '—' }}</td><td>{{ l.lead_created_at|local }}</td><td>{{ l.status_clinica or '—' }}</td>
   <td><span class="tag">{{ l.status_ia }}</span></td><td>{{ l.passo }}</td><td>{{ l.ultimo_template_em|local or '—' }}</td>
   <td>{% if l.conversa_id %}<a href="/conversas/{{ l.conversa_id }}">abrir</a>{% else %}—{% endif %}</td>

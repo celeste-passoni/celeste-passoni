@@ -14,7 +14,7 @@
   <div>
     <div class="frente">
       <h3>Ficha</h3>
-      <p><b>WhatsApp:</b> •••• {{ (c.contato or '')[-4:] }} · <b>Origem:</b> {{ c.origem or lead.origem or '—' }}<br>
+      <p><b>WhatsApp:</b> <a href="https://wa.me/{{ c.contato }}" target="_blank">{{ c.contato }}</a> · <b>Origem:</b> {{ c.origem or lead.origem or '—' }}<br>
       <b>Template de origem:</b> {{ c.template_origem or '—' }} · <b>Ciclo:</b> {{ c.ciclo or '—' }}<br>
       <b>Lead criado na clínica em:</b> {{ lead.lead_created_at|local or '—' }} · <b>Status na clínica:</b> {{ lead.status_clinica or '—' }}<br>
       <b>Paciente TI Saúde:</b> {{ c.id_paciente_tisaude or '—' }} · <b>Agendamento:</b> {{ c.id_agendamento_tisaude or '—' }}
