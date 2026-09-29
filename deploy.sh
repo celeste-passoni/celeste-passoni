@@ -10,8 +10,17 @@ if [ -n "${IMAGEM_PRONTA:-}" ]; then
 else
   IMAGEM="${REGIAO}-docker.pkg.dev/${PROJETO}/celeste/celeste:$(date +%Y%m%d-%H%M%S)"
   echo ">> construindo imagem ${IMAGEM}"
-  # --suppress-logs: a conta de implantação não tem viewer do projeto para transmitir o log; o build segue normalmente
-  gcloud builds submit --project "$PROJETO" --region "$REGIAO" --tag "$IMAGEM" --suppress-logs --quiet .
+  # a conta de implantação não tem viewer do projeto para transmitir o log: submete assíncrono e consulta o status
+  BUILD_ID=$(gcloud builds submit --project "$PROJETO" --region "$REGIAO" --tag "$IMAGEM" --async --quiet --format='value(id)' . 2>/dev/null | tail -1)
+  echo ">> build ${BUILD_ID}"
+  while :; do
+    STATUS=$(gcloud builds describe "$BUILD_ID" --project "$PROJETO" --region "$REGIAO" --format='value(status)')
+    case "$STATUS" in
+      SUCCESS) echo ">> build concluído"; break ;;
+      FAILURE|CANCELLED|TIMEOUT|EXPIRED|INTERNAL_ERROR) echo "build falhou: $STATUS"; exit 1 ;;
+      *) sleep 15 ;;
+    esac
+  done
 fi
 
 deploy_orq() {
