@@ -202,6 +202,10 @@ def test_encaminhar_nao_devolve_link():
 
 
 def test_modo_teste_gate(monkeypatch):
+    import sys
+    import google.cloud.firestore as fs
+    monkeypatch.setattr(fs, "Client", lambda **k: None)   # o módulo cria um cliente Firestore ao importar
+    sys.modules.pop("celeste.orquestrador.app", None)
     from celeste.orquestrador import app as orq
     class Doc:
         def __init__(self, d): self._d = d
