@@ -154,9 +154,11 @@ def _orientar_recepcao(ref, conv: dict) -> dict:
     if not rec.get("orientar_nao_leads", True):
         ref.set({"pendente_resposta": False, "sem_frente_ignorado": True}, merge=True)
         return {"ok": True, "ignorado": "sem frente; orientação desligada"}
-    if conv.get("orientado_recepcao_em"):
+    ultimo = conv.get("orientado_recepcao_em")
+    intervalo = timedelta(hours=float(rec.get("orientacao_intervalo_horas") or 24))
+    if ultimo and datetime.now(timezone.utc) - ultimo < intervalo:
         ref.set({"pendente_resposta": False}, merge=True)
-        return {"ok": True, "ignorado": "sem frente; já orientado"}
+        return {"ok": True, "ignorado": "sem frente; já orientado nas últimas horas"}
     _, mt, _ = _svc()
     try:
         wamid = mt.enviar_botao_url(conv["contato"], rec["orientacao_texto"], rec["botao_rotulo"], rec["link_wa"])
@@ -168,7 +170,8 @@ def _orientar_recepcao(ref, conv: dict) -> dict:
         "direcao": "celeste", "tipo": "interactive", "modelo": "automatico",
         "texto": f"{rec['orientacao_texto']}\n[botão: {rec['botao_rotulo']} → {rec['link_wa']}]",
         "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
-    ref.set({"pendente_resposta": False, "status": "Orientado à recepção", "orientado_recepcao_em": firestore.SERVER_TIMESTAMP,
+    ref.set({"pendente_resposta": False, "status": "Orientado à recepção", "orientado_recepcao_em": datetime.now(timezone.utc),
+             "orientacoes_enviadas": firestore.Increment(1),
              "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP, "total_msgs_celeste": firestore.Increment(1)}, merge=True)
     return {"ok": True, "enviado": 1, "orientado_recepcao": True}
 

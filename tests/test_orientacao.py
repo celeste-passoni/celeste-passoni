@@ -24,7 +24,11 @@ def test_orienta_uma_vez_e_grava_no_painel(monkeypatch):
     gravado = ref.collection.return_value.document.return_value.set.call_args.args[0]
     assert gravado["direcao"] == "celeste" and "Falar com Recepção" in gravado["texto"]      # aparece no painel
     assert ref.set.call_args.args[0]["status"] == "Orientado à recepção"
-    # segunda mensagem da mesma pessoa: não reenvia
+    # segunda mensagem da mesma pessoa dentro de 24 h: não reenvia
+    from datetime import datetime, timedelta, timezone
     mt.reset_mock()
-    r2 = orq._orientar_recepcao(ref, {"id": "c1", "contato": "5511777770000", "orientado_recepcao_em": "x"})
+    r2 = orq._orientar_recepcao(ref, {"id": "c1", "contato": "5511777770000", "orientado_recepcao_em": datetime.now(timezone.utc) - timedelta(hours=23)})
     assert "já orientado" in r2["ignorado"] and not mt.enviar_botao_url.called
+    # depois de 24 h: reenvia
+    r3 = orq._orientar_recepcao(ref, {"id": "c1", "contato": "5511777770000", "orientado_recepcao_em": datetime.now(timezone.utc) - timedelta(hours=25)})
+    assert r3["orientado_recepcao"] and mt.enviar_botao_url.called

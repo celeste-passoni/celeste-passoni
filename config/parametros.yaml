@@ -129,6 +129,7 @@ ia:
     botao_texto: "É só tocar no botão abaixo para falar com a nossa recepção 💙"
     # quem escreve ao número e NÃO está na base de leads recebe esta orientação (1x por conversa, sem IA, sem custo) + o botão
     orientar_nao_leads: true
+    orientacao_intervalo_horas: 24         # repete a orientação se a pessoa voltar a escrever depois deste intervalo
     orientacao_texto: "Olá! Agradeço o seu contato 💙 Para ser atendido pela nossa recepção, é só tocar no botão abaixo. A equipe vai te responder por lá."
     notificar_por: "whatsapp"                 # a IA (número oficial) envia template utility ao número da recepção
     template_aviso: "aviso_lead_encaminhado"  # a criar na Meta (molde: aviso_interesse_acao_recepcao)
