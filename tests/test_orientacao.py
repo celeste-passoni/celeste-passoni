@@ -29,6 +29,9 @@ def test_orienta_uma_vez_e_grava_no_painel(monkeypatch):
     mt.reset_mock()
     r2 = orq._orientar_recepcao(ref, {"id": "c1", "contato": "5511777770000", "orientado_recepcao_em": datetime.now(timezone.utc) - timedelta(hours=23)})
     assert "já orientado" in r2["ignorado"] and not mt.enviar_botao_url.called
+    # botão do painel: força o envio mesmo dentro das 24 h
+    rf = orq._orientar_recepcao(ref, {"id": "c1", "contato": "5511777770000", "orientado_recepcao_em": datetime.now(timezone.utc)}, forcar=True)
+    assert rf["orientado_recepcao"] and mt.enviar_botao_url.called
     # depois de 24 h: reenvia
     r3 = orq._orientar_recepcao(ref, {"id": "c1", "contato": "5511777770000", "orientado_recepcao_em": datetime.now(timezone.utc) - timedelta(hours=25)})
     assert r3["orientado_recepcao"] and mt.enviar_botao_url.called

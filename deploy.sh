@@ -43,7 +43,9 @@ deploy_gw() {
 }
 
 deploy_painel() {
-  gcloud run deploy celeste-painel --project "$PROJETO" --region "$REGIAO" --image "$IMAGEM"     --service-account "celeste-painel@${PROJETO}.iam.gserviceaccount.com"     --allow-unauthenticated --timeout 60 --memory 512Mi --cpu 1 --min-instances 0 --max-instances 2     --set-env-vars "SERVICO=painel,GCP_PROJECT=${PROJETO},GCP_REGION=${REGIAO}" --quiet
+  gcloud run deploy celeste-painel --project "$PROJETO" --region "$REGIAO" --image "$IMAGEM"     --service-account "celeste-painel@${PROJETO}.iam.gserviceaccount.com"     --allow-unauthenticated --timeout 60 --memory 512Mi --cpu 1 --min-instances 0 --max-instances 2     --set-env-vars "SERVICO=painel,GCP_PROJECT=${PROJETO},GCP_REGION=${REGIAO},URL_ORQUESTRADOR=$(gcloud run services describe celeste-orquestrador --project "$PROJETO" --region "$REGIAO" --format 'value(status.url)')" --quiet
+  gcloud run services add-iam-policy-binding celeste-orquestrador --project "$PROJETO" --region "$REGIAO" \
+    --member "serviceAccount:celeste-painel@${PROJETO}.iam.gserviceaccount.com" --role roles/run.invoker --quiet
   echo ">> painel: $(gcloud run services describe celeste-painel --project "$PROJETO" --region "$REGIAO" --format 'value(status.url)')  (usuário passoni; senha no segredo painel-senha)"
 }
 

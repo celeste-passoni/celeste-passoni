@@ -148,7 +148,25 @@ def _e_numero_teste(contato: str) -> bool:
     return contato in {str(n) for n in (_cfg_atendimento().get("numeros_teste") or [])}
 
 
-def _orientar_recepcao(ref, conv: dict) -> dict:
+class PedidoOrientar(BaseModel):
+    conversa_id: str
+
+
+@app.post("/orientar")
+def orientar_manual(p: PedidoOrientar):
+    """Acionado pelo painel: envia a orientação + botão da recepção agora, ignorando o intervalo de 24 h entre repetições."""
+    ref = db.collection("conversas").document(p.conversa_id)
+    conv = ref.get().to_dict()
+    if not conv:
+        raise HTTPException(404, "conversa não existe")
+    conv["id"] = p.conversa_id
+    r = _orientar_recepcao(ref, conv, forcar=True)
+    if not r.get("ok"):
+        raise HTTPException(400, r.get("erro", "não foi possível enviar"))
+    return r
+
+
+def _orientar_recepcao(ref, conv: dict, forcar: bool = False) -> dict:
     """Quem não está na base de leads recebe, uma vez por conversa, a orientação + botão 'Falar com Recepção'. Sem IA, sem custo."""
     rec = config.parametros()["ia"]["recepcao"]
     if not rec.get("orientar_nao_leads", True):
@@ -156,7 +174,7 @@ def _orientar_recepcao(ref, conv: dict) -> dict:
         return {"ok": True, "ignorado": "sem frente; orientação desligada"}
     ultimo = conv.get("orientado_recepcao_em")
     intervalo = timedelta(hours=float(rec.get("orientacao_intervalo_horas") or 24))
-    if ultimo and datetime.now(timezone.utc) - ultimo < intervalo:
+    if not forcar and ultimo and datetime.now(timezone.utc) - ultimo < intervalo:
         ref.set({"pendente_resposta": False}, merge=True)
         return {"ok": True, "ignorado": "sem frente; já orientado nas últimas horas"}
     _, mt, _ = _svc()
@@ -165,9 +183,10 @@ def _orientar_recepcao(ref, conv: dict) -> dict:
     except Exception as e:
         log.warning("orientação à recepção não enviada (%s): %s", conv.get("id"), e)
         ref.set({"pendente_resposta": False}, merge=True)
-        return {"ok": False, "erro": "falha ao enviar orientação"}
+        fora = "131047" in str(e) or "janela" in str(e).lower()
+        return {"ok": False, "erro": "fora da janela de 24 h: a pessoa precisa escrever de novo antes" if fora else f"falha ao enviar: {str(e)[:160]}"}
     ref.collection("mensagens").document(wamid).set({
-        "direcao": "celeste", "tipo": "interactive", "modelo": "automatico",
+        "direcao": "celeste", "tipo": "interactive", "modelo": "manual (painel)" if forcar else "automatico",
         "texto": f"{rec['orientacao_texto']}\n[botão: {rec['botao_rotulo']} → {rec['link_wa']}]",
         "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
     ref.set({"pendente_resposta": False, "status": "Orientado à recepção", "orientado_recepcao_em": datetime.now(timezone.utc),

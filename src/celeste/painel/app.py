@@ -14,7 +14,10 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
+import requests
 from fastapi.responses import HTMLResponse, RedirectResponse
+from google.auth.transport.requests import Request as GRequest
+from google.oauth2 import id_token
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 from google.cloud import firestore
@@ -53,6 +56,7 @@ def _local(dt) -> str:
 
 tpl.env.filters["local"] = _local
 tpl.env.globals["nome_ia"] = config.parametros()["ia"]["nome_atendente"]
+URL_ORQUESTRADOR = os.environ.get("URL_ORQUESTRADOR", "")
 FRENTES = {"leads_perdidos": "Leads Perdidos", "novos_leads": "Novos Leads"}
 tpl.env.globals["FRENTES"] = FRENTES
 tpl.env.globals["rotulo_frente"] = lambda f: FRENTES.get(f) or "Sem frente"
@@ -161,8 +165,23 @@ def conversas(request: Request, frente: str = "", status: str = "", abertas: str
                                                             "status": status, "abertas": abertas, "statuses": statuses})
 
 
+@app.post("/conversas/{cid}/orientar")
+def orientar(cid: str, _=Depends(autenticar)):
+    """Envia agora a orientação + botão 'Falar com Recepção' para esta conversa (via orquestrador, sem IA)."""
+    if not URL_ORQUESTRADOR:
+        return RedirectResponse(f"/conversas/{cid}?aviso=URL do orquestrador não configurada", status_code=303)
+    try:
+        tok = id_token.fetch_id_token(GRequest(), URL_ORQUESTRADOR)
+        r = requests.post(f"{URL_ORQUESTRADOR}/orientar", json={"conversa_id": cid},
+                          headers={"Authorization": f"Bearer {tok}"}, timeout=60)
+        aviso = "Orientação enviada." if r.ok else (r.json().get("detail") if r.headers.get("content-type", "").startswith("application/json") else r.text[:160])
+    except Exception as e:
+        aviso = f"Falha: {str(e)[:160]}"
+    return RedirectResponse(f"/conversas/{cid}?aviso={aviso}", status_code=303)
+
+
 @app.get("/conversas/{cid}", response_class=HTMLResponse)
-def conversa(request: Request, cid: str, _=Depends(autenticar)):
+def conversa(request: Request, cid: str, aviso: str = "", _=Depends(autenticar)):
     ref = db.collection("conversas").document(cid)
     c = ref.get().to_dict()
     if not c:
@@ -171,7 +190,7 @@ def conversa(request: Request, cid: str, _=Depends(autenticar)):
     chamadas = [x.to_dict() for x in db.collection("chamadas_ia").where("conversa_id", "==", cid).stream()]
     chamadas.sort(key=lambda x: x.get("em") or datetime.min.replace(tzinfo=timezone.utc))
     lead = db.collection("leads").document(c.get("contato", "")).get().to_dict() or {}
-    return tpl.TemplateResponse(request, "conversa.html", {"c": dict(c, id=cid), "msgs": msgs, "chamadas": chamadas, "lead": lead,
+    return tpl.TemplateResponse(request, "conversa.html", {"c": dict(c, id=cid), "msgs": msgs, "chamadas": chamadas, "lead": lead, "aviso": aviso,
                                                            "custo": sum(x.get("custo_usd", 0) for x in chamadas)})
 
 
