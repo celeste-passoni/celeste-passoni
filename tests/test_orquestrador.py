@@ -183,3 +183,19 @@ def test_status_sem_data_vira_ira_retornar():
     assert conv["status"] == "Irá nos retornar"
     ferramentas_ia.executar("atualizar_status", {"status": "Vamos retornar na data solicitada", "data_retorno": "2026-11-03"}, ctx)
     assert conv["status"] == "Vamos retornar na data solicitada" and conv["proximo_recontato_em"] == "2026-11-03"
+
+
+def test_botao_url_payload():
+    from celeste.ferramentas import meta as m
+    cliente = m.Meta(session=MagicMock())
+    cliente._post = MagicMock(return_value={"messages": [{"id": "wamid.x"}]})
+    wamid = cliente.enviar_botao_url("5511", "Toque abaixo", "Falar com Recepção", "https://wa.me/5511916069009")
+    corpo = cliente._post.call_args.args[1]
+    assert wamid == "wamid.x" and corpo["type"] == "interactive" and corpo["interactive"]["type"] == "cta_url"
+    assert corpo["interactive"]["action"]["parameters"] == {"display_text": "Falar com Recepção", "url": "https://wa.me/5511916069009"}
+
+
+def test_encaminhar_nao_devolve_link():
+    ctx = _ctx()
+    saida, erro = ferramentas_ia.executar("encaminhar_recepcao", {"motivo": "pediu_pessoa", "resumo": "x"}, ctx)
+    assert not erro and "wa.me" not in saida and "Falar com Recepção" in prompt.formato_saida()

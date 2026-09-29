@@ -144,7 +144,7 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         ctx.avisar_recepcao(e["motivo"], e["resumo"])
         ctx.atualizar({"status": "Encaminhado à recepção", "motivo_encaminhamento": e["motivo"], "aberta": False})
         ctx.encerrar = True
-        return {"ok": True, "link_recepcao": config.parametros()["ia"]["recepcao"]["link_wa"]}
+        return {"ok": True, "aviso": "botão 'Falar com Recepção' será enviado automaticamente após suas mensagens; não escreva link nem número"}
 
     if nome == "registrar_opt_out":
         ctx.atualizar({"status": "Não quer (opt-out)", "aberta": False, "opt_out": True})

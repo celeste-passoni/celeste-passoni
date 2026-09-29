@@ -115,6 +115,17 @@ def responder(p: Pedido):
             "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": res.modelo,
             "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
         enviados += 1
+    if conv.get("status") == "Encaminhado à recepção" and ctx.encerrar:
+        rec = config.parametros()["ia"]["recepcao"]
+        try:
+            wamid = mt.enviar_botao_url(conv["contato"], rec["botao_texto"], rec["botao_rotulo"], rec["link_wa"])
+            ref.collection("mensagens").document(wamid).set({
+                "direcao": "celeste", "tipo": "interactive", "texto": f"{rec['botao_texto']}
+[botão: {rec['botao_rotulo']} → {rec['link_wa']}]",
+                "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
+            enviados += 1
+        except Exception as e:
+            log.warning("botão da recepção não enviado: %s", e)
     ref.set({"pendente_resposta": False, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP,
              "total_msgs_celeste": firestore.Increment(enviados), "custo_usd": firestore.Increment(res.custo_usd),
              "aberta": conv.get("aberta", True) and not ctx.encerrar}, merge=True)

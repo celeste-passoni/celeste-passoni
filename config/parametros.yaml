@@ -121,6 +121,8 @@ ia:
   recepcao:
     whatsapp: "5511916069009"                 # número da recepção (MarketZap)
     link_wa: "https://wa.me/5511916069009"
+    botao_rotulo: "Falar com Recepção"       # botão de link enviado automaticamente após o encaminhamento (máx. 20 caracteres)
+    botao_texto: "É só tocar no botão abaixo para falar com a nossa recepção 💛"
     notificar_por: "whatsapp"                 # a IA (número oficial) envia template utility ao número da recepção
     template_aviso: "aviso_lead_encaminhado"  # a criar na Meta (molde: aviso_interesse_acao_recepcao)
     aviso_conteudo: ["nome do lead", "telefone (link wa.me)", "motivo", "resumo em 3 linhas", "frente"]
