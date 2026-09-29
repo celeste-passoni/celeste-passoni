@@ -199,3 +199,23 @@ def test_encaminhar_nao_devolve_link():
     ctx = _ctx()
     saida, erro = ferramentas_ia.executar("encaminhar_recepcao", {"motivo": "pediu_pessoa", "resumo": "x"}, ctx)
     assert not erro and "wa.me" not in saida and "Falar com Recepção" in prompt.formato_saida()
+
+
+def test_modo_teste_gate(monkeypatch):
+    from celeste.orquestrador import app as orq
+    class Doc:
+        def __init__(self, d): self._d = d
+        def to_dict(self): return self._d
+    class Ref:
+        def __init__(self, d): self._d = d
+        def get(self): return Doc(self._d)
+    class Col:
+        def __init__(self, d): self._d = d
+        def document(self, _): return Ref(self._d)
+    class DB:
+        def __init__(self, d): self._d = d
+        def collection(self, _): return Col(self._d)
+    monkeypatch.setattr(orq, "db", DB({"modo": "teste", "numeros_teste": ["5511999990000"]}))
+    assert orq._pode_responder("5511999990000") and not orq._pode_responder("5511777770000")
+    monkeypatch.setattr(orq, "db", DB({"modo": "producao"}))
+    assert orq._pode_responder("5511777770000")

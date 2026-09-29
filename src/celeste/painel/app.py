@@ -92,7 +92,10 @@ def dashboard(request: Request, _=Depends(autenticar)):
     disp_cfg = dict(config.parametros()["disparos"])
     disp_cfg.update(db.collection("config").document("disparos").get().to_dict() or {})
     templates = _metricas_templates(conversas)
+    atend = dict(config.parametros()["ia"])
+    atend.update(db.collection("config").document("atendimento").get().to_dict() or {})
     return tpl.TemplateResponse(request, "dashboard.html", {
+        "atend": {"modo": atend.get("modo", "teste"), "numeros_teste": atend.get("numeros_teste") or []},
         "por_frente": por_frente, "leads": leads.most_common(), "elegiveis": elegiveis, "custo_hoje": custo_hoje,
         "custo_mes": custo_mes, "disp_hoje": disp_hoje, "disp_cfg": disp_cfg, "templates": templates,
         "cap": config.parametros()["modelos"]["cap_diario_usd"], "hoje": hoje})
@@ -116,6 +119,15 @@ def _metricas_templates(conversas: list[dict]) -> list[dict]:
         e = m[t]
         out.append({"codigo": t, "nome": nomes.get(t, t), **e, "taxa": f"{100 * e['respondidos'] / e['enviados']:.0f}%" if e["enviados"] else "—"})
     return out
+
+
+@app.post("/config/atendimento")
+def salvar_atendimento(modo: str = Form("teste"), numeros_teste: str = Form(""), _=Depends(autenticar)):
+    numeros = ["".join(ch for ch in n if ch.isdigit()) for n in numeros_teste.replace(";", ",").replace("\n", ",").split(",")]
+    db.collection("config").document("atendimento").set({
+        "modo": "producao" if modo == "producao" else "teste", "numeros_teste": [n for n in numeros if len(n) >= 12],
+        "alterado_em": firestore.SERVER_TIMESTAMP}, merge=True)
+    return RedirectResponse("/", status_code=303)
 
 
 @app.post("/config/disparos")

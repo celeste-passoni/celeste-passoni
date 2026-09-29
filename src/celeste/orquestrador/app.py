@@ -67,6 +67,10 @@ def responder(p: Pedido):
         return {"ok": True, "ignorado": "tarefa obsoleta"}
     if not conv.get("aberta", True) or conv.get("modo", "ia") != "ia" or conv.get("opt_out"):
         return {"ok": True, "ignorado": "conversa fechada/pausada"}
+    if not _pode_responder(conv.get("contato", "")):
+        ref.set({"pendente_resposta": False, "modo_teste_ignorado": True}, merge=True)
+        log.info("modo teste: número fora da lista; mensagem gravada sem resposta (conversa %s)", p.conversa_id)
+        return {"ok": True, "ignorado": "modo teste: número não autorizado"}
     if _custo_hoje() >= float(config.parametros()["modelos"]["cap_diario_usd"]):
         ref.set({"pausada_por_custo": True}, merge=True)
         log.error("cap diário de custo atingido; conversa %s pausada", p.conversa_id)
@@ -120,8 +124,7 @@ def responder(p: Pedido):
         try:
             wamid = mt.enviar_botao_url(conv["contato"], rec["botao_texto"], rec["botao_rotulo"], rec["link_wa"])
             ref.collection("mensagens").document(wamid).set({
-                "direcao": "celeste", "tipo": "interactive", "texto": f"{rec['botao_texto']}
-[botão: {rec['botao_rotulo']} → {rec['link_wa']}]",
+                "direcao": "celeste", "tipo": "interactive", "texto": f"{rec['botao_texto']}\n[botão: {rec['botao_rotulo']} → {rec['link_wa']}]",
                 "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
             enviados += 1
         except Exception as e:
@@ -131,6 +134,15 @@ def responder(p: Pedido):
              "aberta": conv.get("aberta", True) and not ctx.encerrar}, merge=True)
     _espelhar_lead(conv)
     return {"ok": True, "enviado": enviados, "modelo": res.modelo, "custo_usd": round(res.custo_usd, 5)}
+
+
+def _pode_responder(contato: str) -> bool:
+    """Em modo teste só responde aos números autorizados. Override: Firestore config/atendimento {modo, numeros_teste}."""
+    cfg = dict(config.parametros()["ia"])
+    cfg.update(db.collection("config").document("atendimento").get().to_dict() or {})
+    if cfg.get("modo", "teste") == "producao":
+        return True
+    return contato in {str(n) for n in (cfg.get("numeros_teste") or [])}
 
 
 # ----------------------------------------------------------------- histórico
