@@ -30,11 +30,13 @@
 
 <h2>Modo de atendimento</h2>
 <div class="frente">
-  {% if atend.modo != 'producao' %}<div class="aviso">Modo <b>teste</b>: a {{ nome_ia }} só responde aos números da lista. Mensagens de outros números ficam gravadas em Conversas, sem resposta e sem custo.</div>
-  {% else %}<div class="aviso" style="background:#dff0e5;border-color:#9fd1b0">Modo <b>produção</b>: a {{ nome_ia }} responde a todos que escreverem para o número oficial.</div>{% endif %}
+  {% if atend.modo == 'aberto' %}<div class="aviso" style="background:#f8e3d8;border-color:#e0b8a3">Modo <b>aberto</b>: a {{ nome_ia }} responde a todos que escreverem para o número oficial.</div>
+  {% elif atend.modo == 'producao' %}<div class="aviso" style="background:#dff0e5;border-color:#9fd1b0">Modo <b>produção</b>: a {{ nome_ia }} responde só a quem está na base de Leads Perdidos (e aos números de teste). Outros números ficam gravados em Conversas, sem resposta e sem custo.</div>
+  {% else %}<div class="aviso">Modo <b>teste</b>: a {{ nome_ia }} só responde aos números de teste. Mensagens de outros números ficam gravadas em Conversas, sem resposta e sem custo.</div>{% endif %}
   <form class="inline" method="post" action="/config/atendimento">
-    <label><input type="radio" name="modo" value="teste" {% if atend.modo != 'producao' %}checked{% endif %}> Teste</label>
-    <label><input type="radio" name="modo" value="producao" {% if atend.modo == 'producao' %}checked{% endif %}> Produção</label>
+    <label><input type="radio" name="modo" value="teste" {% if atend.modo not in ('producao', 'aberto') %}checked{% endif %}> Teste</label>
+    <label><input type="radio" name="modo" value="producao" {% if atend.modo == 'producao' %}checked{% endif %}> Produção (só base de leads)</label>
+    <label><input type="radio" name="modo" value="aberto" {% if atend.modo == 'aberto' %}checked{% endif %}> Aberto (todos)</label>
     <label>Números de teste <input type="text" name="numeros_teste" value="{{ atend.numeros_teste|join(', ') }}" placeholder="5511999990000, 5511888880000" style="width:320px;padding:6px 8px;border:1px solid var(--linha);border-radius:6px;font-family:inherit"></label>
     <button type="submit">Salvar</button>
   </form>

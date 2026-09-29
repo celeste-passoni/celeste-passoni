@@ -137,12 +137,18 @@ def responder(p: Pedido):
 
 
 def _pode_responder(contato: str) -> bool:
-    """Em modo teste só responde aos números autorizados. Override: Firestore config/atendimento {modo, numeros_teste}."""
+    """teste: só numeros_teste · producao: quem está na base de leads (coleção `leads`) ou em numeros_teste · aberto: todos.
+    Override: Firestore config/atendimento {modo, numeros_teste}."""
     cfg = dict(config.parametros()["ia"])
     cfg.update(db.collection("config").document("atendimento").get().to_dict() or {})
-    if cfg.get("modo", "teste") == "producao":
+    modo = cfg.get("modo", "teste")
+    if modo == "aberto":
         return True
-    return contato in {str(n) for n in (cfg.get("numeros_teste") or [])}
+    if contato in {str(n) for n in (cfg.get("numeros_teste") or [])}:
+        return True
+    if modo == "producao":
+        return db.collection("leads").document(contato).get().exists
+    return False
 
 
 # ----------------------------------------------------------------- histórico

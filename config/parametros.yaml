@@ -92,7 +92,8 @@ ia:
   cargo: "concierge da Passoni Clinic"
   idioma: "pt-BR"
   operacao_24_7: true                 # responde a qualquer hora
-  modo: "teste"                       # teste = só responde aos numeros_teste (o resto é gravado no painel, sem resposta) | producao = responde a todos
+  modo: "teste"                       # teste = só responde aos numeros_teste | producao = só quem está na base de leads (coleção leads) + numeros_teste | aberto = todos
+                                      # em qualquer modo, quem não é respondido fica gravado no painel, sem custo
   numeros_teste: []                   # ex.: ["5511999990000"]; o painel/Firestore (config/atendimento) sobrescreve modo e lista
   iniciar_resgates_apenas_em_horario_comercial: true  # resgates/follow-ups só 09:00–19:00 seg–sex
   emojis_max_por_mensagem: 2

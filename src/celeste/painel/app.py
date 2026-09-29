@@ -125,7 +125,7 @@ def _metricas_templates(conversas: list[dict]) -> list[dict]:
 def salvar_atendimento(modo: str = Form("teste"), numeros_teste: str = Form(""), _=Depends(autenticar)):
     numeros = ["".join(ch for ch in n if ch.isdigit()) for n in numeros_teste.replace(";", ",").replace("\n", ",").split(",")]
     db.collection("config").document("atendimento").set({
-        "modo": "producao" if modo == "producao" else "teste", "numeros_teste": [n for n in numeros if len(n) >= 12],
+        "modo": modo if modo in ("teste", "producao", "aberto") else "teste", "numeros_teste": [n for n in numeros if len(n) >= 12],
         "alterado_em": firestore.SERVER_TIMESTAMP}, merge=True)
     return RedirectResponse("/", status_code=303)
 
