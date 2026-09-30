@@ -335,7 +335,9 @@ disparos:
 # Campanhas da recepção (Inativos, Retorno, Geral) — disparos feitos pelos fluxos da clínica, NÃO pela IA
 # ---------------------------------------------------------------------
 campanhas:
-  fonte: "automacoes.controle_envio_*"   # tabelas do BigQuery gravadas pelo n8n
-  janela_dias: 60                        # quem recebeu disparo nos últimos N dias é rotulado com a campanha
+  # Fontes: tabela automacoes.controle_envio_* + valor da coluna `acao`. Só quem recebeu disparo dessas ações é rotulado.
+  # Ações antigas (ex.: inativos, inativos_2) NÃO entram. Para uma nova ação, acrescente uma linha aqui.
+  fontes:
+    - { tabela: controle_envio_inativos, acao: inativos_outubro, rotulo: "Inativos · outubro/2026" }
   sincronizar_a_cada_min: 30
   # Conversas com frente "campanha" nunca são atendidas pela IA (em nenhum modo); a equipe direciona à recepção pelo painel.

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Campanhas da recepção (Inativos, Retorno, Geral): quem recebeu disparo pelos fluxos da clínica.
+"""Campanhas da recepção: quem recebeu disparo pelos fluxos da clínica (n8n) e por isso NÃO é atendido pela IA.
 
-Fonte: tabelas `automacoes.controle_envio_*` do BigQuery (o fluxo do n8n grava celular, nome, enviado_em, acao).
-Destino: Firestore `campanha_contatos/{celular}` → o gateway rotula a conversa com a campanha e a IA NÃO atende.
-Também corrige conversas já abertas sem frente cujo número pertença a uma campanha.
+Fonte: tabelas `automacoes.controle_envio_*` do BigQuery, filtradas pela coluna `acao` — só as ações listadas em
+`campanhas.fontes` (config/parametros.yaml) contam. Destino: Firestore `campanha_contatos/{celular}`.
+O gateway rotula a conversa com a campanha; contatos que deixarem de estar nas fontes são removidos e as conversas voltam a "sem frente".
 """
 from __future__ import annotations
 
@@ -17,76 +17,62 @@ from celeste.jobs.base_leads import normalizar_celular
 
 log = logging.getLogger(__name__)
 
-TABELAS = {  # tabela → rótulo da campanha
-    "controle_envio_inativos": "Inativos",
-    "controle_envio_retorno": "Retorno",
-    "controle_envio_geral": "Geral",
-}
-MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
 
-
-def _sql(tabela: str, dias: int) -> str:
+def _sql(tabela: str, acao: str) -> str:
     return f"""
     SELECT celular, nome, acao, status,
-           GREATEST(IFNULL(enviado_em, TIMESTAMP('2000-01-01')), IFNULL(enviado_em_repescagem, TIMESTAMP('2000-01-01')),
-                    IFNULL(enviado_em_repescagem_2, TIMESTAMP('2000-01-01'))) AS ultimo_envio
+           COALESCE(enviado_em, enviado_em_repescagem, enviado_em_repescagem_2, criado_em) AS ultimo_envio
     FROM `{config.PROJETO_GCP}.automacoes.{tabela}`
-    WHERE COALESCE(enviado_em, enviado_em_repescagem, enviado_em_repescagem_2) IS NOT NULL
-      AND GREATEST(IFNULL(enviado_em, TIMESTAMP('2000-01-01')), IFNULL(enviado_em_repescagem, TIMESTAMP('2000-01-01')),
-                   IFNULL(enviado_em_repescagem_2, TIMESTAMP('2000-01-01'))) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL {int(dias)} DAY)
+    WHERE acao = @acao
+      AND COALESCE(enviado_em, enviado_em_repescagem, enviado_em_repescagem_2) IS NOT NULL
     """
 
 
-def rotulo(tabela: str, quando: datetime) -> str:
-    return f"{TABELAS[tabela]} · {MESES[quando.month - 1]}/{quando.year}"
-
-
-def sincronizar(dias: int = 60) -> dict:
-    p = config.parametros().get("campanhas", {})
-    dias = int(p.get("janela_dias", dias))
+def sincronizar() -> dict:
+    fontes = config.parametros().get("campanhas", {}).get("fontes") or []
     bq = bigquery.Client(project=config.PROJETO_GCP)
     db = firestore.Client(project=config.PROJETO_GCP)
     agora = datetime.now(timezone.utc)
-    resumo: dict = {"importados": 0, "por_campanha": {}, "conversas_rotuladas": 0, "invalidos": 0}
+    resumo: dict = {"importados": 0, "por_campanha": {}, "removidos": 0, "conversas_rotuladas": 0, "conversas_desrotuladas": 0, "invalidos": 0}
+    validos: dict[str, str] = {}
     lote, n = db.batch(), 0
-    vistos: set[str] = set()
-    for tabela in TABELAS:
+    for f in fontes:
+        tabela, acao, rot = f["tabela"], f["acao"], f["rotulo"]
         try:
-            linhas = list(bq.query(_sql(tabela, dias)).result())
+            job = bq.query(_sql(tabela, acao), job_config=bigquery.QueryJobConfig(
+                query_parameters=[bigquery.ScalarQueryParameter("acao", "STRING", acao)]))
+            linhas = list(job.result())
         except Exception as e:
-            log.warning("campanhas: falha lendo %s: %s", tabela, e)
-            resumo[f"erro_{tabela}"] = str(e)[:160]
+            log.warning("campanhas: falha lendo %s/%s: %s", tabela, acao, e)
+            resumo[f"erro_{tabela}_{acao}"] = str(e)[:160]
             continue
         for r in linhas:
             cel = normalizar_celular(r["celular"])
             if not cel:
                 resumo["invalidos"] += 1
                 continue
-            quando = r["ultimo_envio"]
-            camp = rotulo(tabela, quando.astimezone(timezone.utc) if quando.tzinfo else quando)
-            # um número em mais de uma tabela: fica com o envio mais recente
-            if cel in vistos:
-                atual = db.collection("campanha_contatos").document(cel).get().to_dict() or {}
-                if atual.get("ultimo_envio_em") and atual["ultimo_envio_em"] >= quando:
-                    continue
-            vistos.add(cel)
+            validos[cel] = rot
             lote.set(db.collection("campanha_contatos").document(cel), {
-                "celular": cel, "nome": (r["nome"] or "").strip(), "campanha": camp, "fonte": tabela,
-                "acao": r["acao"], "status_fluxo": r["status"], "ultimo_envio_em": quando, "sincronizado_em": agora}, merge=True)
+                "celular": cel, "nome": (r["nome"] or "").strip(), "campanha": rot, "fonte": tabela, "acao": acao,
+                "status_fluxo": r["status"], "ultimo_envio_em": r["ultimo_envio"], "sincronizado_em": agora}, merge=True)
             n += 1; resumo["importados"] += 1
-            resumo["por_campanha"][camp] = resumo["por_campanha"].get(camp, 0) + 1
+            resumo["por_campanha"][rot] = resumo["por_campanha"].get(rot, 0) + 1
             if n >= 400:
                 lote.commit(); lote, n = db.batch(), 0
     if n:
         lote.commit()
 
-    # conversas abertas sem frente cujo número é de campanha → rotula (a resposta pode ter chegado antes da sincronização)
-    for c in db.collection("conversas").where("frente", "==", None).stream():
-        d = c.to_dict()
-        cc = db.collection("campanha_contatos").document(d.get("contato", "")).get()
-        if cc.exists:
-            info = cc.to_dict()
-            c.reference.set({"frente": "campanha", "campanha": info["campanha"], "nome": d.get("nome") or info.get("nome")}, merge=True)
-            resumo["conversas_rotuladas"] += 1
+    # remove contatos que não pertencem mais a nenhuma fonte configurada
+    for doc in db.collection("campanha_contatos").select([]).stream():
+        if doc.id not in validos:
+            doc.reference.delete(); resumo["removidos"] += 1
+
+    # conversas: rotula as sem frente cujo número é de campanha; desrotula as de campanha cujo número saiu
+    for c in db.collection("conversas").stream():
+        d = c.to_dict(); tel = d.get("contato", "")
+        if d.get("frente") is None and tel in validos:
+            c.reference.set({"frente": "campanha", "campanha": validos[tel]}, merge=True); resumo["conversas_rotuladas"] += 1
+        elif d.get("frente") == "campanha" and tel not in validos:
+            c.reference.set({"frente": None, "campanha": None}, merge=True); resumo["conversas_desrotuladas"] += 1
     log.info("campanhas: %s", resumo)
     return resumo
