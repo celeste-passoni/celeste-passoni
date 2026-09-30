@@ -20,7 +20,7 @@ def test_orienta_uma_vez_e_grava_no_painel(monkeypatch):
     ref = MagicMock()
     r = orq._orientar_recepcao(ref, {"id": "c1", "contato": "5511777770000"})
     assert r["orientado_recepcao"] and mt.enviar_botao_url.call_args.args[2] == "Falar com Recepção"
-    assert "atendido pela nossa recepção" in mt.enviar_botao_url.call_args.args[1]
+    assert "recepção ou equipe médica" in mt.enviar_botao_url.call_args.args[1]
     gravado = ref.collection.return_value.document.return_value.set.call_args.args[0]
     assert gravado["direcao"] == "celeste" and "Falar com Recepção" in gravado["texto"]      # aparece no painel
     assert ref.set.call_args.args[0]["status"] == "Orientado à recepção"
