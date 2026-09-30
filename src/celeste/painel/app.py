@@ -59,7 +59,7 @@ tpl.env.globals["nome_ia"] = config.parametros()["ia"]["nome_atendente"]
 URL_ORQUESTRADOR = os.environ.get("URL_ORQUESTRADOR", "")
 FRENTES = {"leads_perdidos": "Leads Perdidos", "novos_leads": "Novos Leads"}
 tpl.env.globals["FRENTES"] = FRENTES
-tpl.env.globals["rotulo_frente"] = lambda f: FRENTES.get(f) or "Sem frente"
+tpl.env.globals["rotulo_frente"] = lambda f, camp=None: (camp or "Campanha") if f == "campanha" else (FRENTES.get(f) or "Sem frente")
 
 
 @app.get("/status")  # /healthz é interceptado pelo front-end do Google no Cloud Run
@@ -69,7 +69,7 @@ def healthz():
 
 # ----------------------------------------------------------------- dashboard
 @app.get("/", response_class=HTMLResponse)
-def dashboard(request: Request, _=Depends(autenticar)):
+def dashboard(request: Request, aviso: str = "", _=Depends(autenticar)):
     hoje = datetime.now(FUSO).strftime("%Y-%m-%d")
     mes = hoje[:7]
     conversas = [dict(c.to_dict(), id=c.id) for c in db.collection("conversas").stream()]
@@ -91,6 +91,18 @@ def dashboard(request: Request, _=Depends(autenticar)):
         if d.get("elegivel"):
             elegiveis += 1
             leads[d.get("status_ia") or "Não contatado"] += 1
+    # campanhas da recepção: enviados (campanha_contatos) × responderam (conversas) × orientados
+    campanhas = {}
+    for cc in db.collection("campanha_contatos").select(["campanha"]).stream():
+        k = cc.to_dict().get("campanha") or "Campanha"
+        campanhas.setdefault(k, {"enviados": 0, "responderam": 0, "orientados": 0})["enviados"] += 1
+    for c in conversas:
+        if c.get("frente") == "campanha":
+            k = c.get("campanha") or "Campanha"
+            campanhas.setdefault(k, {"enviados": 0, "responderam": 0, "orientados": 0})
+            campanhas[k]["responderam"] += 1
+            if c.get("orientado_recepcao_em"):
+                campanhas[k]["orientados"] += 1
     sem_frente = [c for c in conversas if not c.get("frente")]
     por_frente["sem_frente"] = {"conversas": len(sem_frente), "abertas": sum(1 for c in sem_frente if c.get("aberta")),
                                 "respondidas": sum(1 for c in sem_frente if c.get("ultima_msg_celeste_em")), "agendados": 0,
@@ -104,6 +116,7 @@ def dashboard(request: Request, _=Depends(autenticar)):
     atend = dict(config.parametros()["ia"])
     atend.update(db.collection("config").document("atendimento").get().to_dict() or {})
     return tpl.TemplateResponse(request, "dashboard.html", {
+        "campanhas": dict(sorted(campanhas.items())), "aviso": aviso,
         "atend": {"modo": atend.get("modo", "teste"), "numeros_teste": atend.get("numeros_teste") or [],
                   "orientar_automatico": atend.get("orientar_automatico", config.parametros()["ia"]["recepcao"].get("orientar_nao_leads", False))},
         "por_frente": por_frente, "leads": leads.most_common(), "elegiveis": elegiveis, "custo_hoje": custo_hoje,
@@ -141,6 +154,22 @@ def salvar_atendimento(modo: str = Form("teste"), numeros_teste: str = Form(""),
     return RedirectResponse("/", status_code=303)
 
 
+@app.post("/campanhas/sincronizar")
+def sincronizar_campanhas(_=Depends(autenticar)):
+    """Importa agora quem recebeu disparo dos fluxos da clínica (via serviço de jobs)."""
+    url = os.environ.get("URL_JOBS", "")
+    if not url:
+        return RedirectResponse("/?aviso=URL do serviço de jobs não configurada", status_code=303)
+    try:
+        tok = id_token.fetch_id_token(GRequest(), url)
+        r = requests.post(f"{url}/jobs/campanhas", headers={"Authorization": f"Bearer {tok}"}, timeout=300)
+        j = r.json() if r.ok else {}
+        aviso = f"Campanhas sincronizadas: {j.get('importados', 0)} contatos, {j.get('conversas_rotuladas', 0)} conversas rotuladas." if r.ok else f"Falha: {r.text[:160]}"
+    except Exception as e:
+        aviso = f"Falha: {str(e)[:160]}"
+    return RedirectResponse(f"/?aviso={aviso}", status_code=303)
+
+
 @app.post("/config/disparos")
 def salvar_disparos(ativo: str = Form("off"), limite_diario: int = Form(100), limite_por_execucao: int = Form(25), _=Depends(autenticar)):
     db.collection("config").document("disparos").set({
@@ -155,15 +184,19 @@ def conversas(request: Request, frente: str = "", status: str = "", abertas: str
     docs = [dict(c.to_dict(), id=c.id) for c in db.collection("conversas").stream()]
     if frente == "sem_frente":
         docs = [c for c in docs if not c.get("frente")]
+    elif frente.startswith("campanha:"):
+        docs = [c for c in docs if c.get("frente") == "campanha" and c.get("campanha") == frente[9:]]
     elif frente:
         docs = [c for c in docs if c.get("frente") == frente]
+    campanhas_lista = sorted({c.get("campanha") for c in db.collection("conversas").select(["campanha"]).stream()
+                              for c in [c.to_dict()] if c.get("campanha")})
     if status:
         docs = [c for c in docs if c.get("status") == status]
     if abertas:
         docs = [c for c in docs if c.get("aberta")]
     docs.sort(key=lambda c: (c.get("ultima_msg_lead_em") or c.get("criado_em") or datetime.min.replace(tzinfo=timezone.utc)), reverse=True)
     statuses = sorted({c.get("status") for c in docs if c.get("status")})
-    return tpl.TemplateResponse(request, "conversas.html", {"conversas": docs[:300], "total": len(docs), "frente": frente,
+    return tpl.TemplateResponse(request, "conversas.html", {"conversas": docs[:300], "total": len(docs), "frente": frente, "campanhas_lista": campanhas_lista,
                                                             "status": status, "abertas": abertas, "statuses": statuses})
 
 

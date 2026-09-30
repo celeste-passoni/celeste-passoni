@@ -33,6 +33,7 @@ db = firestore.Client(project=config.PROJETO_GCP)
 BUCKET = os.environ.get("BUCKET_MIDIA", f"celeste-midia-{config.PROJETO_GCP}")
 SIMULAR_DELAY = os.environ.get("SIMULAR_DELAY", "1") == "1"   # desligar em testes locais
 FUSO = ZoneInfo(config.FUSO)
+FRENTES_IA = {f for f, cfg in config.parametros()["frentes"].items() if cfg.get("ativa")}   # hoje: leads_perdidos
 
 _motor: motor.Motor | None = None
 _meta: meta.Meta | None = None
@@ -67,8 +68,8 @@ def responder(p: Pedido):
         return {"ok": True, "ignorado": "tarefa obsoleta"}
     if not conv.get("aberta", True) or conv.get("modo", "ia") != "ia" or conv.get("opt_out"):
         return {"ok": True, "ignorado": "conversa fechada/pausada"}
-    if not conv.get("frente") and not _e_numero_teste(conv.get("contato", "")):
-        return _orientar_recepcao(ref, conv)
+    if conv.get("frente") not in FRENTES_IA and not _e_numero_teste(conv.get("contato", "")):
+        return _orientar_recepcao(ref, conv)   # sem frente ou campanha da recepção: a IA não atende
     if not _pode_responder(conv.get("contato", "")):
         ref.set({"pendente_resposta": False, "modo_teste_ignorado": True}, merge=True)
         log.info("modo teste: número fora da lista; mensagem gravada sem resposta (conversa %s)", p.conversa_id)

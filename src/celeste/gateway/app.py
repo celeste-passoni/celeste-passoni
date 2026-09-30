@@ -94,13 +94,20 @@ def _conversa_aberta(telefone: str, nome: str | None):
     for c in abertas:
         return c.reference
     # frente: quem está na base de leads (coleção `leads`) é Leads Perdidos; quem não está fica SEM frente
-    frente = "leads_perdidos" if db.collection("leads").document(telefone).get().exists else None
+    frente, campanha = None, None
+    if db.collection("leads").document(telefone).get().exists:
+        frente = "leads_perdidos"
+    else:
+        cc = db.collection("campanha_contatos").document(telefone).get()
+        if cc.exists:  # recebeu disparo dos fluxos da clínica (Inativos/Retorno/Geral): a IA não atende
+            frente, campanha = "campanha", cc.to_dict().get("campanha")
+            nome = nome or cc.to_dict().get("nome")
     contato = db.collection("contatos").document(telefone)
     if not contato.get().exists:
         contato.set({"telefone": telefone, "nome": nome, "criado_em": firestore.SERVER_TIMESTAMP, "opt_out": False,
                      "origem": frente or "espontaneo"}, merge=True)
     ref = db.collection("conversas").document()
-    ref.set({"contato": telefone, "nome": nome, "frente": frente, "modo": "ia", "status": "Em conversa",
+    ref.set({"contato": telefone, "nome": nome, "frente": frente, "campanha": campanha, "modo": "ia", "status": "Em conversa",
              "aberta": True, "criado_em": firestore.SERVER_TIMESTAMP, "origem": "espontaneo"})
     return ref
 

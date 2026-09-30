@@ -43,8 +43,10 @@ deploy_gw() {
 }
 
 deploy_painel() {
-  gcloud run deploy celeste-painel --project "$PROJETO" --region "$REGIAO" --image "$IMAGEM"     --service-account "celeste-painel@${PROJETO}.iam.gserviceaccount.com"     --allow-unauthenticated --timeout 60 --memory 512Mi --cpu 1 --min-instances 0 --max-instances 2     --set-env-vars "SERVICO=painel,GCP_PROJECT=${PROJETO},GCP_REGION=${REGIAO},URL_ORQUESTRADOR=$(gcloud run services describe celeste-orquestrador --project "$PROJETO" --region "$REGIAO" --format 'value(status.url)')" --quiet
+  gcloud run deploy celeste-painel --project "$PROJETO" --region "$REGIAO" --image "$IMAGEM"     --service-account "celeste-painel@${PROJETO}.iam.gserviceaccount.com"     --allow-unauthenticated --timeout 60 --memory 512Mi --cpu 1 --min-instances 0 --max-instances 2     --set-env-vars "SERVICO=painel,GCP_PROJECT=${PROJETO},GCP_REGION=${REGIAO},URL_ORQUESTRADOR=$(gcloud run services describe celeste-orquestrador --project "$PROJETO" --region "$REGIAO" --format 'value(status.url)'),URL_JOBS=$(gcloud run services describe celeste-jobs --project "$PROJETO" --region "$REGIAO" --format 'value(status.url)')" --quiet
   gcloud run services add-iam-policy-binding celeste-orquestrador --project "$PROJETO" --region "$REGIAO" \
+    --member "serviceAccount:celeste-painel@${PROJETO}.iam.gserviceaccount.com" --role roles/run.invoker --quiet
+  gcloud run services add-iam-policy-binding celeste-jobs --project "$PROJETO" --region "$REGIAO" \
     --member "serviceAccount:celeste-painel@${PROJETO}.iam.gserviceaccount.com" --role roles/run.invoker --quiet
   echo ">> painel: $(gcloud run services describe celeste-painel --project "$PROJETO" --region "$REGIAO" --format 'value(status.url)')  (usuário passoni; senha no segredo painel-senha)"
 }
@@ -61,6 +63,7 @@ deploy_jobs() {
   agendar celeste-carregar-base "0 6 * * *"        /jobs/carregar-base
   agendar celeste-disparos      "*/30 9-18 * * 1-5" /jobs/disparos
   agendar celeste-espelho       "30 23 * * *"       /jobs/espelho
+  agendar celeste-campanhas     "*/30 7-22 * * *"   /jobs/campanhas
 }
 
 case "$ALVO" in

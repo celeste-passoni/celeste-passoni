@@ -1,5 +1,6 @@
 {% extends "base.html" %}{% block titulo %}Visão geral{% endblock %}
 {% block corpo %}
+{% if aviso %}<div class="aviso">{{ aviso }}</div>{% endif %}
 <h1>Visão geral <span class="muted" style="font-size:14px;font-weight:400">· {{ hoje }}</span></h1>
 
 <div class="cards">
@@ -29,6 +30,17 @@
 </div>
 
 <p class="muted" style="margin-top:10px">Sem frente (não estão na base de leads): <b>{{ por_frente.sem_frente.conversas }}</b> conversa(s), {{ por_frente.sem_frente.respondidas }} respondida(s) · <a href="/conversas?frente=sem_frente">ver</a></p>
+
+<h2>Campanhas da recepção <span class="muted" style="font-weight:400;text-transform:none;letter-spacing:0">(disparos dos fluxos da clínica; a {{ nome_ia }} não atende)</span></h2>
+<div class="frente">
+  {% if campanhas %}
+  <table><tr><th>Campanha</th><th>Receberam disparo</th><th>Responderam no número</th><th>Orientados à recepção</th><th></th></tr>
+  {% for nome, d in campanhas.items() %}<tr><td><b>{{ nome }}</b></td><td>{{ d.enviados }}</td><td>{{ d.responderam }}</td><td>{{ d.orientados }}</td>
+    <td><a href="/conversas?frente=campanha:{{ nome }}">ver conversas</a></td></tr>{% endfor %}
+  </table>
+  {% else %}<p class="muted">Nenhum contato de campanha importado ainda.</p>{% endif %}
+  <form method="post" action="/campanhas/sincronizar" style="margin-top:10px"><button type="submit" class="leve">Sincronizar agora</button> <span class="muted" style="font-size:12px">importa quem recebeu disparo (Inativos, Retorno, Geral) das tabelas da clínica; automático a cada 30 min</span></form>
+</div>
 
 <h2>Modo de atendimento</h2>
 <div class="frente">

@@ -21,7 +21,7 @@ COLECOES = {  # nome da tabela → coleção (None = collection group)
     "leads": ("leads", False), "conversas": ("conversas", False), "mensagens": ("mensagens", True),
     "chamadas_ia": ("chamadas_ia", False), "status_entrega": ("status_entrega", False),
     "encaminhamentos": ("encaminhamentos", False), "custos_diarios": ("custos_diarios", False),
-    "disparos_diarios": ("disparos_diarios", False),
+    "disparos_diarios": ("disparos_diarios", False), "campanha_contatos": ("campanha_contatos", False),
 }
 
 
