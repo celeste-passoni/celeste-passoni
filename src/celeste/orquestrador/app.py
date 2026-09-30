@@ -169,9 +169,11 @@ def orientar_manual(p: PedidoOrientar):
 def _orientar_recepcao(ref, conv: dict, forcar: bool = False) -> dict:
     """Quem não está na base de leads recebe, uma vez por conversa, a orientação + botão 'Falar com Recepção'. Sem IA, sem custo."""
     rec = config.parametros()["ia"]["recepcao"]
-    if not rec.get("orientar_nao_leads", True):
+    cfg = _cfg_atendimento()
+    automatico = cfg.get("orientar_automatico", rec.get("orientar_nao_leads", False))
+    if not forcar and not automatico:
         ref.set({"pendente_resposta": False, "sem_frente_ignorado": True}, merge=True)
-        return {"ok": True, "ignorado": "sem frente; orientação desligada"}
+        return {"ok": True, "ignorado": "sem frente; orientação automática desligada (use o botão no painel)"}
     ultimo = conv.get("orientado_recepcao_em")
     intervalo = timedelta(hours=float(rec.get("orientacao_intervalo_horas") or 24))
     if not forcar and ultimo and datetime.now(timezone.utc) - ultimo < intervalo:

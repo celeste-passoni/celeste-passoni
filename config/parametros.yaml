@@ -128,7 +128,7 @@ ia:
     botao_rotulo: "Falar com Recepção"       # botão de link enviado automaticamente após o encaminhamento (máx. 20 caracteres)
     botao_texto: "É só tocar no botão abaixo para falar com a nossa recepção 💙"
     # quem escreve ao número e NÃO está na base de leads recebe esta orientação (1x por conversa, sem IA, sem custo) + o botão
-    orientar_nao_leads: true
+    orientar_nao_leads: false              # orientação AUTOMÁTICA a quem não é lead (painel sobrescreve em config/atendimento.orientar_automatico); o botão manual do painel funciona sempre
     orientacao_intervalo_horas: 24         # repete a orientação se a pessoa voltar a escrever depois deste intervalo
     orientacao_texto: "Olá! Agradeço o seu contato 💙 Para ser atendido pela nossa recepção, é só tocar no botão abaixo. A equipe vai te responder por lá."
     notificar_por: "whatsapp"                 # a IA (número oficial) envia template utility ao número da recepção
