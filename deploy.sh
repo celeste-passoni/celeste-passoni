@@ -63,7 +63,6 @@ deploy_jobs() {
   agendar celeste-carregar-base "0 6 * * *"        /jobs/carregar-base
   agendar celeste-disparos      "*/30 9-18 * * 1-5" /jobs/disparos
   agendar celeste-espelho       "30 23 * * *"       /jobs/espelho
-  agendar celeste-campanhas     "*/30 7-22 * * *"   /jobs/campanhas
 }
 
 case "$ALVO" in

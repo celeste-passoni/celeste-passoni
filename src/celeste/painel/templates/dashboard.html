@@ -39,7 +39,7 @@
     <td><a href="/conversas?frente=campanha:{{ nome }}">ver conversas</a></td></tr>{% endfor %}
   </table>
   {% else %}<p class="muted">Nenhum contato de campanha importado ainda.</p>{% endif %}
-  <form method="post" action="/campanhas/sincronizar" style="margin-top:10px"><button type="submit" class="leve">Sincronizar agora</button> <span class="muted" style="font-size:12px">importa quem recebeu disparo (Inativos, Retorno, Geral) das tabelas da clínica; automático a cada 30 min</span></form>
+  <form method="post" action="/campanhas/sincronizar" style="margin-top:10px"><button type="submit" class="leve">Sincronizar agora</button> <span class="muted" style="font-size:12px">importa da tabela da clínica quem recebeu o disparo da ação configurada; base fixa, rode uma vez após o disparo</span></form>
 </div>
 
 <h2>Modo de atendimento</h2>

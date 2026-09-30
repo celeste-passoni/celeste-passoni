@@ -339,5 +339,5 @@ campanhas:
   # Ações antigas (ex.: inativos, inativos_2) NÃO entram. Para uma nova ação, acrescente uma linha aqui.
   fontes:
     - { tabela: controle_envio_inativos, acao: inativos_outubro, rotulo: "Inativos · outubro/2026" }
-  sincronizar_a_cada_min: 30
+  # base fixa: sincronizar UMA vez pelo botão "Sincronizar agora" do painel (sem agendamento)
   # Conversas com frente "campanha" nunca são atendidas pela IA (em nenhum modo); a equipe direciona à recepção pelo painel.
