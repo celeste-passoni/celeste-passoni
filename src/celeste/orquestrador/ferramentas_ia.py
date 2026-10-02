@@ -56,8 +56,9 @@ FERRAMENTAS: list[dict] = [
      "strict": True, "input_schema": {"type": "object", "properties": {"motivo": {"type": "string"}}, "required": ["motivo"], "additionalProperties": False}},
     {"name": "enviar_video", "description": "Envia um dos vídeos da clínica ao lead (uma vez por conversa cada).",
      "strict": True, "input_schema": {"type": "object", "properties": {
-         "video": {"type": "string", "enum": ["institucional", "dra_luciana", "dr_lucas", "boas_vindas_consulta", "como_funciona_consulta", "casos_sucesso", "tecnologias", "sobre_clinica"]}},
-         "required": ["video"], "additionalProperties": False}},
+         "video": {"type": "string", "enum": ["institucional", "dra_luciana", "dr_lucas", "boas_vindas_consulta", "como_funciona_consulta", "casos_sucesso", "tecnologias", "sobre_clinica"]},
+         "reenviar": {"type": "boolean", "description": "true só quando o lead CONFIRMOU que quer receber de novo um vídeo já enviado"}},
+         "required": ["video", "reenviar"], "additionalProperties": False}},
     {"name": "atualizar_status", "description": "Registra o resultado da conversa quando ela chega a um desfecho sem agendamento (ex.: Irá nos retornar, Achou caro).",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "status": {"type": "string", "enum": ["Irá nos retornar", "Vamos retornar na data solicitada", "Achou caro", "Quer pelo convênio",
@@ -154,8 +155,8 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
 
     if nome == "enviar_video":
         enviados = ctx.conversa.get("videos_enviados") or []
-        if e["video"] in enviados:
-            return {"ok": False, "aviso": "vídeo já enviado nesta conversa"}
+        if e["video"] in enviados and not e.get("reenviar"):
+            return {"ok": False, "aviso": "vídeo já enviado nesta conversa; confirme com o lead se ele quer de novo e, se sim, chame com reenviar=true"}
         wamid = ctx.enviar_video(e["video"])
         ctx.atualizar({"videos_enviados": enviados + [e["video"]]})
         return {"ok": True, "wamid": wamid}

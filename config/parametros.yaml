@@ -152,41 +152,41 @@ Equipe Passoni Clinic"         # repete a orientação se a pessoa voltar a escr
   meta_taxa_encaminhamento_max: 0.05          # alerta no painel se passar
 
 # ---------------------------------------------------------------------
-# Vídeos (re-hospedar; URLs atuais são do S3 do MarketZap)
+# Vídeos (hospedados no bucket público celeste-videos-…; copiados do MarketZap em 03/10/2026)
 # ---------------------------------------------------------------------
 videos:
   institucional:
     descricao: "apresenta o trabalho da Dra. Luciana e os tratamentos"
     quando: "logo após a saudação, no primeiro contato"
-    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/b343637a22a0cdcd2c5dcd2510753f523c73a93f"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/institucional.mp4"
   dra_luciana:
     descricao: "vídeo da Dra. Luciana"
     quando: "junto com a apresentação das modalidades"
-    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/30dbba2b0a5d58feeca281d7b278f511ac83be33"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/dra_luciana.mp4"
   dr_lucas:
     descricao: "vídeo do Dr. Lucas Vieira"
     quando: "quando o lead considera a opção de R$ 800"
-    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/9b6468f435b2d895ddc134d86b084120c42c52c3"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/dr_lucas.mp4"
   boas_vindas_consulta:
     descricao: "pós-confirmação / o que esperar no dia"
     quando: "após confirmar o agendamento"
-    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/12c2ae502ce2c93dfdf7a102bf6e0c017aaa8aa6"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/boas_vindas_consulta.mp4"
   como_funciona_consulta:
     descricao: "explica tricoscopia e tratamento do folículo"
     quando: "dúvida clínica"
-    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/f6a1daaa8df2d20c4370ab7b9404847297dad43f"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/como_funciona_consulta.mp4"
   casos_sucesso:
     descricao: "casos de sucesso"
     quando: "objeção de resultado / 'vale a pena?'"
-    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/f6dd0cb789cac9391ad130b67b35a5c20075faf7"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/casos_sucesso.mp4"
   tecnologias:
     descricao: "tecnologias da clínica"
     quando: "objeção de preço de tratamento"
-    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/d127fd490ae69dc25d0eaea214c40fe324b9bbb9"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/tecnologias.mp4"
   sobre_clinica:
     descricao: "sobre a clínica e currículo da Dra."
     quando: "lead pergunta quem é a Dra. / credibilidade"
-    url: "https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/75c97a7f09f89de0a0138a831161397025a04604"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/sobre_clinica.mp4"
 
 # ---------------------------------------------------------------------
 # Campos do pré-cadastro (na ordem em que são pedidos)

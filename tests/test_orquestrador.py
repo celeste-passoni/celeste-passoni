@@ -90,9 +90,10 @@ def test_video_nao_repete():
     conv = {"id": "c1"}
     ctx = _ctx(conv)
     ctx.atualizar = lambda campos: conv.update(campos)
-    s1, _ = ferramentas_ia.executar("enviar_video", {"video": "institucional"}, ctx)
-    s2, _ = ferramentas_ia.executar("enviar_video", {"video": "institucional"}, ctx)
-    assert '"ok": true' in s1 and "já enviado" in s2
+    s1, _ = ferramentas_ia.executar("enviar_video", {"video": "institucional", "reenviar": False}, ctx)
+    s2, _ = ferramentas_ia.executar("enviar_video", {"video": "institucional", "reenviar": False}, ctx)
+    s3, _ = ferramentas_ia.executar("enviar_video", {"video": "institucional", "reenviar": True}, ctx)
+    assert '"ok": true' in s1 and "já enviado" in s2 and '"ok": true' in s3
 
 
 def test_encaminhar_encerra_e_avisa():
