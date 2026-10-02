@@ -26,8 +26,8 @@
 <tr><th></th><th style="text-align:right">Leads Perdidos</th><th style="text-align:right">Novos Leads <span class="muted" style="text-transform:none;font-weight:400">(em breve)</span></th><th style="text-align:right">Total</th></tr>
 {% macro linha(rot, chave, ef=False, dinheiro=False) -%}
 <tr class="{{ 'ef' if ef }}"><td class="rot">{{ rot }}</td>
-{% for f in ['leads_perdidos','novos_leads'] %}<td class="num">{% set v = F[f][chave] %}{% if v is none %}<span class="muted">a definir</span>{% elif dinheiro %}R$ {{ '%.2f'|format(v) }}{% else %}{{ v }}{% endif %}</td>{% endfor %}
-<td class="num">{% set v = total[chave] %}{% if v is none %}<span class="muted">a definir</span>{% elif dinheiro %}R$ {{ '%.2f'|format(v) }}{% else %}<b>{{ v }}</b>{% endif %}</td></tr>
+{% for f in ['leads_perdidos','novos_leads'] %}<td class="num">{% set v = F[f][chave] %}{% if v is none %}{{ '0%' if ef else ('R$ 0,00' if dinheiro else 0) }}{% elif dinheiro %}R$ {{ '%.2f'|format(v) }}{% else %}{{ v }}{% endif %}</td>{% endfor %}
+<td class="num">{% set v = total[chave] %}{% if v is none %}<b>{{ '0%' if ef else ('R$ 0,00' if dinheiro else 0) }}</b>{% elif dinheiro %}R$ {{ '%.2f'|format(v) }}{% else %}<b>{{ v }}</b>{% endif %}</td></tr>
 {%- endmacro %}
 {{ linha('1. Leads Disponibilizados', 'disponibilizados') }}
 {{ linha('2. Leads Distintos Conversados pela ' ~ nome_ia, 'conversados', ef=True) }}
@@ -44,9 +44,9 @@
 {{ linha('13. Eficiência 2 %: Comparecimento', 'ef2', ef=True) }}
 {{ linha('14. Leads com Venda', 'vendas') }}
 {{ linha('15. Faturamento gerado pela ' ~ nome_ia, 'faturamento', dinheiro=True) }}
-<tr class="total"><td>16. Eficiência Global {{ nome_ia }} (Ef. 1 × Ef. 2 × Ef. 3)</td>{% for f in ['leads_perdidos','novos_leads'] %}<td class="num">{{ F[f].ef_global or 'a definir' }}</td>{% endfor %}<td class="num">{{ total.ef_global or 'a definir' }}</td></tr>
+<tr class="total"><td>16. Eficiência Global {{ nome_ia }}</td>{% for f in ['leads_perdidos','novos_leads'] %}<td class="num">{{ F[f].ef_global or '0%' }}</td>{% endfor %}<td class="num">{{ total.ef_global or '0%' }}</td></tr>
 </table>
-<p class="muted" style="font-size:12px">Linhas 10, 14, 15 e 16: fórmulas a definir com a clínica. Comparecidos: confirmado no TI Saúde para consultas agendadas pela {{ nome_ia }}. Pediram SAIR no período: {{ total.sair }}.</p>
+<p class="muted" style="font-size:12px">Comparecidos: confirmado no TI Saúde para consultas agendadas pela {{ nome_ia }}. Pediram SAIR no período: {{ total.sair }}.</p>
 
 <h2>Conversas distintas por dia (a {{ nome_ia }} enviou ao menos uma mensagem)</h2>
 <div class="bloco"><canvas id="diario" height="90"></canvas></div>

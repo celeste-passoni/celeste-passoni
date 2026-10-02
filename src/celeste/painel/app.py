@@ -87,7 +87,7 @@ def _no_periodo(v, ini, fim) -> bool:
 
 
 def _pct(a: int, b: int) -> str:
-    return f"{100 * a / b:.1f}%" if b else "—"
+    return f"{100 * a / b:.1f}%" if b else "0%"
 
 
 def _oidc_post(url: str, caminho: str, corpo: dict, timeout=120):
