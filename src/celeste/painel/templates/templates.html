@@ -1,20 +1,19 @@
 {% extends "base.html" %}{% block titulo %}Templates{% endblock %}
 {% block corpo %}
 <h1>Templates</h1>
-<p class="muted">Templates da conta do WhatsApp Business, lidos direto da Meta. Os usados pela {{ nome_ia }}: {{ usados|join(', ') }}.</p>
+<p class="muted">Templates que a {{ nome_ia }} usa nos disparos. Status lido da Meta; os ainda não criados mostram o texto planejado.</p>
 {% if erro %}<div class="aviso">Não foi possível ler os templates da Meta: {{ erro }}</div>{% endif %}
 <table>
-<tr><th>Nome</th><th>Status</th><th>Categoria</th><th>Idioma</th><th>Conteúdo</th><th>Botões</th></tr>
+<tr><th>Código</th><th>Nome</th><th>Frente</th><th>Status</th><th>Categoria</th><th>Conteúdo</th><th>Botões</th></tr>
 {% for t in itens %}
 <tr>
-  <td><b>{{ t.nome }}</b>{% if t.celeste %}<br><span class="tag lp">{{ nome_ia }}</span>{% endif %}</td>
+  <td><b>{{ t.codigo }}</b></td><td>{{ t.nome }}</td><td><span class="tag {{ 'lp' if t.frente == 'Leads Perdidos' else '' }}">{{ t.frente }}</span></td>
   <td><span class="tag {% if t.status == 'APPROVED' %}ok{% elif t.status == 'REJECTED' %}alerta{% endif %}">{{ t.status }}</span></td>
-  <td>{{ t.categoria }}</td><td>{{ t.idioma }}</td>
-  <td style="white-space:pre-wrap;max-width:520px">{% if t.cabecalho %}<b>{{ t.cabecalho }}</b>
-{% endif %}{{ t.corpo }}{% if t.rodape %}
+  <td>{{ t.categoria }}</td>
+  <td style="white-space:pre-wrap;max-width:520px">{{ t.corpo }}{% if t.rodape %}
 <span class="muted">{{ t.rodape }}</span>{% endif %}</td>
   <td>{% for b in t.botoes %}<span class="tag">{{ b }}</span> {% endfor %}</td>
 </tr>
-{% else %}<tr><td colspan="6" class="muted">Nenhum template.</td></tr>{% endfor %}
+{% else %}<tr><td colspan="7" class="muted">Nenhum template.</td></tr>{% endfor %}
 </table>
 {% endblock %}

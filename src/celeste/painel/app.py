@@ -488,19 +488,29 @@ def sincronizar_campanhas(_=Depends(autenticar)):
 # ================================================================= 5. TEMPLATES
 @app.get("/templates", response_class=HTMLResponse)
 def templates(request: Request, _=Depends(autenticar)):
+    """Só os templates da Celeste: os da esteira de Leads Perdidos (+ aviso à recepção). Os das ações da clínica não aparecem."""
+    from celeste.jobs import templates_texto
     p = config.parametros()
-    usados = set(p["disparos"]["templates"].values()) | {p["ia"]["recepcao"].get("template_aviso")}
-    itens, erro = [], ""
+    planejados = [(cod, nome, "Leads Perdidos") for cod, nome in p["disparos"]["templates"].items()]
+    planejados.append(("Aviso", p["ia"]["recepcao"].get("template_aviso"), "Recepção"))
+    na_meta, erro = {}, ""
     try:
         from celeste.ferramentas import meta
         for t in meta.Meta().templates():
-            comps = {c.get("type"): c for c in t.get("components", [])}
-            botoes = [b.get("text") for b in (comps.get("BUTTONS") or {}).get("buttons", [])]
-            itens.append({"nome": t.get("name"), "status": t.get("status"), "categoria": t.get("category"), "idioma": t.get("language"),
-                          "cabecalho": (comps.get("HEADER") or {}).get("text"), "corpo": (comps.get("BODY") or {}).get("text"),
-                          "rodape": (comps.get("FOOTER") or {}).get("text"), "botoes": botoes, "celeste": t.get("name") in usados})
+            na_meta[t.get("name")] = t
     except Exception as e:
         erro = str(e)[:200]
-    ordem = {"APPROVED": 0, "PENDING": 1, "IN_APPEAL": 2, "REJECTED": 3}
-    itens.sort(key=lambda x: (not x["celeste"], ordem.get(x["status"], 9), x["nome"] or ""))
-    return tpl.TemplateResponse(request, "templates.html", {"itens": itens, "erro": erro, "usados": sorted(u for u in usados if u)})
+    itens = []
+    for cod, nome, frente in planejados:
+        t = na_meta.get(nome)
+        if t:
+            comps = {c.get("type"): c for c in t.get("components", [])}
+            itens.append({"codigo": cod, "nome": nome, "frente": frente, "status": t.get("status"), "categoria": t.get("category"), "idioma": t.get("language"),
+                          "corpo": (comps.get("BODY") or {}).get("text"), "rodape": (comps.get("FOOTER") or {}).get("text"),
+                          "botoes": [b.get("text") for b in (comps.get("BUTTONS") or {}).get("buttons", [])]})
+        else:
+            prev = templates_texto.TEMPLATES.get(cod)
+            itens.append({"codigo": cod, "nome": nome, "frente": frente, "status": "A CRIAR NA META", "categoria": "—", "idioma": "pt_BR",
+                          "corpo": prev["corpo"].replace("{1}", "{{1}}").replace("{2}", "{{2}}").replace("{3}", "{{3}}") if prev else "(texto definido no aviso à recepção)",
+                          "rodape": templates_texto.RODAPE if prev else None, "botoes": prev["botoes"] if prev else []})
+    return tpl.TemplateResponse(request, "templates.html", {"itens": itens, "erro": erro})
