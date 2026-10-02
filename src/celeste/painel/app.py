@@ -121,7 +121,8 @@ def gestao(request: Request, de: str = "", ate: str = "", aviso: str = "", _=Dep
         cs = [c for c in conversas if c.get("frente") == f]
         disponibilizados = sum(1 for l in ls if l.get("elegivel"))          # base elegível atual (query da clínica)
         conversados = [c for c in cs if _no_periodo(c.get("primeira_msg_celeste_em") or c.get("ultimo_template_em"), ini, fim)]
-        com_resposta = [c for c in cs if _no_periodo(c.get("primeira_msg_lead_em") or c.get("ultima_msg_lead_em"), ini, fim)]
+        com_resposta = [c for c in cs if (c.get("primeira_msg_celeste_em") or c.get("ultimo_template_em"))   # só quem a Celeste contatou
+                        and _no_periodo(c.get("primeira_msg_lead_em") or c.get("ultima_msg_lead_em"), ini, fim)]
         marcados = [c for c in cs if c.get("status") == "Agendado" and _no_periodo(c.get("agendado_em") or c.get("criado_em"), ini, fim)]
         sair = [c for c in cs if c.get("opt_out") and _no_periodo(c.get("opt_out_em") or c.get("ultima_msg_lead_em"), ini, fim)]
         comparecidos = [c for c in cs if c.get("compareceu") and _no_periodo(c.get("compareceu_em"), ini, fim)]
@@ -147,6 +148,8 @@ def gestao(request: Request, de: str = "", ate: str = "", aviso: str = "", _=Dep
         q = (db.collection_group("mensagens").where("direcao", "in", ["celeste", "template"])
              .where("recebido_em", ">=", ini).where("recebido_em", "<", fim))
         for m in q.stream():
+            if m.to_dict().get("tipo") == "interactive":      # orientação/botão da recepção não conta como conversa da Celeste
+                continue
             cid = m.reference.parent.parent.id
             dia = _dt(m.to_dict().get("recebido_em")).astimezone(FUSO).strftime("%Y-%m-%d")
             por_dia[dia][frente_de.get(cid) if frente_de.get(cid) in FRENTES_IA else "sem_frente"].add(cid)
