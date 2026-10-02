@@ -112,7 +112,8 @@ def gestao(request: Request, de: str = "", ate: str = "", aviso: str = "", _=Dep
     d, a, ini, fim = _periodo(de, ate)
     hoje = datetime.now(FUSO).strftime("%Y-%m-%d")
 
-    leads = [l.to_dict() for l in db.collection("leads").select(["frente", "disponibilizado_em", "carregado_em", "elegivel"]).stream()]
+    # só os elegíveis (base atual): quem saiu da base não entra em nenhuma conta da Gestão
+    leads = [l.to_dict() for l in db.collection("leads").where("elegivel", "==", True).select(["frente", "elegivel"]).stream()]
     conversas = [dict(c.to_dict(), id=c.id) for c in db.collection("conversas").stream()]
 
     funil = {}

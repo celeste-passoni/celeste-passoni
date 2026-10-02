@@ -40,6 +40,7 @@
       <select id="f_status"><option value="">Todos os status</option>{% for s in statuses %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select>
       <input id="f_busca" type="text" placeholder="nome ou telefone" style="flex:1;min-width:120px">
       <label style="font-size:12px"><input id="f_abertas" type="checkbox"> só abertas</label>
+      <button type="button" class="leve" style="font-size:11px;padding:4px 8px" onclick="carregarLista(); if (atual) abrir(atual, true);">Atualizar</button>
       <span id="f_total" class="muted" style="font-size:11px;width:100%"></span>
     </div>
     <div class="itens" id="itens"></div>
@@ -132,6 +133,6 @@ async function enviar() {
 ['f_frente', 'f_status', 'f_abertas'].forEach(i => $('#' + i).addEventListener('change', carregarLista));
 $('#f_busca').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(carregarLista, 300); });
 carregarLista().then(() => { if (atual) abrir(atual); });
-setInterval(() => { carregarLista(); if (atual) abrir(atual, true); }, 30000);
+// sem atualização automática: a tela só recarrega quando a página é atualizada ou pelo botão "Atualizar"
 </script>
 {% endblock %}
