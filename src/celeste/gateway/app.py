@@ -76,7 +76,11 @@ def _processar(ev: dict) -> None:
     })
     if not (conv_ref.get().to_dict() or {}).get("primeira_msg_lead_em"):
         conv_ref.set({"primeira_msg_lead_em": firestore.SERVER_TIMESTAMP}, merge=True)
-    conv_ref.set({"ultima_msg_lead_em": firestore.SERVER_TIMESTAMP,
+    previa = ev.get("texto") or ev.get("botao") or {"audio": "🎤 áudio", "voice": "🎤 áudio", "image": "🖼️ imagem", "document": "📎 documento",
+                                                      "video": "🎬 vídeo", "sticker": "sticker"}.get(ev["tipo"], f"[{ev['tipo']}]")
+    conv_ref.set({"ultima": {"texto": str(previa)[:160], "direcao": "lead", "tipo": ev["tipo"],
+                             "em": datetime.fromtimestamp(ev["timestamp"], tz=timezone.utc)},
+                  "ultima_msg_lead_em": firestore.SERVER_TIMESTAMP,
                   "janela_24h_ate": datetime.now(timezone.utc) + timedelta(hours=24),
                   "pendente_resposta": True}, merge=True)
     _agendar_debounce(conv_ref.id, ev["tipo"])

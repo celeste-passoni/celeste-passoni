@@ -47,3 +47,27 @@ def test_orientacao_automatica_desligada_so_manual(monkeypatch):
     assert "desligada" in r["ignorado"] and not mt.enviar_botao_url.called
     r2 = orq._orientar_recepcao(ref, {"id": "c1", "contato": "5511777770000"}, forcar=True)   # botão do painel
     assert r2["orientado_recepcao"] and mt.enviar_botao_url.called
+
+
+def test_modo_humano_e_envio(monkeypatch):
+    orq = _orq(monkeypatch)
+    from fastapi import HTTPException
+    import pytest
+    # /modo grava o modo na conversa
+    doc = orq.db.collection.return_value.document.return_value
+    doc.get.return_value.exists = True
+    assert orq.mudar_modo(orq.PedidoModo(conversa_id="c1", modo="humano"))["modo"] == "humano"
+    assert doc.set.call_args.args[0]["modo"] == "humano"
+    with pytest.raises(HTTPException):
+        orq.mudar_modo(orq.PedidoModo(conversa_id="c1", modo="x"))
+    # /enviar exige modo humano
+    doc.get.return_value.to_dict.return_value = {"contato": "5511999990000", "modo": "ia"}
+    with pytest.raises(HTTPException):
+        orq.enviar_humano(orq.PedidoEnviar(conversa_id="c1", texto="oi"))
+    doc.get.return_value.to_dict.return_value = {"contato": "5511999990000", "modo": "humano"}
+    mt = MagicMock(); mt.enviar_texto.return_value = "wamid.h"
+    monkeypatch.setattr(orq, "_svc", lambda: (None, mt, None))
+    r = orq.enviar_humano(orq.PedidoEnviar(conversa_id="c1", texto="Olá, aqui é a equipe"))
+    assert r["wamid"] == "wamid.h" and mt.enviar_texto.call_args.args == ("5511999990000", "Olá, aqui é a equipe")
+    gravado = doc.collection.return_value.document.return_value.set.call_args.args[0]
+    assert gravado["direcao"] == "humano"

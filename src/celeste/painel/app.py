@@ -186,8 +186,121 @@ def _atalhos():
             ("Mês anterior", m1.replace(day=1), m1), ("30 dias", hoje - timedelta(days=29), hoje)]
 
 
-# ================================================================= 2. ATENDIMENTOS (lista + conversa; versão WhatsApp na próxima entrega)
-@app.get("/conversas", response_class=HTMLResponse)
+# ================================================================= 2. ATENDIMENTOS (estilo WhatsApp Web)
+from fastapi.responses import JSONResponse
+
+
+def _json_dt(v):
+    v = _dt(v)
+    return v.astimezone(FUSO).isoformat() if v else None
+
+
+def _resumo_conversa(c: dict) -> dict:
+    u = c.get("ultima") or {}
+    return {"id": c["id"], "nome": c.get("nome") or "(sem nome)", "contato": c.get("contato"), "frente": c.get("frente"),
+            "campanha": c.get("campanha"), "rotulo": tpl.env.globals["rotulo_frente"](c.get("frente"), c.get("campanha")),
+            "status": c.get("status"), "modo": c.get("modo", "ia"), "aberta": bool(c.get("aberta")),
+            "ultima_texto": u.get("texto") or "", "ultima_direcao": u.get("direcao"), "ultima_em": _json_dt(u.get("em") or c.get("ultima_msg_lead_em") or c.get("criado_em")),
+            "nao_lida": (u.get("direcao") == "lead"), "revisar": bool(c.get("revisar"))}
+
+
+@app.get("/atendimentos", response_class=HTMLResponse)
+def atendimentos(request: Request, c: str = "", _=Depends(autenticar)):
+    statuses = sorted({x.get("status") for x in (d.to_dict() for d in db.collection("conversas").select(["status"]).stream()) if x.get("status")})
+    campanhas_lista = sorted({x.get("campanha") for x in (d.to_dict() for d in db.collection("conversas").select(["campanha"]).stream()) if x.get("campanha")})
+    return tpl.TemplateResponse(request, "atendimentos.html", {"inicial": c, "statuses": statuses, "campanhas_lista": campanhas_lista})
+
+
+@app.get("/api/conversas")
+def api_conversas(frente: str = "", status: str = "", busca: str = "", abertas: str = "", _=Depends(autenticar)):
+    docs = [dict(c.to_dict(), id=c.id) for c in db.collection("conversas").stream()]
+    if frente == "sem_frente":
+        docs = [c for c in docs if not c.get("frente")]
+    elif frente.startswith("campanha:"):
+        docs = [c for c in docs if c.get("frente") == "campanha" and c.get("campanha") == frente[9:]]
+    elif frente:
+        docs = [c for c in docs if c.get("frente") == frente]
+    if status:
+        docs = [c for c in docs if c.get("status") == status]
+    if abertas:
+        docs = [c for c in docs if c.get("aberta")]
+    if busca:
+        b = busca.lower()
+        docs = [c for c in docs if b in (c.get("nome") or "").lower() or b in (c.get("contato") or "")]
+    def chave(c):
+        u = c.get("ultima") or {}
+        return _dt(u.get("em")) or _dt(c.get("ultima_msg_lead_em")) or _dt(c.get("criado_em")) or datetime.min.replace(tzinfo=timezone.utc)
+    docs.sort(key=chave, reverse=True)
+    return JSONResponse({"total": len(docs), "itens": [_resumo_conversa(c) for c in docs[:400]]})
+
+
+@app.get("/api/conversas/{cid}")
+def api_conversa(cid: str, _=Depends(autenticar)):
+    ref = db.collection("conversas").document(cid)
+    c = ref.get().to_dict()
+    if not c:
+        raise HTTPException(404)
+    c["id"] = cid
+    msgs = []
+    for m in ref.collection("mensagens").order_by("recebido_em").stream():
+        x = m.to_dict()
+        if x.get("direcao") == "lead" and x.get("tipo") in ("audio", "voice"):
+            texto = "🎤 " + (x.get("transcricao") or "(áudio sem transcrição)")
+        elif x.get("direcao") == "lead" and x.get("tipo") == "image":
+            texto = "🖼️ imagem " + (x.get("texto") or "")
+        elif x.get("botao"):
+            texto = "🔘 " + str(x.get("botao"))
+        else:
+            texto = x.get("texto") or f"[{x.get('tipo')}]"
+        msgs.append({"id": m.id, "direcao": x.get("direcao"), "texto": texto, "em": _json_dt(x.get("recebido_em")), "modelo": x.get("modelo"), "autor": x.get("autor")})
+    chamadas = [x.to_dict() for x in db.collection("chamadas_ia").where("conversa_id", "==", cid).stream()]
+    lead = db.collection("leads").document(c.get("contato", "")).get().to_dict() or {}
+    ficha = {"contato": c.get("contato"), "nome": c.get("nome"), "frente": c.get("frente"), "campanha": c.get("campanha"),
+             "rotulo": tpl.env.globals["rotulo_frente"](c.get("frente"), c.get("campanha")), "status": c.get("status"), "modo": c.get("modo", "ia"),
+             "aberta": bool(c.get("aberta")), "origem": c.get("origem") or lead.get("origem"), "template_origem": c.get("template_origem"), "ciclo": c.get("ciclo"),
+             "lead_created_at": _json_dt(lead.get("lead_created_at")), "status_clinica": lead.get("status_clinica"),
+             "id_paciente_tisaude": c.get("id_paciente_tisaude"), "id_agendamento_tisaude": c.get("id_agendamento_tisaude"), "agendamento": c.get("agendamento"),
+             "motivo_encaminhamento": c.get("motivo_encaminhamento"), "proximo_recontato_em": c.get("proximo_recontato_em"),
+             "videos_enviados": c.get("videos_enviados") or [], "orientacoes_enviadas": c.get("orientacoes_enviadas") or 0,
+             "orientado_recepcao_em": _json_dt(c.get("orientado_recepcao_em")), "janela_24h_ate": _json_dt(c.get("janela_24h_ate")),
+             "custo": round(sum(x.get("custo_usd", 0) for x in chamadas), 4), "respostas_ia": len(chamadas), "revisar": bool(c.get("revisar"))}
+    return JSONResponse({"ficha": ficha, "mensagens": msgs})
+
+
+def _acao_orq(caminho: str, corpo: dict):
+    if not URL_ORQUESTRADOR:
+        return JSONResponse({"ok": False, "erro": "URL do orquestrador não configurada"}, status_code=500)
+    try:
+        r = _oidc_post(URL_ORQUESTRADOR, caminho, corpo, timeout=90)
+        if r.ok:
+            return JSONResponse({"ok": True, **(r.json() if r.headers.get("content-type", "").startswith("application/json") else {})})
+        det = r.json().get("detail") if r.headers.get("content-type", "").startswith("application/json") else r.text[:200]
+        return JSONResponse({"ok": False, "erro": det}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"ok": False, "erro": str(e)[:200]}, status_code=500)
+
+
+@app.post("/api/conversas/{cid}/orientar")
+def api_orientar(cid: str, _=Depends(autenticar)):
+    return _acao_orq("/orientar", {"conversa_id": cid})
+
+
+@app.post("/api/conversas/{cid}/modo")
+def api_modo(cid: str, modo: str = Form(...), _=Depends(autenticar)):
+    return _acao_orq("/modo", {"conversa_id": cid, "modo": modo})
+
+
+@app.post("/api/conversas/{cid}/enviar")
+def api_enviar(cid: str, texto: str = Form(...), _=Depends(autenticar)):
+    return _acao_orq("/enviar", {"conversa_id": cid, "texto": texto, "autor": "equipe"})
+
+
+@app.get("/conversas")
+def conversas_redirect(frente: str = "", _=Depends(autenticar)):
+    return RedirectResponse(f"/atendimentos?frente={frente}", status_code=302)
+
+
+@app.get("/conversas-tabela", response_class=HTMLResponse)
 def conversas(request: Request, frente: str = "", status: str = "", abertas: str = "", busca: str = "", _=Depends(autenticar)):
     docs = [dict(c.to_dict(), id=c.id) for c in db.collection("conversas").stream()]
     if frente == "sem_frente":
@@ -210,7 +323,12 @@ def conversas(request: Request, frente: str = "", status: str = "", abertas: str
                                                             "abertas": abertas, "busca": busca, "statuses": statuses, "campanhas_lista": campanhas_lista})
 
 
-@app.get("/conversas/{cid}", response_class=HTMLResponse)
+@app.get("/conversas/{cid}")
+def conversa_redirect(cid: str, _=Depends(autenticar)):
+    return RedirectResponse(f"/atendimentos?c={cid}", status_code=302)
+
+
+@app.get("/conversas-tabela/{cid}", response_class=HTMLResponse)
 def conversa(request: Request, cid: str, aviso: str = "", _=Depends(autenticar)):
     ref = db.collection("conversas").document(cid)
     c = ref.get().to_dict()

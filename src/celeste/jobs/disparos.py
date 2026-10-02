@@ -208,7 +208,8 @@ def _registrar_envio(db, lead_id: str, lead: dict, dec: Decisao, nome_tpl: str, 
         "direcao": "template", "tipo": "template", "template": nome_tpl, "codigo": dec.template,
         "texto": templates_texto.renderizar(dec.template, lead.get("primeiro_nome") or "", **extras),
         "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
-    conv_ref.set({"status": status, "ultimo_template_em": agora, "template_origem": dec.template}, merge=True)
+    conv_ref.set({"status": status, "ultimo_template_em": agora, "template_origem": dec.template,
+                  "ultima": {"texto": f"[template {dec.template}] " + templates_texto.TEMPLATES[dec.template]["corpo"][:120], "direcao": "template", "tipo": "template", "em": agora}}, merge=True)
     db.collection("leads").document(lead_id).set({
         "status_ia": status, "passo": dec.novo_passo, "ultimo_template_em": agora, "conversa_id": conv_id,
         "templates_enviados": firestore.ArrayUnion([{"codigo": dec.template, "template": nome_tpl, "em": agora, "wamid": wamid, "motivo": dec.motivo}]),

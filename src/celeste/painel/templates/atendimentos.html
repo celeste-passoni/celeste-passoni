@@ -1,0 +1,137 @@
+{% extends "base.html" %}{% block titulo %}Atendimentos{% endblock %}
+{% block head %}
+<style>
+.wa{display:grid;grid-template-columns:360px 1fr;gap:0;height:calc(100vh - 48px);background:var(--card);border:1px solid var(--linha);border-radius:12px;overflow:hidden}
+.lista{border-right:1px solid var(--linha);display:flex;flex-direction:column;min-height:0}
+.lista .filtros{padding:10px;border-bottom:1px solid var(--linha);display:flex;flex-wrap:wrap;gap:6px;background:var(--bege)}
+.lista .filtros select,.lista .filtros input{font-size:12px;padding:5px 6px}
+.lista .itens{overflow-y:auto;flex:1}
+.item{padding:10px 12px;border-bottom:1px solid var(--linha);cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:2px 8px}
+.item:hover{background:#faf6ef}.item.sel{background:#efe6d8}
+.item .nome{font-weight:600;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .hora{font-size:11px;color:var(--cinza);text-align:right}
+.item .previa{grid-column:1/3;font-size:12px;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .previa.lead{font-weight:600;color:var(--texto)}
+.item .tags{grid-column:1/3;display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}
+.tag.mini{font-size:10px;padding:1px 6px}.tag.humano{background:#e6e0f5;color:#4a3a8a}
+.bolinha{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--alerta);margin-left:4px}
+.painel{display:grid;grid-template-columns:1fr 320px;min-height:0}
+.conv{display:flex;flex-direction:column;min-height:0}
+.conv .topo{padding:10px 16px;border-bottom:1px solid var(--linha);background:var(--bege);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.conv .topo .nome{font-weight:700;color:var(--navy);font-size:15px}
+.conv .msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:6px;background:#f7f3ec}
+.conv .rodape{padding:10px 12px;border-top:1px solid var(--linha);background:#fff}
+.conv .rodape textarea{width:100%;min-height:48px;padding:8px 10px;border:1px solid var(--linha);border-radius:8px;font-family:inherit;font-size:13px;resize:vertical}
+.ficha{border-left:1px solid var(--linha);overflow-y:auto;padding:14px;font-size:13px;background:#fff}
+.ficha h4{margin:12px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--cinza)}
+.ficha p{margin:4px 0;line-height:1.45}
+.vazio{display:flex;align-items:center;justify-content:center;height:100%;color:var(--cinza)}
+.acoes button{margin:4px 4px 0 0;font-size:12px;padding:6px 10px}
+.balao{max-width:78%}.balao.celeste{align-self:flex-end}.balao.humano{background:#4a3a8a;color:#fff;align-self:flex-end}
+@media(max-width:1100px){.painel{grid-template-columns:1fr}.ficha{display:none}}
+@media(max-width:800px){.wa{grid-template-columns:1fr}.lista{display:none}}
+</style>
+{% endblock %}
+{% block corpo %}
+<div class="wa">
+  <div class="lista">
+    <div class="filtros">
+      <select id="f_frente"><option value="">Todas as frentes</option>{% for k, v in FRENTES.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}{% for camp in campanhas_lista %}<option value="campanha:{{ camp }}">{{ camp }}</option>{% endfor %}<option value="sem_frente">Sem frente</option></select>
+      <select id="f_status"><option value="">Todos os status</option>{% for s in statuses %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select>
+      <input id="f_busca" type="text" placeholder="nome ou telefone" style="flex:1;min-width:120px">
+      <label style="font-size:12px"><input id="f_abertas" type="checkbox"> só abertas</label>
+      <span id="f_total" class="muted" style="font-size:11px;width:100%"></span>
+    </div>
+    <div class="itens" id="itens"></div>
+  </div>
+  <div class="painel">
+    <div class="conv" id="conv"><div class="vazio">Selecione uma conversa</div></div>
+    <div class="ficha" id="ficha"></div>
+  </div>
+</div>
+
+<script>
+const NOME_IA = {{ nome_ia|tojson }};
+let atual = {{ inicial|tojson }} || null, cacheLista = [], timer = null;
+const $ = s => document.querySelector(s);
+const esc = t => (t ?? '').toString().replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const hora = iso => { if (!iso) return ''; const d = new Date(iso), h = new Date(); const dia = d.toDateString() === h.toDateString();
+  return dia ? d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}); };
+const tagFrente = (f, rot) => `<span class="tag mini ${f === 'leads_perdidos' ? 'lp' : f === 'campanha' ? 'alerta' : f ? 'nl' : ''}">${esc(rot)}</span>`;
+
+async function carregarLista() {
+  const q = new URLSearchParams({frente: $('#f_frente').value, status: $('#f_status').value, busca: $('#f_busca').value, abertas: $('#f_abertas').checked ? '1' : ''});
+  const r = await fetch('/api/conversas?' + q); const j = await r.json(); cacheLista = j.itens;
+  $('#f_total').textContent = j.total + ' conversa(s)';
+  $('#itens').innerHTML = j.itens.map(c => `
+    <div class="item ${c.id === atual ? 'sel' : ''}" onclick="abrir('${c.id}')">
+      <div class="nome">${esc(c.nome)}${c.nao_lida ? '<span class="bolinha" title="última mensagem é do lead"></span>' : ''}</div>
+      <div class="hora">${hora(c.ultima_em)}</div>
+      <div class="previa ${c.ultima_direcao === 'lead' ? 'lead' : ''}">${c.ultima_direcao === 'celeste' ? NOME_IA + ': ' : c.ultima_direcao === 'humano' ? 'Equipe: ' : c.ultima_direcao === 'template' ? '' : ''}${esc(c.ultima_texto)}</div>
+      <div class="tags">${tagFrente(c.frente, c.rotulo)}<span class="tag mini">${esc(c.status || '')}</span>${c.modo === 'humano' ? '<span class="tag mini humano">humano</span>' : ''}${c.aberta ? '' : '<span class="tag mini">encerrada</span>'}${c.revisar ? '<span class="tag mini alerta">revisar</span>' : ''}</div>
+    </div>`).join('') || '<div class="vazio" style="height:120px">Nenhuma conversa</div>';
+}
+
+async function abrir(id, manterScroll) {
+  atual = id; history.replaceState(null, '', '/atendimentos?c=' + id);
+  document.querySelectorAll('.item').forEach(e => e.classList.toggle('sel', e.getAttribute('onclick') === `abrir('${id}')`));
+  const r = await fetch('/api/conversas/' + id); if (!r.ok) return; const j = await r.json(); const f = j.ficha;
+  const msgsEl = $('#conv .msgs'); const noFim = !msgsEl || (msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 40);
+  $('#conv').innerHTML = `
+    <div class="topo"><span class="nome">${esc(f.nome || '(sem nome)')}</span> ${tagFrente(f.frente, f.rotulo)} <span class="tag mini">${esc(f.status || '')}</span>
+      ${f.modo === 'humano' ? '<span class="tag mini humano">modo humano</span>' : ''} <a class="muted" style="font-size:12px" href="https://wa.me/${f.contato}" target="_blank">${f.contato}</a></div>
+    <div class="msgs">${j.mensagens.map(m => `<div class="balao ${m.direcao}">${esc(m.texto)}<div class="meta">${hora(m.em)}${m.direcao === 'humano' ? ' · equipe' : m.modelo ? ' · ' + esc(m.modelo) : ''}</div></div>`).join('')}</div>
+    <div class="rodape">
+      <div class="acoes">
+        <button class="leve" onclick="acao('orientar')">Enviar orientação à recepção</button>
+        ${f.modo === 'humano'
+          ? `<button onclick="acao('modo','ia')">Devolver para a ${NOME_IA}</button>`
+          : `<button onclick="if(confirm('Pausar a ${NOME_IA} nesta conversa e responder como equipe?')) acao('modo','humano')">Liberar para Humano</button>`}
+        <span id="msg_acao" class="muted" style="font-size:12px"></span>
+      </div>
+      ${f.modo === 'humano' ? `<div style="margin-top:8px"><textarea id="txt" placeholder="Escreva como equipe da Passoni Clinic… (Enter envia, Shift+Enter quebra linha)"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="muted" style="font-size:11px">${f.janela_24h_ate && new Date(f.janela_24h_ate) > new Date() ? 'janela do WhatsApp aberta até ' + hora(f.janela_24h_ate) : 'fora da janela de 24 h: só é possível enviar depois que a pessoa escrever'}</span><button onclick="enviar()">Enviar</button></div></div>` : ''}
+    </div>`;
+  const ag = f.agendamento ? `${f.agendamento.data} ${f.agendamento.hora} · ${f.agendamento.profissional || ''}` : '—';
+  $('#ficha').innerHTML = `
+    <h4>Ficha</h4>
+    <p><b>WhatsApp:</b> <a href="https://wa.me/${f.contato}" target="_blank">${f.contato}</a></p>
+    <p><b>Frente:</b> ${esc(f.rotulo)} · <b>Origem:</b> ${esc(f.origem || '—')}</p>
+    <p><b>Template de origem:</b> ${esc(f.template_origem || '—')} · <b>Ciclo:</b> ${esc(f.ciclo || '—')}</p>
+    <p><b>Lead criado na clínica:</b> ${hora(f.lead_created_at) || '—'} · <b>Status na clínica:</b> ${esc(f.status_clinica || '—')}</p>
+    <h4>Agendamento</h4>
+    <p><b>Paciente TI Saúde:</b> ${esc(f.id_paciente_tisaude || '—')} · <b>Agendamento:</b> ${esc(f.id_agendamento_tisaude || '—')}</p>
+    <p><b>Consulta:</b> ${esc(ag)}</p>
+    ${f.proximo_recontato_em ? `<p><b>Recontato em:</b> ${esc(f.proximo_recontato_em)}</p>` : ''}
+    ${f.motivo_encaminhamento ? `<p><b>Encaminhado por:</b> ${esc(f.motivo_encaminhamento)}</p>` : ''}
+    <h4>${NOME_IA}</h4>
+    <p><b>Modo:</b> ${f.modo === 'humano' ? 'humano (IA pausada)' : 'IA'} · <b>Conversa:</b> ${f.aberta ? 'aberta' : 'encerrada'}</p>
+    <p><b>Vídeos enviados:</b> ${esc(f.videos_enviados.join(', ') || '—')}</p>
+    <p><b>Orientações à recepção:</b> ${f.orientacoes_enviadas}${f.orientado_recepcao_em ? ' · última ' + hora(f.orientado_recepcao_em) : ''}</p>
+    <p><b>Custo:</b> US$ ${f.custo.toFixed(4)} · ${f.respostas_ia} resposta(s) da IA</p>
+    <p class="muted" style="font-size:11px;margin-top:10px"><a href="/conversas-tabela/${id}">ver bastidores</a></p>`;
+  const el = $('#conv .msgs'); if (el && (noFim || !manterScroll)) el.scrollTop = el.scrollHeight;
+  const t = $('#txt'); if (t) t.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } });
+}
+
+async function acao(tipo, valor) {
+  const fd = new FormData(); if (tipo === 'modo') fd.append('modo', valor);
+  const r = await fetch(`/api/conversas/${atual}/${tipo}`, {method: 'POST', body: tipo === 'modo' ? fd : null});
+  const j = await r.json(); const m = $('#msg_acao'); if (m) m.textContent = j.ok ? (tipo === 'orientar' ? 'Orientação enviada.' : '') : 'Falha: ' + j.erro;
+  await abrir(atual, true); await carregarLista();
+}
+
+async function enviar() {
+  const t = $('#txt'); const texto = (t.value || '').trim(); if (!texto) return;
+  const fd = new FormData(); fd.append('texto', texto);
+  const r = await fetch(`/api/conversas/${atual}/enviar`, {method: 'POST', body: fd}); const j = await r.json();
+  if (!j.ok) { alert('Não enviado: ' + j.erro); return; }
+  t.value = ''; await abrir(atual, true); await carregarLista();
+}
+
+['f_frente', 'f_status', 'f_abertas'].forEach(i => $('#' + i).addEventListener('change', carregarLista));
+$('#f_busca').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(carregarLista, 300); });
+carregarLista().then(() => { if (atual) abrir(atual); });
+setInterval(() => { carregarLista(); if (atual) abrir(atual, true); }, 30000);
+</script>
+{% endblock %}

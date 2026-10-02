@@ -134,6 +134,8 @@ def responder(p: Pedido):
             log.warning("botão da recepção não enviado: %s", e)
     if enviados and not conv.get("primeira_msg_celeste_em"):
         ref.set({"primeira_msg_celeste_em": firestore.SERVER_TIMESTAMP}, merge=True)
+    if res.baloes:
+        ref.set({"ultima": {"texto": res.baloes[-1][:160], "direcao": "celeste", "tipo": "text", "em": datetime.now(timezone.utc)}}, merge=True)
     ref.set({"pendente_resposta": False, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP,
              "total_msgs_celeste": firestore.Increment(enviados), "custo_usd": firestore.Increment(res.custo_usd),
              "aberta": conv.get("aberta", True) and not ctx.encerrar}, merge=True)
@@ -149,6 +151,55 @@ def _cfg_atendimento() -> dict:
 
 def _e_numero_teste(contato: str) -> bool:
     return contato in {str(n) for n in (_cfg_atendimento().get("numeros_teste") or [])}
+
+
+class PedidoModo(BaseModel):
+    conversa_id: str
+    modo: str          # "humano" | "ia"
+
+
+@app.post("/modo")
+def mudar_modo(p: PedidoModo):
+    """'humano' pausa a Celeste nesta conversa (a equipe responde pelo painel); 'ia' devolve para ela."""
+    if p.modo not in ("humano", "ia"):
+        raise HTTPException(400, "modo inválido")
+    ref = db.collection("conversas").document(p.conversa_id)
+    if not ref.get().exists:
+        raise HTTPException(404, "conversa não existe")
+    ref.set({"modo": p.modo, "modo_alterado_em": firestore.SERVER_TIMESTAMP, "aberta": True}, merge=True)
+    return {"ok": True, "modo": p.modo}
+
+
+class PedidoEnviar(BaseModel):
+    conversa_id: str
+    texto: str
+    autor: str = "equipe"
+
+
+@app.post("/enviar")
+def enviar_humano(p: PedidoEnviar):
+    """Texto livre enviado por uma pessoa da equipe (conversa em modo humano; só dentro da janela de 24 h do WhatsApp)."""
+    texto = (p.texto or "").strip()
+    if not texto:
+        raise HTTPException(400, "texto vazio")
+    ref = db.collection("conversas").document(p.conversa_id)
+    conv = ref.get().to_dict()
+    if not conv:
+        raise HTTPException(404, "conversa não existe")
+    if conv.get("modo") != "humano":
+        raise HTTPException(400, "libere a conversa para humano antes de enviar")
+    _, mt, _ = _svc()
+    try:
+        wamid = mt.enviar_texto(conv["contato"], texto)
+    except Exception as e:
+        fora = "131047" in str(e)
+        raise HTTPException(400, "fora da janela de 24 h: a pessoa precisa escrever de novo antes" if fora else f"falha ao enviar: {str(e)[:160]}")
+    ref.collection("mensagens").document(wamid).set({
+        "direcao": "humano", "tipo": "text", "texto": texto, "autor": p.autor,
+        "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
+    ref.set({"ultima": {"texto": texto[:160], "direcao": "humano", "tipo": "text", "em": datetime.now(timezone.utc)},
+             "ultima_msg_humano_em": firestore.SERVER_TIMESTAMP, "pendente_resposta": False}, merge=True)
+    return {"ok": True, "wamid": wamid}
 
 
 class PedidoOrientar(BaseModel):
@@ -194,7 +245,8 @@ def _orientar_recepcao(ref, conv: dict, forcar: bool = False) -> dict:
         "direcao": "celeste", "tipo": "interactive", "modelo": "manual (painel)" if forcar else "automatico",
         "texto": f"{rec['orientacao_texto']}\n[botão: {rec['botao_rotulo']} → {rec['link_wa']}]",
         "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
-    ref.set({"pendente_resposta": False, "status": "Orientado à recepção", "orientado_recepcao_em": datetime.now(timezone.utc),
+    ref.set({"ultima": {"texto": rec["orientacao_texto"][:160], "direcao": "celeste", "tipo": "interactive", "em": datetime.now(timezone.utc)},
+             "pendente_resposta": False, "status": "Orientado à recepção", "orientado_recepcao_em": datetime.now(timezone.utc),
              "orientacoes_enviadas": firestore.Increment(1),
              "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP, "total_msgs_celeste": firestore.Increment(1)}, merge=True)
     return {"ok": True, "enviado": 1, "orientado_recepcao": True}
@@ -228,8 +280,10 @@ def _historico(ref, mt: meta.Meta) -> tuple[list[dict], str | None]:
                 turnos[-1]["content"].extend(blocos)
             else:
                 turnos.append({"role": "user", "content": blocos})
-        elif m.get("direcao") in ("celeste", "template"):
+        elif m.get("direcao") in ("celeste", "template", "humano"):
             texto = m.get("texto") or f"[template {m.get('template')}]"
+            if m.get("direcao") == "humano":
+                texto = f"[mensagem enviada por uma pessoa da equipe, não por você]: {texto}"
             if turnos and turnos[-1]["role"] == "assistant":
                 turnos[-1]["content"] += "\n---\n" + texto
             else:
