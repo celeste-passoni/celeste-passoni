@@ -116,48 +116,60 @@ def gestao(request: Request, de: str = "", ate: str = "", aviso: str = "", _=Dep
     leads = [l.to_dict() for l in db.collection("leads").where("elegivel", "==", True).select(["frente", "elegivel"]).stream()]
     conversas = [dict(c.to_dict(), id=c.id) for c in db.collection("conversas").stream()]
 
-    funil = {}
-    for f in FRENTES:
-        ls = [l for l in leads if l.get("frente") == f]
-        cs = [c for c in conversas if c.get("frente") == f]
-        disponibilizados = sum(1 for l in ls if l.get("elegivel"))          # base elegível atual (query da clínica)
-        conversados = [c for c in cs if _no_periodo(c.get("primeira_msg_celeste_em") or c.get("ultimo_template_em"), ini, fim)]
-        com_resposta = [c for c in cs if (c.get("primeira_msg_celeste_em") or c.get("ultimo_template_em"))   # só quem a Celeste contatou
-                        and _no_periodo(c.get("primeira_msg_lead_em") or c.get("ultima_msg_lead_em"), ini, fim)]
-        marcados = [c for c in cs if c.get("status") == "Agendado" and _no_periodo(c.get("agendado_em") or c.get("criado_em"), ini, fim)]
-        sair = [c for c in cs if c.get("opt_out") and _no_periodo(c.get("opt_out_em") or c.get("ultima_msg_lead_em"), ini, fim)]
-        comparecidos = [c for c in cs if c.get("compareceu") and _no_periodo(c.get("compareceu_em"), ini, fim)]
-        funil[f] = {
-            "disponibilizados": disponibilizados, "conversados": len(conversados), "com_resposta": len(com_resposta),
-            "marcados": len(marcados), "sair": len(sair), "comparecidos": len(comparecidos), "vendas": None, "faturamento": None,
-            "ef_resposta": _pct(len(com_resposta), len(conversados)), "ef_marcacao": _pct(len(marcados), len(conversados)),
-            "ef_comparecimento": _pct(len(comparecidos), len(marcados)), "ef_global": _pct(len(marcados), disponibilizados),
-            "custo": sum(float(c.get("custo_usd") or 0) for c in conversados),
-        }
-    total = {k: (sum(funil[f][k] for f in FRENTES) if isinstance(funil["leads_perdidos"][k], int) else None)
-             for k in ("disponibilizados", "conversados", "com_resposta", "marcados", "sair", "comparecidos", "vendas", "faturamento")}
-    total["ef_resposta"] = _pct(total["com_resposta"], total["conversados"])
-    total["ef_marcacao"] = _pct(total["marcados"], total["conversados"])
-    total["ef_comparecimento"] = _pct(total["comparecidos"], total["marcados"])
-    total["ef_global"] = _pct(total["marcados"], total["disponibilizados"])
-    total["custo"] = sum(funil[f]["custo"] for f in FRENTES)
+    dias = [(d + timedelta(days=i)).isoformat() for i in range((a - d).days + 1)]
+    n_dias = max(1, len(dias))
+    hoje_d = datetime.now(FUSO).date().isoformat()
 
-    # gráfico diário: conversas distintas em que a Celeste mandou ≥ 1 mensagem (template ou IA), por dia e frente
+    # mensagens que a Celeste ENVIOU no período (template ou IA; orientação/botão da recepção e humano não contam)
     frente_de = {c["id"]: c.get("frente") for c in conversas}
     por_dia: dict[str, dict[str, set]] = defaultdict(lambda: defaultdict(set))
+    conv_msg: dict[str, set] = defaultdict(set)      # frente → conversas com mensagem da Celeste no período
+    n_msgs: dict[str, int] = defaultdict(int)        # frente → mensagens enviadas no período
     try:
         q = (db.collection_group("mensagens").where("direcao", "in", ["celeste", "template"])
              .where("recebido_em", ">=", ini).where("recebido_em", "<", fim))
         for m in q.stream():
-            if m.to_dict().get("tipo") == "interactive":      # orientação/botão da recepção não conta como conversa da Celeste
+            x = m.to_dict()
+            if x.get("tipo") == "interactive" or (x.get("modelo") or "").startswith("automatico"):
                 continue
             cid = m.reference.parent.parent.id
-            dia = _dt(m.to_dict().get("recebido_em")).astimezone(FUSO).strftime("%Y-%m-%d")
-            por_dia[dia][frente_de.get(cid) if frente_de.get(cid) in FRENTES_IA else "sem_frente"].add(cid)
+            fr = frente_de.get(cid) if frente_de.get(cid) in FRENTES_IA else "sem_frente"
+            dia = _dt(x.get("recebido_em")).astimezone(FUSO).strftime("%Y-%m-%d")
+            por_dia[dia][fr].add(cid); conv_msg[fr].add(cid); n_msgs[fr] += 1
     except Exception as e:  # índice ainda propagando
-        por_dia = defaultdict(lambda: defaultdict(set)); aviso = aviso or f"Gráfico diário indisponível no momento ({str(e)[:80]})"
-    dias = [(d + timedelta(days=i)).isoformat() for i in range((a - d).days + 1)]
+        aviso = aviso or f"Dados de mensagens indisponíveis no momento ({str(e)[:80]})"
     serie = {f: [len(por_dia[x][f]) for x in dias] for f in ["leads_perdidos", "sem_frente"]}
+
+    funil = {}
+    for f in FRENTES:
+        ls = [l for l in leads if l.get("frente") == f]
+        cs = [c for c in conversas if c.get("frente") == f]
+        disponibilizados = len(ls)                                                   # 1. base elegível (query da clínica)
+        conversados = len(conv_msg.get(f, set()))                                    # 2. distintos com msg da Celeste no período
+        msgs = n_msgs.get(f, 0)                                                      # 4. mensagens enviadas
+        primeira_vez = sum(1 for c in cs if _no_periodo(c.get("primeira_msg_celeste_em") or c.get("ultimo_template_em"), ini, fim))  # 6.
+        marcados = [c for c in cs if c.get("agendado_em") and _no_periodo(c.get("agendado_em"), ini, fim)]                           # 8.
+        decorridos = [c for c in marcados if (c.get("agendamento") or {}).get("data", "9999") < hoje_d]                              # 11.
+        comparecidos = [c for c in cs if c.get("compareceu") and _no_periodo(c.get("compareceu_em") or c.get("agendado_em"), ini, fim)]  # 12.
+        sair = sum(1 for c in cs if c.get("opt_out") and _no_periodo(c.get("opt_out_em") or c.get("ultima_msg_lead_em"), ini, fim))
+        ef1 = (len(marcados) / disponibilizados) if disponibilizados else None
+        ef2 = (len(comparecidos) / len(decorridos)) if decorridos else None
+        funil[f] = {
+            "disponibilizados": disponibilizados, "conversados": conversados, "conversados_dia": round(conversados / n_dias, 1),
+            "msgs_dia": round(msgs / n_dias, 1), "pct_conversados": _pct(conversados, disponibilizados),
+            "primeira_vez": primeira_vez, "primeira_vez_dia": round(primeira_vez / n_dias, 1),
+            "marcados": len(marcados), "ef1": _pct(len(marcados), disponibilizados),
+            "agendados_mes": None, "decorridos": len(decorridos), "comparecidos": len(comparecidos),
+            "ef2": _pct(len(comparecidos), len(decorridos)), "vendas": None, "faturamento": None, "ef3": None,
+            "ef_global": None, "sair": sair, "_msgs": msgs, "_ef1": ef1, "_ef2": ef2,
+        }
+    inteiros = ("disponibilizados", "conversados", "primeira_vez", "marcados", "decorridos", "comparecidos", "sair", "_msgs")
+    total = {k: sum(funil[f][k] for f in FRENTES) for k in inteiros}
+    total.update({"conversados_dia": round(total["conversados"] / n_dias, 1), "msgs_dia": round(total["_msgs"] / n_dias, 1),
+                  "pct_conversados": _pct(total["conversados"], total["disponibilizados"]),
+                  "primeira_vez_dia": round(total["primeira_vez"] / n_dias, 1), "ef1": _pct(total["marcados"], total["disponibilizados"]),
+                  "agendados_mes": None, "ef2": _pct(total["comparecidos"], total["decorridos"]), "vendas": None, "faturamento": None,
+                  "ef3": None, "ef_global": None})
 
     # campanhas da recepção
     campanhas: dict[str, dict] = {}
