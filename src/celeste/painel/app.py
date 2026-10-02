@@ -208,7 +208,16 @@ def _resumo_conversa(c: dict) -> dict:
             "campanha": c.get("campanha"), "rotulo": tpl.env.globals["rotulo_frente"](c.get("frente"), c.get("campanha")),
             "status": c.get("status"), "modo": c.get("modo", "ia"), "aberta": bool(c.get("aberta")),
             "ultima_texto": u.get("texto") or "", "ultima_direcao": u.get("direcao"), "ultima_em": _json_dt(u.get("em") or c.get("ultima_msg_lead_em") or c.get("criado_em")),
-            "nao_lida": (u.get("direcao") == "lead"), "revisar": bool(c.get("revisar"))}
+            "nao_lida": _nao_lida(c), "revisar": bool(c.get("revisar"))}
+
+
+def _nao_lida(c: dict) -> bool:
+    """Pendente = última mensagem é do lead e ninguém marcou como lida depois dela."""
+    u = c.get("ultima") or {}
+    if u.get("direcao") != "lead":
+        return False
+    lida, em = _dt(c.get("lida_em")), _dt(u.get("em"))
+    return not (lida and em and lida >= em)
 
 
 @app.get("/atendimentos", response_class=HTMLResponse)
@@ -290,6 +299,13 @@ def _acao_orq(caminho: str, corpo: dict):
 @app.post("/api/conversas/{cid}/orientar")
 def api_orientar(cid: str, _=Depends(autenticar)):
     return _acao_orq("/orientar", {"conversa_id": cid})
+
+
+@app.post("/api/conversas/{cid}/lida")
+def api_lida(cid: str, _=Depends(autenticar)):
+    """Tira a marcação de pendente sem responder (marca como lida até a próxima mensagem do lead)."""
+    db.collection("conversas").document(cid).set({"lida_em": datetime.now(timezone.utc) + timedelta(seconds=1)}, merge=True)
+    return JSONResponse({"ok": True})
 
 
 @app.post("/api/conversas/{cid}/aviso")
