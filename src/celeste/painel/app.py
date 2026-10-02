@@ -36,6 +36,7 @@ config.SEGREDOS.setdefault("PAINEL_SENHA", "painel-senha")
 URL_ORQUESTRADOR = os.environ.get("URL_ORQUESTRADOR", "")
 URL_JOBS = os.environ.get("URL_JOBS", "")
 FRENTES = {"leads_perdidos": "Leads Perdidos", "novos_leads": "Novos Leads"}
+FRENTES_IA = {f for f, cfg in config.parametros()["frentes"].items() if cfg.get("ativa")}   # frentes que a Celeste trabalha hoje
 POR_PAGINA = 200
 
 
@@ -118,8 +119,8 @@ def gestao(request: Request, de: str = "", ate: str = "", aviso: str = "", _=Dep
     for f in FRENTES:
         ls = [l for l in leads if l.get("frente") == f]
         cs = [c for c in conversas if c.get("frente") == f]
-        disponibilizados = sum(1 for l in ls if _no_periodo(l.get("disponibilizado_em") or l.get("carregado_em"), ini, fim))
-        conversados = [c for c in cs if _no_periodo(c.get("primeira_msg_celeste_em") or c.get("ultimo_template_em") or c.get("ultima_msg_celeste_em"), ini, fim)]
+        disponibilizados = sum(1 for l in ls if l.get("elegivel"))          # base elegível atual (query da clínica)
+        conversados = [c for c in cs if _no_periodo(c.get("primeira_msg_celeste_em") or c.get("ultimo_template_em"), ini, fim)]
         com_resposta = [c for c in cs if _no_periodo(c.get("primeira_msg_lead_em") or c.get("ultima_msg_lead_em"), ini, fim)]
         marcados = [c for c in cs if c.get("status") == "Agendado" and _no_periodo(c.get("agendado_em") or c.get("criado_em"), ini, fim)]
         sair = [c for c in cs if c.get("opt_out") and _no_periodo(c.get("opt_out_em") or c.get("ultima_msg_lead_em"), ini, fim)]
@@ -148,11 +149,11 @@ def gestao(request: Request, de: str = "", ate: str = "", aviso: str = "", _=Dep
         for m in q.stream():
             cid = m.reference.parent.parent.id
             dia = _dt(m.to_dict().get("recebido_em")).astimezone(FUSO).strftime("%Y-%m-%d")
-            por_dia[dia][frente_de.get(cid) or "outros"].add(cid)
+            por_dia[dia][frente_de.get(cid) if frente_de.get(cid) in FRENTES_IA else "sem_frente"].add(cid)
     except Exception as e:  # índice ainda propagando
         por_dia = defaultdict(lambda: defaultdict(set)); aviso = aviso or f"Gráfico diário indisponível no momento ({str(e)[:80]})"
     dias = [(d + timedelta(days=i)).isoformat() for i in range((a - d).days + 1)]
-    serie = {f: [len(por_dia[x][f]) for x in dias] for f in list(FRENTES) + ["outros"]}
+    serie = {f: [len(por_dia[x][f]) for x in dias] for f in ["leads_perdidos", "sem_frente"]}
 
     # campanhas da recepção
     campanhas: dict[str, dict] = {}
@@ -168,13 +169,15 @@ def gestao(request: Request, de: str = "", ate: str = "", aviso: str = "", _=Dep
 
     custo_hoje = (db.collection("custos_diarios").document(hoje).get().to_dict() or {}).get("custo_usd", 0)
     custo_mes = sum((c.to_dict() or {}).get("custo_usd", 0) for c in db.collection("custos_diarios").stream() if c.id.startswith(hoje[:7]))
-    sem_frente = sum(1 for c in conversas if not c.get("frente"))
-    encaminhados_abertos = sum(1 for e in db.collection("encaminhamentos").where("atendido", "==", False).stream())
+    sem_frente = sum(1 for c in conversas if c.get("frente") not in FRENTES_IA)          # tudo que não é frente da IA
+    encaminhados = sum(1 for c in conversas if c.get("orientado_recepcao_em"))           # receberam a mensagem da recepção
+    abertas_ia = sum(1 for c in conversas if c.get("frente") in FRENTES_IA and c.get("aberta")
+                     and (c.get("primeira_msg_celeste_em") or c.get("ultimo_template_em")))
     return tpl.TemplateResponse(request, "gestao.html", {
         "de": d.isoformat(), "ate": a.isoformat(), "funil": funil, "total": total, "dias": dias, "serie": serie,
         "campanhas": dict(sorted(campanhas.items())), "custo_hoje": custo_hoje, "custo_mes": custo_mes,
         "cap": config.parametros()["modelos"]["cap_diario_usd"], "elegiveis": sum(1 for l in leads if l.get("elegivel")),
-        "abertas": sum(1 for c in conversas if c.get("aberta")), "sem_frente": sem_frente, "encaminhados_abertos": encaminhados_abertos,
+        "abertas": abertas_ia, "sem_frente": sem_frente, "encaminhados": encaminhados,
         "aviso": aviso, "atalhos": _atalhos(),
     })
 
@@ -368,7 +371,7 @@ def marcar_atendido(eid: str, _=Depends(autenticar)):
 
 # ================================================================= 3. LISTAS
 @app.get("/listas", response_class=HTMLResponse)
-def listas(request: Request, frente: str = "leads_perdidos", status: str = "", pagina: int = 1, _=Depends(autenticar)):
+def listas(request: Request, frente: str = "leads_perdidos", status: str = "", pagina: int = 1, base: str = "elegiveis", _=Depends(autenticar)):
     pagina = max(1, pagina)
     campanhas_lista = sorted({x.get("campanha") for x in (c.to_dict() for c in db.collection("campanha_contatos").select(["campanha"]).stream()) if x.get("campanha")})
     conv_por_contato = {x.get("contato"): cid for cid, x in ((c.id, c.to_dict()) for c in db.collection("conversas").select(["contato", "aberta"]).stream())}
@@ -384,6 +387,8 @@ def listas(request: Request, frente: str = "leads_perdidos", status: str = "", p
         statuses = []
     else:
         q = db.collection("leads").where("frente", "==", frente)
+        if base == "elegiveis":
+            q = q.where("elegivel", "==", True)
         if status:
             q = q.where("status_ia", "==", status)
         total = q.count().get()[0][0].value
@@ -392,11 +397,11 @@ def listas(request: Request, frente: str = "leads_perdidos", status: str = "", p
     paginas = max(1, -(-total // POR_PAGINA))
     por_status = Counter()
     if not frente.startswith("campanha:"):
-        for d in db.collection("leads").where("frente", "==", frente).select(["status_ia", "elegivel"]).stream():
-            x = d.to_dict(); por_status[("elegível" if x.get("elegivel") else "fora da base")] += 1
+        for d in db.collection("leads").where("frente", "==", frente).where("elegivel", "==", True).select(["status_ia"]).stream():
+            por_status[d.to_dict().get("status_ia") or "Não contatado"] += 1
     return tpl.TemplateResponse(request, "listas.html", {"itens": itens, "total": total, "pagina": pagina, "paginas": paginas, "frente": frente,
-                                                         "status": status, "statuses": statuses, "campanhas_lista": campanhas_lista,
-                                                         "por_status": dict(por_status), "por_pagina": POR_PAGINA})
+                                                         "status": status, "statuses": statuses, "campanhas_lista": campanhas_lista, "base": base,
+                                                         "por_status": dict(por_status.most_common()), "por_pagina": POR_PAGINA})
 
 
 # ================================================================= 4. FRENTES DE TRABALHO
@@ -473,7 +478,7 @@ def sincronizar_campanhas(_=Depends(autenticar)):
         aviso = f"Campanhas sincronizadas: {j.get('importados', 0)} contatos, {j.get('conversas_rotuladas', 0)} conversas rotuladas." if r.ok else f"Falha: {r.text[:160]}"
     except Exception as e:
         aviso = f"Falha: {str(e)[:160]}"
-    return RedirectResponse(f"/?aviso={aviso}", status_code=303)
+    return RedirectResponse(f"/listas?frente=campanha:Inativos · outubro/2026&aviso={aviso}", status_code=303)
 
 
 # ================================================================= 5. TEMPLATES

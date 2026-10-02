@@ -13,8 +13,8 @@
 
 <div class="cards">
   <div class="card"><div class="n">{{ elegiveis }}</div><div class="l">leads elegíveis na base hoje</div></div>
-  <div class="card"><div class="n">{{ abertas }}</div><div class="l">conversas abertas</div></div>
-  <div class="card"><div class="n">{{ encaminhados_abertos }}</div><div class="l">encaminhados à recepção pendentes</div></div>
+  <div class="card"><div class="n">{{ abertas }}</div><div class="l">conversas abertas da {{ nome_ia }}</div></div>
+  <div class="card"><div class="n">{{ encaminhados }}</div><div class="l">encaminhados à recepção</div></div>
   <div class="card"><div class="n">{{ sem_frente }}</div><div class="l">conversas sem frente</div></div>
   <div class="card"><div class="n">US$ {{ '%.2f'|format(custo_hoje or 0) }}</div><div class="l">custo IA hoje (teto US$ {{ cap }})</div></div>
   <div class="card"><div class="n">US$ {{ '%.2f'|format(custo_mes) }}</div><div class="l">custo IA no mês</div></div>
@@ -29,7 +29,7 @@
 {% for f in ['leads_perdidos','novos_leads'] %}<td class="num">{% set v = F[f][chave] %}{% if v is none %}<span class="muted">a definir</span>{% elif dinheiro %}US$ {{ '%.2f'|format(v) }}{% else %}{{ v }}{% endif %}</td>{% endfor %}
 <td class="num">{% set v = total[chave] %}{% if v is none %}<span class="muted">a definir</span>{% elif dinheiro %}US$ {{ '%.2f'|format(v) }}{% else %}<b>{{ v }}</b>{% endif %}</td></tr>
 {%- endmacro %}
-{{ linha('Leads disponibilizados no período', 'disponibilizados') }}
+{{ linha('Leads disponibilizados (base elegível)', 'disponibilizados') }}
 {{ linha('Leads distintos conversados (Celeste iniciou)', 'conversados') }}
 {{ linha('Leads distintos com resposta', 'com_resposta') }}
 {{ linha('% com resposta', 'ef_resposta', ef=True) }}
@@ -48,22 +48,9 @@
 <h2>Conversas distintas por dia (a {{ nome_ia }} enviou ao menos uma mensagem)</h2>
 <div class="bloco"><canvas id="diario" height="90"></canvas></div>
 <script>
-new Chart(document.getElementById('diario'), {type:'bar', data:{labels: {{ dias|map('replace','2026-','')|list|tojson }},
-  datasets:[{label:'Leads Perdidos', data: {{ serie.leads_perdidos|tojson }}, backgroundColor:'#12152B', stack:'s'},
-            {label:'Novos Leads', data: {{ serie.novos_leads|tojson }}, backgroundColor:'#D9C7A5', stack:'s'},
-            {label:'Outros (recepção/campanhas)', data: {{ serie.outros|tojson }}, backgroundColor:'#b8532a', stack:'s'}]},
-  options:{responsive:true, scales:{x:{stacked:true, grid:{display:false}}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}},
-           plugins:{legend:{position:'bottom'}}}});
+new Chart(document.getElementById('diario'), {type:'line', data:{labels: {{ dias|map('replace','2026-','')|list|tojson }},
+  datasets:[{label:'Leads Perdidos', data: {{ serie.leads_perdidos|tojson }}, borderColor:'#12152B', backgroundColor:'#12152B', tension:.3, pointRadius:3},
+            {label:'Sem frente', data: {{ serie.sem_frente|tojson }}, borderColor:'#b8532a', backgroundColor:'#b8532a', tension:.3, pointRadius:3}]},
+  options:{responsive:true, scales:{x:{grid:{display:false}}, y:{beginAtZero:true, ticks:{precision:0}}}, plugins:{legend:{position:'bottom'}}}});
 </script>
-
-<h2>Campanhas da recepção <span class="muted" style="font-weight:400;text-transform:none;letter-spacing:0">(disparos dos fluxos da clínica; a {{ nome_ia }} não atende)</span></h2>
-<div class="bloco">
-  {% if campanhas %}
-  <table><tr><th>Campanha</th><th>Receberam disparo</th><th>Responderam no número</th><th>Orientados à recepção</th><th></th></tr>
-  {% for nome, d in campanhas.items() %}<tr><td><b>{{ nome }}</b></td><td>{{ d.enviados }}</td><td>{{ d.responderam }}</td><td>{{ d.orientados }}</td>
-    <td><a href="/conversas?frente=campanha:{{ nome }}">ver conversas</a> · <a href="/listas?frente=campanha:{{ nome }}">ver lista</a></td></tr>{% endfor %}
-  </table>
-  {% else %}<p class="muted">Nenhum contato de campanha importado.</p>{% endif %}
-  <form method="post" action="/campanhas/sincronizar" style="margin-top:10px"><button type="submit" class="leve">Sincronizar agora</button> <span class="muted" style="font-size:12px">importa da tabela da clínica quem recebeu o disparo da ação configurada; base fixa, rode uma vez após o disparo</span></form>
-</div>
 {% endblock %}
