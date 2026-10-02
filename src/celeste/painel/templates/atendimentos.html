@@ -86,6 +86,7 @@ async function abrir(id, manterScroll) {
     <div class="rodape">
       <div class="acoes">
         <button class="leve" onclick="acao('orientar')">Enviar orientação à recepção</button>
+        <button class="leve" onclick="acao('aviso')">Enviar aviso de recebimento</button>
         ${f.modo === 'humano'
           ? `<button onclick="acao('modo','ia')">Devolver para a ${NOME_IA}</button>`
           : `<button onclick="if(confirm('Pausar a ${NOME_IA} nesta conversa e responder como equipe?')) acao('modo','humano')">Liberar para Humano</button>`}
@@ -119,7 +120,7 @@ async function abrir(id, manterScroll) {
 async function acao(tipo, valor) {
   const fd = new FormData(); if (tipo === 'modo') fd.append('modo', valor);
   const r = await fetch(`/api/conversas/${atual}/${tipo}`, {method: 'POST', body: tipo === 'modo' ? fd : null});
-  const j = await r.json(); const m = $('#msg_acao'); if (m) m.textContent = j.ok ? (tipo === 'orientar' ? 'Orientação enviada.' : '') : 'Falha: ' + j.erro;
+  const j = await r.json(); const m = $('#msg_acao'); if (m) m.textContent = j.ok ? (tipo === 'orientar' ? 'Orientação enviada.' : tipo === 'aviso' ? 'Aviso enviado.' : '') : 'Falha: ' + j.erro;
   await abrir(atual, true); await carregarLista();
 }
 

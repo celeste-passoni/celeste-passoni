@@ -292,6 +292,11 @@ def api_orientar(cid: str, _=Depends(autenticar)):
     return _acao_orq("/orientar", {"conversa_id": cid})
 
 
+@app.post("/api/conversas/{cid}/aviso")
+def api_aviso(cid: str, _=Depends(autenticar)):
+    return _acao_orq("/aviso", {"conversa_id": cid})
+
+
 @app.post("/api/conversas/{cid}/modo")
 def api_modo(cid: str, modo: str = Form(...), _=Depends(autenticar)):
     return _acao_orq("/modo", {"conversa_id": cid, "modo": modo})

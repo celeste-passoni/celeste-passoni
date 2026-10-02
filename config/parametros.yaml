@@ -129,7 +129,11 @@ ia:
     botao_texto: "É só tocar no botão abaixo para falar com a nossa recepção 💙"
     # quem escreve ao número e NÃO está na base de leads recebe esta orientação (1x por conversa, sem IA, sem custo) + o botão
     orientar_nao_leads: false              # orientação AUTOMÁTICA a quem não é lead (painel sobrescreve em config/atendimento.orientar_automatico); o botão manual do painel funciona sempre
-    orientacao_intervalo_horas: 24         # repete a orientação se a pessoa voltar a escrever depois deste intervalo
+    orientacao_intervalo_horas: 24
+    # 2ª mensagem automática, enviada pelo botão "Enviar aviso de recebimento" do painel (texto puro, sem botão, janela 24 h)
+    aviso_recebimento_texto: "Olá! Agradecemos o seu contato 💙 Sua mensagem foi encaminhada para a nossa equipe, e em breve alguém vai falar com você por aqui.
+
+Equipe Passoni Clinic"         # repete a orientação se a pessoa voltar a escrever depois deste intervalo
     orientacao_texto: "Olá! Agradeço o seu contato 💙 Para ser atendido pela recepção ou equipe médica, é só tocar no botão abaixo. A equipe vai te responder por lá."
     notificar_por: "whatsapp"                 # a IA (número oficial) envia template utility ao número da recepção
     template_aviso: "aviso_lead_encaminhado"  # a criar na Meta (molde: aviso_interesse_acao_recepcao)

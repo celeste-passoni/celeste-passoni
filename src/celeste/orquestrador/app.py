@@ -202,6 +202,33 @@ def enviar_humano(p: PedidoEnviar):
     return {"ok": True, "wamid": wamid}
 
 
+class PedidoAviso(BaseModel):
+    conversa_id: str
+
+
+@app.post("/aviso")
+def aviso_recebimento(p: PedidoAviso):
+    """Acionado pelo painel: envia o aviso de recebimento (texto puro) à conversa, dentro da janela de 24 h."""
+    ref = db.collection("conversas").document(p.conversa_id)
+    conv = ref.get().to_dict()
+    if not conv:
+        raise HTTPException(404, "conversa não existe")
+    texto = config.parametros()["ia"]["recepcao"]["aviso_recebimento_texto"]
+    _, mt, _ = _svc()
+    try:
+        wamid = mt.enviar_texto(conv["contato"], texto)
+    except Exception as e:
+        fora = "131047" in str(e)
+        raise HTTPException(400, "fora da janela de 24 h: a pessoa precisa escrever de novo antes" if fora else f"falha ao enviar: {str(e)[:160]}")
+    ref.collection("mensagens").document(wamid).set({
+        "direcao": "celeste", "tipo": "text", "modelo": "automatico (aviso de recebimento)", "texto": texto,
+        "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
+    ref.set({"ultima": {"texto": texto[:160], "direcao": "celeste", "tipo": "text", "em": datetime.now(timezone.utc)},
+             "pendente_resposta": False, "aviso_recebimento_em": datetime.now(timezone.utc),
+             "avisos_recebimento": firestore.Increment(1)}, merge=True)
+    return {"ok": True, "wamid": wamid}
+
+
 class PedidoOrientar(BaseModel):
     conversa_id: str
 

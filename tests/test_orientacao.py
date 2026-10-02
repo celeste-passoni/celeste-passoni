@@ -71,3 +71,13 @@ def test_modo_humano_e_envio(monkeypatch):
     assert r["wamid"] == "wamid.h" and mt.enviar_texto.call_args.args == ("5511999990000", "Olá, aqui é a equipe")
     gravado = doc.collection.return_value.document.return_value.set.call_args.args[0]
     assert gravado["direcao"] == "humano"
+
+
+def test_aviso_recebimento(monkeypatch):
+    orq = _orq(monkeypatch)
+    doc = orq.db.collection.return_value.document.return_value
+    doc.get.return_value.to_dict.return_value = {"contato": "5511999990000"}
+    mt = MagicMock(); mt.enviar_texto.return_value = "wamid.a"
+    monkeypatch.setattr(orq, "_svc", lambda: (None, mt, None))
+    r = orq.aviso_recebimento(orq.PedidoAviso(conversa_id="c1"))
+    assert r["wamid"] == "wamid.a" and "encaminhada para a nossa equipe" in mt.enviar_texto.call_args.args[1]
