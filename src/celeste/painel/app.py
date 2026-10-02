@@ -410,19 +410,9 @@ def marcar_atendido(eid: str, _=Depends(autenticar)):
 @app.get("/listas", response_class=HTMLResponse)
 def listas(request: Request, frente: str = "leads_perdidos", status: str = "", pagina: int = 1, base: str = "elegiveis", _=Depends(autenticar)):
     pagina = max(1, pagina)
-    campanhas_lista = sorted({x.get("campanha") for x in (c.to_dict() for c in db.collection("campanha_contatos").select(["campanha"]).stream()) if x.get("campanha")})
-    conv_por_contato = {x.get("contato"): cid for cid, x in ((c.id, c.to_dict()) for c in db.collection("conversas").select(["contato", "aberta"]).stream())}
-    if frente.startswith("campanha:"):
-        q = db.collection("campanha_contatos").where("campanha", "==", frente[9:])
-        total = q.count().get()[0][0].value
-        itens = []
-        for d in q.order_by("ultimo_envio_em", direction=firestore.Query.DESCENDING).offset((pagina - 1) * POR_PAGINA).limit(POR_PAGINA).stream():
-            x = d.to_dict()
-            itens.append({"nome": x.get("nome"), "celular": x.get("celular"), "origem": x.get("acao"), "lead_created_at": x.get("ultimo_envio_em"),
-                          "status_clinica": x.get("status_fluxo"), "status_ia": "Campanha (recepção)", "passo": "—", "ultimo_template_em": x.get("ultimo_envio_em"),
-                          "conversa_id": conv_por_contato.get(x.get("celular"))})
-        statuses = []
-    else:
+    if frente not in FRENTES:
+        frente = "leads_perdidos"
+    if True:
         q = db.collection("leads").where("frente", "==", frente)
         if base == "elegiveis":
             q = q.where("elegivel", "==", True)
@@ -433,11 +423,10 @@ def listas(request: Request, frente: str = "leads_perdidos", status: str = "", p
         statuses = config.parametros()["leads_perdidos"]["status_ia"]
     paginas = max(1, -(-total // POR_PAGINA))
     por_status = Counter()
-    if not frente.startswith("campanha:"):
-        for d in db.collection("leads").where("frente", "==", frente).where("elegivel", "==", True).select(["status_ia"]).stream():
-            por_status[d.to_dict().get("status_ia") or "Não contatado"] += 1
+    for d in db.collection("leads").where("frente", "==", frente).where("elegivel", "==", True).select(["status_ia"]).stream():
+        por_status[d.to_dict().get("status_ia") or "Não contatado"] += 1
     return tpl.TemplateResponse(request, "listas.html", {"itens": itens, "total": total, "pagina": pagina, "paginas": paginas, "frente": frente,
-                                                         "status": status, "statuses": statuses, "campanhas_lista": campanhas_lista, "base": base,
+                                                         "status": status, "statuses": statuses, "base": base,
                                                          "por_status": dict(por_status.most_common()), "por_pagina": POR_PAGINA})
 
 

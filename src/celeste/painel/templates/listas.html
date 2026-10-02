@@ -2,8 +2,7 @@
 {% block corpo %}
 <h1>Listas</h1>
 <form class="inline" method="get" style="margin-bottom:14px">
-  <select name="frente">{% for k, v in FRENTES.items() %}<option value="{{ k }}" {% if frente == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
-    {% for camp in campanhas_lista %}<option value="campanha:{{ camp }}" {% if frente == 'campanha:' ~ camp %}selected{% endif %}>{{ camp }} (recepção)</option>{% endfor %}</select>
+  <select name="frente">{% for k, v in FRENTES.items() %}<option value="{{ k }}" {% if frente == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
   {% if statuses %}<select name="base"><option value="elegiveis" {% if base == 'elegiveis' %}selected{% endif %}>Elegíveis (base atual)</option><option value="todos" {% if base == 'todos' %}selected{% endif %}>Todos já carregados</option></select>
   <select name="status"><option value="">Todos os status da IA</option>{% for s in statuses %}<option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>{% endif %}
   <button type="submit" class="leve">Filtrar</button>
@@ -20,7 +19,7 @@
 {% for l in itens %}
 <tr>
   <td>{{ l.nome or '(sem nome)' }}<br><span class="muted">{{ l.celular }}</span></td>
-  <td><span class="tag {% if frente == 'leads_perdidos' %}lp{% elif frente.startswith('campanha:') %}alerta{% else %}nl{% endif %}">{{ FRENTES.get(frente) or frente[9:] }}</span></td>
+  <td><span class="tag {% if frente == 'leads_perdidos' %}lp{% else %}nl{% endif %}">{{ FRENTES.get(frente) }}</span></td>
   <td>{{ l.origem or '—' }}</td><td>{{ l.lead_created_at|local }}</td>
   <td><span class="tag">{{ l.status_ia }}</span>{% if l.elegivel is defined and not l.elegivel %} <span class="muted" style="font-size:11px">fora da base</span>{% endif %}</td>
   <td>{{ l.passo }}</td><td>{{ l.ultimo_template_em|local or '—' }}</td>
@@ -29,7 +28,6 @@
 {% else %}<tr><td colspan="8" class="muted">Nenhum lead.</td></tr>{% endfor %}
 </table>
 
-{% if frente.startswith('campanha:') %}<form method="post" action="/campanhas/sincronizar" style="margin:10px 0"><button type="submit" class="leve">Sincronizar campanha</button> <span class="muted" style="font-size:12px">importa da tabela da clínica quem recebeu o disparo; rode uma vez após o disparo</span></form>{% endif %}
 <p class="pag" style="margin-top:12px">
   {% if pagina > 1 %}<a class="btn leve" href="/listas?frente={{ frente }}&base={{ base }}&status={{ status }}&pagina={{ pagina - 1 }}">← anterior</a>{% endif %}
   <span class="muted">página {{ pagina }} de {{ paginas }}</span>
