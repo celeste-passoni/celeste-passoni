@@ -74,6 +74,8 @@ def _processar(ev: dict) -> None:
         "recebido_em": datetime.fromtimestamp(ev["timestamp"], tz=timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP,
         "transcricao": None, "midia_gcs": None,
     })
+    if not (conv_ref.get().to_dict() or {}).get("primeira_msg_lead_em"):
+        conv_ref.set({"primeira_msg_lead_em": firestore.SERVER_TIMESTAMP}, merge=True)
     conv_ref.set({"ultima_msg_lead_em": firestore.SERVER_TIMESTAMP,
                   "janela_24h_ate": datetime.now(timezone.utc) + timedelta(hours=24),
                   "pendente_resposta": True}, merge=True)

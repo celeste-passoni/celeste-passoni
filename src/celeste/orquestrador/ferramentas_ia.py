@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any, Callable
 
 from celeste.comum import config
@@ -124,7 +124,8 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         obs = f"Agendado pela Celeste (IA) via WhatsApp | frente {ctx.conversa.get('frente')} | conversa {ctx.conversa.get('id')}"
         a = ctx.ts.agendar_consulta(id_paciente=int(e["id_paciente"]), profissional_id=e["profissional"],
                                     data=date.fromisoformat(e["data"]), hora=e["hora"], observacoes=obs)
-        ctx.atualizar({"id_agendamento_tisaude": a["id"], "status": "Agendado", "agendamento": {"data": e["data"], "hora": e["hora"], "profissional": e["profissional"]}})
+        ctx.atualizar({"id_agendamento_tisaude": a["id"], "status": "Agendado", "agendado_em": datetime.now(timezone.utc),
+                       "agendamento": {"data": e["data"], "hora": e["hora"], "profissional": e["profissional"]}})
         return {"id_agendamento": a["id"], "data": e["data"], "hora": e["hora"], "status": ts.STATUS.get(a.get("status"))}
 
     if nome == "reagendar":
@@ -147,7 +148,7 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         return {"ok": True, "aviso": "botão 'Falar com Recepção' será enviado automaticamente após suas mensagens; não escreva link nem número"}
 
     if nome == "registrar_opt_out":
-        ctx.atualizar({"status": "Não quer (opt-out)", "aberta": False, "opt_out": True})
+        ctx.atualizar({"status": "Não quer (opt-out)", "aberta": False, "opt_out": True, "opt_out_em": datetime.now(timezone.utc)})
         ctx.encerrar = True
         return {"ok": True}
 

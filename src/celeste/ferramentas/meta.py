@@ -110,7 +110,7 @@ class Meta:
 
     def templates(self) -> list[dict]:
         r = self.http.get(f"{GRAPH}/{WABA_ID}/message_templates", headers=self._h(),
-                          params={"fields": "name,status,category,language,quality_score", "limit": 200}, timeout=60)
+                          params={"fields": "name,status,category,language,quality_score,components", "limit": 200}, timeout=60)
         return r.json().get("data", [])
 
 

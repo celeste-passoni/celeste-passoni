@@ -132,6 +132,8 @@ def responder(p: Pedido):
             enviados += 1
         except Exception as e:
             log.warning("botão da recepção não enviado: %s", e)
+    if enviados and not conv.get("primeira_msg_celeste_em"):
+        ref.set({"primeira_msg_celeste_em": firestore.SERVER_TIMESTAMP}, merge=True)
     ref.set({"pendente_resposta": False, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP,
              "total_msgs_celeste": firestore.Increment(enviados), "custo_usd": firestore.Increment(res.custo_usd),
              "aberta": conv.get("aberta", True) and not ctx.encerrar}, merge=True)

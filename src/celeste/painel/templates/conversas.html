@@ -5,6 +5,7 @@
   <select name="frente"><option value="">Todas as frentes</option>{% for k, v in FRENTES.items() %}<option value="{{ k }}" {% if frente == k %}selected{% endif %}>{{ v }}</option>{% endfor %}{% for camp in campanhas_lista %}<option value="campanha:{{ camp }}" {% if frente == 'campanha:' ~ camp %}selected{% endif %}>{{ camp }}</option>{% endfor %}<option value="sem_frente" {% if frente == 'sem_frente' %}selected{% endif %}>Sem frente</option></select>
   <select name="status"><option value="">Todos os status</option>{% for s in statuses %}<option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
   <label><input type="checkbox" name="abertas" value="1" {% if abertas %}checked{% endif %}> só abertas</label>
+  <input type="text" name="busca" value="{{ busca }}" placeholder="nome ou telefone" style="width:180px">
   <button type="submit" class="leve">Filtrar</button>
 </form>
 <table>

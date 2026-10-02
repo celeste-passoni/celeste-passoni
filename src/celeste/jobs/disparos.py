@@ -199,6 +199,7 @@ def _registrar_envio(db, lead_id: str, lead: dict, dec: Decisao, nome_tpl: str, 
         conv_ref = db.collection("conversas").document()
         conv_ref.set({"contato": lead["celular"], "nome": lead.get("nome"), "frente": "leads_perdidos", "modo": "ia",
                       "status": status, "aberta": True, "criado_em": agora, "origem": "disparo", "template_origem": dec.template,
+                      "primeira_msg_celeste_em": agora,
                       "ciclo": next((x["ciclo"] for x in d["passos"] if x["template"] == dec.template), None)})
         conv_id = conv_ref.id
     db.collection("contatos").document(lead["celular"]).set(

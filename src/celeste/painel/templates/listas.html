@@ -1,0 +1,35 @@
+{% extends "base.html" %}{% block titulo %}Listas{% endblock %}
+{% block corpo %}
+<h1>Listas</h1>
+<form class="inline" method="get" style="margin-bottom:14px">
+  <select name="frente">{% for k, v in FRENTES.items() %}<option value="{{ k }}" {% if frente == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+    {% for camp in campanhas_lista %}<option value="campanha:{{ camp }}" {% if frente == 'campanha:' ~ camp %}selected{% endif %}>{{ camp }} (recepção)</option>{% endfor %}</select>
+  {% if statuses %}<select name="status"><option value="">Todos os status da IA</option>{% for s in statuses %}<option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>{% endif %}
+  <button type="submit" class="leve">Filtrar</button>
+</form>
+
+<div class="cards" style="margin-bottom:14px">
+  <div class="card"><div class="n">{{ total }}</div><div class="l">leads nesta lista{% if status %} · {{ status }}{% endif %}</div></div>
+  {% for k, v in por_status.items() %}<div class="card"><div class="n">{{ v }}</div><div class="l">{{ k }}</div></div>{% endfor %}
+  <div class="card"><div class="n">{{ pagina }} / {{ paginas }}</div><div class="l">página · {{ por_pagina }} por página</div></div>
+</div>
+
+<table>
+<tr><th>Lead</th><th>Origem</th><th>Criado na clínica</th><th>Status na clínica</th><th>Status da IA</th><th>Passo</th><th>Último template</th><th>Conversa</th></tr>
+{% for l in itens %}
+<tr>
+  <td>{{ l.nome or '(sem nome)' }}<br><span class="muted">{{ l.celular }}</span></td>
+  <td>{{ l.origem or '—' }}</td><td>{{ l.lead_created_at|local }}</td><td>{{ l.status_clinica or '—' }}</td>
+  <td><span class="tag">{{ l.status_ia }}</span>{% if l.elegivel is defined and not l.elegivel %} <span class="muted" style="font-size:11px">fora da base</span>{% endif %}</td>
+  <td>{{ l.passo }}</td><td>{{ l.ultimo_template_em|local or '—' }}</td>
+  <td>{% if l.conversa_id %}<a href="/conversas/{{ l.conversa_id }}">abrir</a>{% else %}—{% endif %}</td>
+</tr>
+{% else %}<tr><td colspan="8" class="muted">Nenhum lead.</td></tr>{% endfor %}
+</table>
+
+<p class="pag" style="margin-top:12px">
+  {% if pagina > 1 %}<a class="btn leve" href="/listas?frente={{ frente }}&status={{ status }}&pagina={{ pagina - 1 }}">← anterior</a>{% endif %}
+  <span class="muted">página {{ pagina }} de {{ paginas }}</span>
+  {% if pagina < paginas %}<a class="btn leve" href="/listas?frente={{ frente }}&status={{ status }}&pagina={{ pagina + 1 }}">próxima →</a>{% endif %}
+</p>
+{% endblock %}

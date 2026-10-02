@@ -69,7 +69,7 @@ def carregar(dry_run: bool = False) -> dict:
     bq = bigquery.Client(project=config.PROJETO_GCP)
     db = firestore.Client(project=config.PROJETO_GCP)
     agora = datetime.now(timezone.utc)
-    existentes = {d.id: d.to_dict() for d in db.collection("leads").select(["status_ia", "elegivel", "passo", "disponibilizado_em"]).stream()}
+    existentes = {d.id: d.to_dict() for d in db.collection("leads").select(["status_ia", "elegivel", "passo", "disponibilizado_em", "carregado_em"]).stream()}
 
     # (A) base do dia = query da clínica com a janela de data
     na_janela: dict[str, dict] = {}
