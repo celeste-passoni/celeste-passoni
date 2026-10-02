@@ -23,6 +23,7 @@ from pydantic import BaseModel
 
 from celeste.comum import config
 from celeste.ferramentas import meta, tisaude, transcricao
+from celeste.ferramentas.tisaude_simulado import TiSaudeSimulado
 from celeste.orquestrador import ferramentas_ia, motor
 
 logging.basicConfig(level=logging.INFO)
@@ -91,6 +92,10 @@ def responder(p: Pedido):
         except Exception:
             pass
 
+    if conv.get("teste") or _e_numero_teste(conv.get("contato", "")):
+        ts = TiSaudeSimulado()                      # lê a agenda real, não grava nada
+        conv["teste"] = True
+        ref.set({"teste": True, "tisaude_simulado": True}, merge=True)
     ctx = ferramentas_ia.Contexto(
         conversa=conv, telefone=conv["contato"], tisaude=ts, viacep=transcricao.viacep,
         enviar_video=lambda v: _enviar_video(mt, ref, conv, v),
@@ -102,6 +107,8 @@ def responder(p: Pedido):
         frente = "leads_perdidos"  # única frente ativa no piloto
     res = mot.responder(frente, conv, historico, ctx)
     _registrar_chamada(p.conversa_id, res, time.time() - inicio)
+    if isinstance(ts, TiSaudeSimulado) and ts.simulados:
+        ref.set({"simulacoes_tisaude": firestore.ArrayUnion(ts.simulados)}, merge=True)
     if res.refusal:
         ref.set({"revisar": True, "revisar_motivo": "modelo recusou responder"}, merge=True)
         return {"ok": True, "enviado": 0, "refusal": True}

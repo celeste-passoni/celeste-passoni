@@ -114,7 +114,7 @@ def gestao(request: Request, de: str = "", ate: str = "", aviso: str = "", _=Dep
 
     # só os elegíveis (base atual): quem saiu da base não entra em nenhuma conta da Gestão
     leads = [l.to_dict() for l in db.collection("leads").where("elegivel", "==", True).select(["frente", "elegivel"]).stream()]
-    conversas = [dict(c.to_dict(), id=c.id) for c in db.collection("conversas").stream()]
+    conversas = [dict(c.to_dict(), id=c.id) for c in db.collection("conversas").stream() if not (c.to_dict() or {}).get("teste")]
 
     dias = [(d + timedelta(days=i)).isoformat() for i in range((a - d).days + 1)]
     n_dias = max(1, len(dias))
@@ -220,7 +220,7 @@ def _resumo_conversa(c: dict) -> dict:
             "campanha": c.get("campanha"), "rotulo": tpl.env.globals["rotulo_frente"](c.get("frente"), c.get("campanha")),
             "status": c.get("status"), "modo": c.get("modo", "ia"), "aberta": bool(c.get("aberta")),
             "ultima_texto": u.get("texto") or "", "ultima_direcao": u.get("direcao"), "ultima_em": _json_dt(u.get("em") or c.get("ultima_msg_lead_em") or c.get("criado_em")),
-            "nao_lida": _nao_lida(c), "revisar": bool(c.get("revisar"))}
+            "nao_lida": _nao_lida(c), "revisar": bool(c.get("revisar")), "teste": bool(c.get("teste"))}
 
 
 def _nao_lida(c: dict) -> bool:
@@ -291,7 +291,8 @@ def api_conversa(cid: str, _=Depends(autenticar)):
              "motivo_encaminhamento": c.get("motivo_encaminhamento"), "proximo_recontato_em": c.get("proximo_recontato_em"),
              "videos_enviados": c.get("videos_enviados") or [], "orientacoes_enviadas": c.get("orientacoes_enviadas") or 0,
              "orientado_recepcao_em": _json_dt(c.get("orientado_recepcao_em")), "janela_24h_ate": _json_dt(c.get("janela_24h_ate")),
-             "custo": round(sum(x.get("custo_usd", 0) for x in chamadas), 4), "respostas_ia": len(chamadas), "revisar": bool(c.get("revisar"))}
+             "custo": round(sum(x.get("custo_usd", 0) for x in chamadas), 4), "respostas_ia": len(chamadas), "revisar": bool(c.get("revisar")),
+             "teste": bool(c.get("teste")), "simulacoes": c.get("simulacoes_tisaude") or []}
     return JSONResponse({"ficha": ficha, "mensagens": msgs})
 
 
@@ -317,6 +318,13 @@ def api_orientar(cid: str, _=Depends(autenticar)):
 def api_lida(cid: str, _=Depends(autenticar)):
     """Tira a marcação de pendente sem responder (marca como lida até a próxima mensagem do lead)."""
     db.collection("conversas").document(cid).set({"lida_em": datetime.now(timezone.utc) + timedelta(seconds=1)}, merge=True)
+    return JSONResponse({"ok": True})
+
+
+@app.post("/api/conversas/{cid}/reiniciar")
+def api_reiniciar(cid: str, _=Depends(autenticar)):
+    """Encerra a conversa (de teste) para que a próxima mensagem do número abra uma conversa nova, sem memória da anterior."""
+    db.collection("conversas").document(cid).set({"aberta": False, "status": "Encerrada (reiniciada)", "encerrada_em": datetime.now(timezone.utc)}, merge=True)
     return JSONResponse({"ok": True})
 
 

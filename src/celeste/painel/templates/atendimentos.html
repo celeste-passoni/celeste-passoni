@@ -69,7 +69,7 @@ async function carregarLista() {
       <div class="nome">${esc(c.nome)}</div>
       <div class="hora">${hora(c.ultima_em)}${c.nao_lida ? '<span class="bolinha" title="pendente de resposta"></span>' : ''}</div>
       <div class="previa">${c.ultima_direcao === 'celeste' ? NOME_IA + ': ' : c.ultima_direcao === 'humano' ? 'Equipe: ' : c.ultima_direcao === 'template' ? '' : ''}${esc(c.ultima_texto)}</div>
-      <div class="tags">${tagFrente(c.frente, c.rotulo)}<span class="tag mini">${esc(c.status || '')}</span>${c.modo === 'humano' ? '<span class="tag mini humano">humano</span>' : ''}${c.aberta ? '' : '<span class="tag mini">encerrada</span>'}${c.revisar ? '<span class="tag mini alerta">revisar</span>' : ''}</div>
+      <div class="tags">${tagFrente(c.frente, c.rotulo)}<span class="tag mini">${esc(c.status || '')}</span>${c.modo === 'humano' ? '<span class="tag mini humano">humano</span>' : ''}${c.teste ? '<span class="tag mini alerta">TESTE</span>' : ''}${c.aberta ? '' : '<span class="tag mini">encerrada</span>'}${c.revisar ? '<span class="tag mini alerta">revisar</span>' : ''}</div>
     </div>`).join('') || '<div class="vazio" style="height:120px">Nenhuma conversa</div>';
 }
 
@@ -80,13 +80,14 @@ async function abrir(id, manterScroll) {
   const msgsEl = $('#conv .msgs'); const noFim = !msgsEl || (msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 40);
   $('#conv').innerHTML = `
     <div class="topo"><span class="nome">${esc(f.nome || '(sem nome)')}</span> ${tagFrente(f.frente, f.rotulo)} <span class="tag mini">${esc(f.status || '')}</span>
-      ${f.modo === 'humano' ? '<span class="tag mini humano">modo humano</span>' : ''} <a class="muted" style="font-size:12px" href="https://wa.me/${f.contato}" target="_blank">${f.contato}</a></div>
+      ${f.modo === 'humano' ? '<span class="tag mini humano">modo humano</span>' : ''}${f.teste ? '<span class="tag mini alerta">TESTE · TI Saúde simulado</span>' : ''} <a class="muted" style="font-size:12px" href="https://wa.me/${f.contato}" target="_blank">${f.contato}</a></div>
     <div class="msgs">${j.mensagens.map(m => `<div class="balao ${m.direcao}">${esc(m.texto)}<div class="meta">${hora(m.em)}${m.direcao === 'humano' ? ' · equipe' : m.modelo ? ' · ' + esc(m.modelo) : ''}</div></div>`).join('')}</div>
     <div class="rodape">
       <div class="acoes">
         <button class="leve" onclick="acao('orientar')">Enviar orientação à recepção</button>
         <button class="leve" onclick="acao('aviso')">Enviar aviso de recebimento</button>
         <button class="leve" onclick="acao('lida')" title="Tira a bolinha de pendente sem responder">Marcar como lida</button>
+        ${f.teste && f.aberta ? `<button class="leve" onclick="if(confirm('Encerrar esta conversa de teste? A próxima mensagem do número abre uma conversa nova, sem memória.')) acao('reiniciar')">Encerrar e reiniciar</button>` : ''}
         ${f.modo === 'humano'
           ? `<button onclick="acao('modo','ia')">Devolver para a ${NOME_IA}</button>`
           : `<button onclick="if(confirm('Pausar a ${NOME_IA} nesta conversa e responder como equipe?')) acao('modo','humano')">Liberar para Humano</button>`}
@@ -112,6 +113,7 @@ async function abrir(id, manterScroll) {
     <p><b>Vídeos enviados:</b> ${esc(f.videos_enviados.join(', ') || '—')}</p>
     <p><b>Orientações à recepção:</b> ${f.orientacoes_enviadas}${f.orientado_recepcao_em ? ' · última ' + hora(f.orientado_recepcao_em) : ''}</p>
     <p><b>Custo:</b> US$ ${f.custo.toFixed(4)} · ${f.respostas_ia} resposta(s) da IA</p>
+    ${f.teste && f.simulacoes.length ? '<h4>Simulado no TI Saúde (nada gravado)</h4>' + f.simulacoes.map(s => `<p>• <b>${esc(s.acao)}</b>: ${esc(JSON.stringify(s.dados))}</p>`).join('') : ''}
     <p class="muted" style="font-size:11px;margin-top:10px"><a href="/conversas-tabela/${id}">ver bastidores</a></p>`;
   const el = $('#conv .msgs'); if (el && (noFim || !manterScroll)) el.scrollTop = el.scrollHeight;
   const t = $('#txt'); if (t) t.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } });
@@ -120,7 +122,7 @@ async function abrir(id, manterScroll) {
 async function acao(tipo, valor) {
   const fd = new FormData(); if (tipo === 'modo') fd.append('modo', valor);
   const r = await fetch(`/api/conversas/${atual}/${tipo}`, {method: 'POST', body: tipo === 'modo' ? fd : null});
-  const j = await r.json(); const m = $('#msg_acao'); if (m) m.textContent = j.ok ? (tipo === 'orientar' ? 'Orientação enviada.' : tipo === 'aviso' ? 'Aviso enviado.' : tipo === 'lida' ? 'Marcada como lida.' : '') : 'Falha: ' + j.erro;
+  const j = await r.json(); const m = $('#msg_acao'); if (m) m.textContent = j.ok ? (tipo === 'orientar' ? 'Orientação enviada.' : tipo === 'aviso' ? 'Aviso enviado.' : tipo === 'lida' ? 'Marcada como lida.' : tipo === 'reiniciar' ? 'Conversa encerrada.' : '') : 'Falha: ' + j.erro;
   await abrir(atual, true); await carregarLista();
 }
 

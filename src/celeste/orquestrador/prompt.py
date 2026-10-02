@@ -64,12 +64,14 @@ def camadas_estaveis(frente: str) -> str:
 def contexto_lead(conversa: dict) -> str:
     """Bloco volátil com o que se sabe do lead (vai na primeira mensagem do usuário)."""
     linhas = ["[CONTEXTO DO LEAD — não repita isto para o lead]"]
-    for rotulo, chave in (("Nome", "nome"), ("Telefone", "contato"), ("Frente", "frente"), ("Origem", "origem"),
+    if conversa.get("origem") == "espontaneo":
+        linhas.append("- Origem: espontâneo (o lead escreveu primeiro; nenhum template foi enviado a ele)")
+    for rotulo, chave in (("Nome", "nome"), ("Telefone", "contato"), ("Frente", "frente"), ("Origem", "origem") if conversa.get("origem") != "espontaneo" else ("", ""),
                           ("Último contato anterior", "ultimo_contato_anterior"), ("Resumo da conversa anterior", "resumo_contexto"),
                           ("Objeção anterior", "objecao_anterior"), ("Modalidade de interesse", "modalidade_interesse"),
                           ("Template que originou", "template_origem"), ("Status atual", "status"), ("Paciente TI Saúde id", "id_paciente_tisaude"),
                           ("Agendamento TI Saúde id", "id_agendamento_tisaude")):
-        v = conversa.get(chave)
+        v = conversa.get(chave) if chave else None
         if v:
             linhas.append(f"- {rotulo}: {v}")
     return "\n".join(linhas)

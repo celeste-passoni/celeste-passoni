@@ -100,8 +100,11 @@ def _conversa_aberta(telefone: str, nome: str | None):
     for c in abertas:
         return c.reference
     # frente: quem está na base de leads (coleção `leads`) é Leads Perdidos; quem não está fica SEM frente
-    frente, campanha = None, None
-    if db.collection("leads").document(telefone).get().exists:
+    frente, campanha, teste = None, None, False
+    cfg = db.collection("config").document("atendimento").get().to_dict() or {}
+    if telefone in {str(n) for n in (cfg.get("numeros_teste") or [])}:
+        frente, teste = "leads_perdidos", True            # número de teste da clínica: Celeste atende como lead novo, TI Saúde simulado
+    elif db.collection("leads").document(telefone).get().exists:
         frente = "leads_perdidos"
     else:
         cc = db.collection("campanha_contatos").document(telefone).get()
@@ -114,7 +117,7 @@ def _conversa_aberta(telefone: str, nome: str | None):
                      "origem": frente or "espontaneo"}, merge=True)
     ref = db.collection("conversas").document()
     ref.set({"contato": telefone, "nome": nome, "frente": frente, "campanha": campanha, "modo": "ia", "status": "Em conversa",
-             "aberta": True, "criado_em": firestore.SERVER_TIMESTAMP, "origem": "espontaneo"})
+             "aberta": True, "criado_em": firestore.SERVER_TIMESTAMP, "origem": "espontaneo", "teste": teste})
     return ref
 
 

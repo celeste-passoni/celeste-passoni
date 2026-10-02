@@ -229,3 +229,19 @@ def test_modo_teste_gate(monkeypatch):
     assert orq._pode_responder("5511555550000") and orq._pode_responder("5511999990000") and not orq._pode_responder("5511777770000")
     monkeypatch.setattr(orq, "db", DB({"modo": "aberto"}, set()))
     assert orq._pode_responder("5511777770000")
+
+
+def test_tisaude_simulado_nao_grava():
+    from datetime import date
+    from celeste.ferramentas.tisaude_simulado import TiSaudeSimulado
+    ts = TiSaudeSimulado(session=MagicMock())
+    ts._req = MagicMock(side_effect=AssertionError("escrita real não pode acontecer"))
+    p = ts.criar_paciente({"nome": "TESTE", "cpf": "1"})
+    a = ts.agendar_consulta(id_paciente=p["id"], profissional_id="dr_lucas", data=date(2026, 10, 13), hora="10:00", observacoes="x")
+    assert p["simulado"] and a["simulado"] and a["id"] >= 900000 and len(ts.simulados) == 2
+    assert "cpf" not in ts.simulados[0]["dados"]
+
+
+def test_contexto_espontaneo():
+    c = prompt.contexto_lead({"nome": "Ana", "contato": "5511", "frente": "leads_perdidos", "origem": "espontaneo"})
+    assert "espontâneo" in c and "nenhum template" in c and "Origem: espontaneo" not in c
