@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Carga da base de Leads Perdidos: BigQuery (query da clínica + filtros do YAML) → Firestore `leads`.
+"""Carga da base de Leads Perdidos: query oficial da clínica (BigQuery) → Firestore `leads`.
 
 Regras:
+  • a query é a da clínica (gold.leads + gold.sistemaweb_perdidos; janela de 3 a 4 meses; exclui 'Não quer'; 1 por celular);
   • a IA só LÊ as tabelas da clínica; o estado dela vive em `leads/{celular}` no Firestore;
-  • um lead que já existe no Firestore mantém status_ia, ciclo e histórico — só atualizamos os dados vindos da clínica;
-  • quem saiu da base (agendou, 'Não quer', fora da janela) fica `elegivel=false` e sai da fila de disparo;
+  • a janela de data vale na ENTRADA: quem já recebeu template (passo > 0) fica elegível até o fim do ciclo,
+    a menos que tenha agendado / 'Não quer' / participado de outra ação (query sem janela);
+  • `disponibilizado_em` = primeira vez que o lead apareceu na base (métrica "Leads disponibilizados" do painel);
   • telefone normalizado para o formato da Meta (55 + DDD + 9 dígitos); formato irreconhecível → inelegível.
 """
 from __future__ import annotations
@@ -33,31 +35,32 @@ def normalizar_celular(bruto: str | None) -> str | None:
     return None
 
 
-def sql_base(p: dict) -> str:
+def sql_base(p: dict, com_janela: bool = True) -> str:
+    """Query oficial da clínica (recebida em 02/10/2026). `com_janela=False` = mesmos filtros sem o recorte de data
+    (usada para saber se quem já está na esteira continua válido)."""
     f = p["filtros"]
-    # a janela de idade (90–120 dias) é aplicada em Python, na ENTRADA da fila: quem já recebeu template fica até o fim do ciclo
-    condicao_data = f"DATE(t.created_at) >= DATE_SUB(CURRENT_DATE('America/Sao_Paulo'), INTERVAL {int(f['idade_maxima_dias']) + 400} DAY)"
     excluidos = ", ".join(f"'{s}'" for s in p["status_da_clinica_excluidos"])
-    dias_clinica = int(f.get("ignorar_se_contato_clinica_ha_menos_de_dias") or 0)
-    cond_clinica = (f"AND (status_clinica_em IS NULL OR DATE(status_clinica_em) <= DATE_SUB(CURRENT_DATE('America/Sao_Paulo'), INTERVAL {dias_clinica} DAY))"
-                    if dias_clinica else "")
+    janela = (f"  AND DATE(t.created_at) >= DATE_SUB(CURRENT_DATE(), INTERVAL {int(f['janela_meses_max'])} MONTH)\n"
+              f"  AND DATE(t.created_at) <  DATE_SUB(CURRENT_DATE(), INTERVAL {int(f['janela_meses_min'])} MONTH)\n") if com_janela else ""
     return f"""
-WITH base AS (
-  SELECT t.celular, t.nome, t.created_at, t.primeira_origem, t.cpf,
-         s.status AS status_clinica, s.contatado AS contatado_clinica, s.data_atualizacao AS status_clinica_em,
-         ROW_NUMBER() OVER (PARTITION BY t.celular ORDER BY t.created_at DESC) AS rn
-  FROM `{p['fonte']['tabela_leads']}` t
-  LEFT JOIN `{p['fonte']['tabela_status']}` s
-    ON s.nome = t.nome AND REGEXP_REPLACE(s.contato, '[^0-9]', '') = REGEXP_REPLACE(t.celular_sem_ddd, '[^0-9]', '')
-  WHERE LOWER(t.agendou) IN ('não', 'nao')
-    AND LOWER(t.participou_acao_lead_perdidos) IN ('não', 'nao')
-    AND LOWER(t.dentro_2_dias_uteis) IN ('não', 'nao')
-    AND {condicao_data}
-    AND t.created_at < CURRENT_TIMESTAMP()
-)
-SELECT * EXCEPT(rn) FROM base
-WHERE rn = 1 AND (status_clinica IS NULL OR status_clinica NOT IN ({excluidos}))
-{cond_clinica}
+SELECT
+  CURRENT_DATE() AS data_execucao,
+  'Perdidos' AS frente,
+  CAST(t.created_at AS DATETIME) AS data,
+  t.nome AS nome,
+  CONCAT('55', REGEXP_REPLACE(CAST(t.celular_sem_ddd AS STRING), r'[^0-9]', '')) AS contato,
+  t.primeira_origem AS info_extra,
+  s.status AS status,
+  s.data_atualizacao AS data_atualizacao,
+  t.cpf AS cpf
+FROM `{p['fonte']['tabela_leads']}` t
+LEFT JOIN `{p['fonte']['tabela_status']}` s
+  ON COALESCE(t.nome, '') = COALESCE(s.nome, '') AND COALESCE(CAST(t.celular_sem_ddd AS STRING), '') = COALESCE(s.contato, '')
+WHERE LOWER(CAST(t.agendou AS STRING)) IN ('não', 'nao')
+{janela}  AND LOWER(CAST(t.dentro_2_dias_uteis AS STRING)) IN ('não', 'nao')
+  AND LOWER(CAST(t.participou_acao_lead_perdidos AS STRING)) = 'não'
+  AND (s.status IS NULL OR s.status NOT IN ({excluidos}))
+QUALIFY ROW_NUMBER() OVER (PARTITION BY t.celular_sem_ddd ORDER BY t.created_at DESC) = 1
 """
 
 
@@ -65,57 +68,66 @@ def carregar(dry_run: bool = False) -> dict:
     p = config.parametros()["leads_perdidos"]
     bq = bigquery.Client(project=config.PROJETO_GCP)
     db = firestore.Client(project=config.PROJETO_GCP)
-    linhas = list(bq.query(sql_base(p)).result())
     agora = datetime.now(timezone.utc)
-    vistos: set[str] = set()
-    novos = atualizados = invalidos = 0
-    lote, n_lote = db.batch(), 0
+    existentes = {d.id: d.to_dict() for d in db.collection("leads").select(["status_ia", "elegivel", "passo", "disponibilizado_em"]).stream()}
 
-    existentes = {d.id: d.to_dict() for d in db.collection("leads").select(["status_ia", "elegivel", "passo"]).stream()}
-    fora_janela = 0
-    idade_min, idade_max = int(p["filtros"]["idade_minima_dias"]), int(p["filtros"]["idade_maxima_dias"])
-
-    for r in linhas:
-        cel = normalizar_celular(r["celular"])
-        if not cel or cel in vistos:
+    # (A) base do dia = query da clínica com a janela de data
+    na_janela: dict[str, dict] = {}
+    invalidos = 0
+    for r in bq.query(sql_base(p, com_janela=True)).result():
+        cel = normalizar_celular(r["contato"])
+        if not cel or cel in na_janela:
             invalidos += 1
             continue
-        idade = (agora - r["created_at"]).days
-        ja_na_esteira = int((existentes.get(cel) or {}).get("passo") or 0) > 0
-        if not ja_na_esteira and not (idade_min <= idade <= idade_max):
-            fora_janela += 1          # ainda não chegou aos 90 dias, ou passou dos 120 sem nunca ter entrado
-            continue
-        vistos.add(cel)
+        na_janela[cel] = dict(r)
+    # (B) quem já está na esteira continua válido se ainda passa nos filtros sem a janela
+    em_esteira = {cid for cid, d in existentes.items() if int(d.get("passo") or 0) > 0 and d.get("elegivel")}
+    ainda_validos: dict[str, dict] = {}
+    if em_esteira:
+        for r in bq.query(sql_base(p, com_janela=False)).result():
+            cel = normalizar_celular(r["contato"])
+            if cel in em_esteira and cel not in na_janela:
+                ainda_validos[cel] = dict(r)
+
+    novos = atualizados = 0
+    lote, n = db.batch(), 0
+    for cel, r in list(na_janela.items()) + list(ainda_validos.items()):
         nome = (r["nome"] or "").strip()
         dados = {
             "celular": cel, "nome": nome, "primeiro_nome": _primeiro_nome(nome), "frente": "leads_perdidos",
-            "lead_created_at": r["created_at"], "origem": r["primeira_origem"], "tem_cpf": bool(r["cpf"]),
-            "status_clinica": r["status_clinica"], "contatado_clinica": r["contatado_clinica"],
-            "elegivel": True, "atualizado_em": agora, "idade_dias": idade,
+            "lead_created_at": r["data"].replace(tzinfo=timezone.utc) if r["data"].tzinfo is None else r["data"],
+            "origem": r["info_extra"], "tem_cpf": bool(r["cpf"]), "status_clinica": r["status"],
+            "status_clinica_em": r["data_atualizacao"], "elegivel": True, "atualizado_em": agora,
+            "na_janela": cel in na_janela,
         }
         if cel not in existentes:
             dados.update({"status_ia": "Não contatado", "passo": 0, "ciclo": 0, "templates_enviados": [],
-                          "proximo_contato_em": None, "opt_out": False, "conversa_id": None, "carregado_em": agora})
+                          "proximo_contato_em": None, "opt_out": False, "conversa_id": None,
+                          "carregado_em": agora, "disponibilizado_em": agora})
             novos += 1
         else:
+            if not existentes[cel].get("disponibilizado_em"):
+                dados["disponibilizado_em"] = existentes[cel].get("carregado_em") or agora
             atualizados += 1
         if not dry_run:
             lote.set(db.collection("leads").document(cel), dados, merge=True)
-            n_lote += 1
-            if n_lote >= 400:
-                lote.commit(); lote, n_lote = db.batch(), 0
+            n += 1
+            if n >= 400:
+                lote.commit(); lote, n = db.batch(), 0
 
-    sairam = [cid for cid, d in existentes.items() if d.get("elegivel") and cid not in vistos]
+    validos = set(na_janela) | set(ainda_validos)
+    sairam = [cid for cid, d in existentes.items() if d.get("elegivel") and cid not in validos]
     if not dry_run:
         for cid in sairam:
             lote.set(db.collection("leads").document(cid), {"elegivel": False, "saiu_da_base_em": agora}, merge=True)
-            n_lote += 1
-            if n_lote >= 400:
-                lote.commit(); lote, n_lote = db.batch(), 0
-        if n_lote:
+            n += 1
+            if n >= 400:
+                lote.commit(); lote, n = db.batch(), 0
+        if n:
             lote.commit()
-    resumo = {"lidos_bigquery": len(linhas), "fora_da_janela_de_idade": fora_janela, "elegiveis": len(vistos), "novos": novos,
-              "atualizados": atualizados, "invalidos_ou_duplicados": invalidos, "sairam_da_base": len(sairam), "dry_run": dry_run}
+    resumo = {"na_janela": len(na_janela), "mantidos_em_esteira": len(ainda_validos), "elegiveis": len(validos),
+              "novos": novos, "atualizados": atualizados, "invalidos_ou_duplicados": invalidos,
+              "sairam_da_base": len(sairam), "dry_run": dry_run}
     log.info("carga da base: %s", resumo)
     return resumo
 

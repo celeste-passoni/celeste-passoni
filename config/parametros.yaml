@@ -224,18 +224,15 @@ leads_perdidos:
     tabela_leads: "vertical-theory-489419-a7.gold.leads"
     tabela_status: "vertical-theory-489419-a7.gold.sistemaweb_perdidos"
     join: "nome + celular_sem_ddd = status.contato"      # como na query da clínica
-  filtros:
-    idade_minima_dias: 90                                # entra na fila da Celeste quando o lead foi criado há ≥ 90 dias...
-    idade_maxima_dias: 120                               # ...e ≤ 120 dias. Quem já entrou na esteira fica até o fim do ciclo.
+  filtros:                                             # = query oficial da clínica (02/10/2026)
+    janela_meses_min: 3                                # criados há MAIS de 3 meses...
+    janela_meses_max: 4                                # ...e até 4 meses atrás. Quem já entrou na esteira fica até o fim do ciclo.
     agendou: "não"
     participou_acao_lead_perdidos: "não"
     dentro_2_dias_uteis: "não"
     um_por_celular_mais_recente: true
-    ignorar_se_contato_clinica_ha_menos_de_dias: 14      # a recepção mexeu no status há menos de N dias → a IA espera (0 = desliga)
-  status_da_clinica_excluidos:                           # status gravados pelas atendentes que tiram o lead da fila da IA
+  status_da_clinica_excluidos:                         # status gravados pelas atendentes que tiram o lead da fila da IA
     - "Não quer"
-    - "Número Inválido"
-    - "Número duplicado"
   # A IA NÃO escreve nas tabelas da clínica (gold.*). O status abaixo é o dela, no CRM (Firestore),
   # inspirado na lista que a recepção usa; aparece no painel e no espelho ia_atendimento.
   status_ia:
