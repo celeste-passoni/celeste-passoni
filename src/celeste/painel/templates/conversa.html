@@ -23,12 +23,10 @@
       {% if c.motivo_encaminhamento %}<br><b>Encaminhado por:</b> {{ c.motivo_encaminhamento }}{% endif %}
       {% if c.proximo_recontato_em %}<br><b>Recontato em:</b> {{ c.proximo_recontato_em }}{% endif %}</p>
       <p><b>Vídeos enviados:</b> {{ (c.videos_enviados or [])|join(', ') or '—' }}</p>
-      {% if not c.frente or c.frente == 'campanha' %}
       <form method="post" action="/conversas/{{ c.id }}/orientar" onsubmit="return confirm('Enviar agora a mensagem com o botão Falar com Recepção para esta pessoa?')">
         <button type="submit">Enviar orientação à recepção</button>
         <span class="muted" style="font-size:12px"> só funciona se a pessoa escreveu nas últimas 24 h{% if c.orientacoes_enviadas %} · já enviada {{ c.orientacoes_enviadas }}x, última {{ c.orientado_recepcao_em|local }}{% endif %}</span>
       </form>
-      {% endif %}
       <p><b>Custo da conversa:</b> US$ {{ '%.4f'|format(custo) }} · {{ chamadas|length }} resposta(s) da {{ nome_ia }}</p>
     </div>
     <div class="frente" style="margin-top:12px">
