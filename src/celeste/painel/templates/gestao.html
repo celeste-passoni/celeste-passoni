@@ -29,22 +29,22 @@
 {% for f in ['leads_perdidos','novos_leads'] %}<td class="num">{% set v = F[f][chave] %}{% if v is none %}{{ '0%' if ef else ('R$ 0,00' if dinheiro else 0) }}{% elif dinheiro %}R$ {{ '%.2f'|format(v) }}{% else %}{{ v }}{% endif %}</td>{% endfor %}
 <td class="num">{% set v = total[chave] %}{% if v is none %}<b>{{ '0%' if ef else ('R$ 0,00' if dinheiro else 0) }}</b>{% elif dinheiro %}R$ {{ '%.2f'|format(v) }}{% else %}<b>{{ v }}</b>{% endif %}</td></tr>
 {%- endmacro %}
-{{ linha('1. Leads Disponibilizados', 'disponibilizados') }}
-{{ linha('2. Leads Distintos Conversados pela ' ~ nome_ia, 'conversados', ef=True) }}
-{{ linha('3. Leads Conversados / Dia', 'conversados_dia') }}
-{{ linha('4. Mensagens Enviadas / Dia', 'msgs_dia') }}
-{{ linha('5. % de Leads Conversados', 'pct_conversados', ef=True) }}
-{{ linha('6. Leads Conversados pela 1ª vez', 'primeira_vez') }}
-{{ linha('7. Leads Conversados pela 1ª vez / Dia', 'primeira_vez_dia') }}
-{{ linha('8. Leads Distintos Marcados', 'marcados') }}
-{{ linha('9. Eficiência 1 %: Marcação', 'ef1', ef=True) }}
-{{ linha('10. Leads Agendados para serem Atendidos no Mês', 'agendados_mes') }}
-{{ linha('11. Leads com Data de Agendamento Decorrido', 'decorridos') }}
-{{ linha('12. Leads Comparecidos', 'comparecidos') }}
-{{ linha('13. Eficiência 2 %: Comparecimento', 'ef2', ef=True) }}
-{{ linha('14. Leads com Venda', 'vendas') }}
-{{ linha('15. Faturamento gerado pela ' ~ nome_ia, 'faturamento', dinheiro=True) }}
-<tr class="total"><td>16. Eficiência Global {{ nome_ia }}</td>{% for f in ['leads_perdidos','novos_leads'] %}<td class="num">{{ F[f].ef_global or '0%' }}</td>{% endfor %}<td class="num">{{ total.ef_global or '0%' }}</td></tr>
+{{ linha('Leads Disponibilizados', 'disponibilizados') }}
+{{ linha('Leads Distintos Conversados pela ' ~ nome_ia, 'conversados', ef=True) }}
+{{ linha('Leads Conversados / Dia', 'conversados_dia') }}
+{{ linha('Mensagens Enviadas / Dia', 'msgs_dia') }}
+{{ linha('% de Leads Conversados', 'pct_conversados', ef=True) }}
+{{ linha('Leads Conversados pela 1ª vez', 'primeira_vez') }}
+{{ linha('Leads Conversados pela 1ª vez / Dia', 'primeira_vez_dia') }}
+{{ linha('Leads Distintos Marcados', 'marcados') }}
+{{ linha('Eficiência 1 %: Marcação', 'ef1', ef=True) }}
+{{ linha('Leads Agendados para serem Atendidos no Mês', 'agendados_mes') }}
+{{ linha('Leads com Data de Agendamento Decorrido', 'decorridos') }}
+{{ linha('Leads Comparecidos', 'comparecidos') }}
+{{ linha('Eficiência 2 %: Comparecimento', 'ef2', ef=True) }}
+{{ linha('Leads com Venda', 'vendas') }}
+{{ linha('Faturamento gerado pela ' ~ nome_ia, 'faturamento', dinheiro=True) }}
+<tr class="total"><td>Eficiência Global {{ nome_ia }}</td>{% for f in ['leads_perdidos','novos_leads'] %}<td class="num">{{ F[f].ef_global or '0%' }}</td>{% endfor %}<td class="num">{{ total.ef_global or '0%' }}</td></tr>
 </table>
 <p class="muted" style="font-size:12px">Comparecidos: confirmado no TI Saúde para consultas agendadas pela {{ nome_ia }}. Pediram SAIR no período: {{ total.sair }}.</p>
 
