@@ -42,8 +42,8 @@ def test_separar_baloes(texto, esperado):
 
 def test_delay_humano_dentro_dos_limites():
     for _ in range(200):
-        assert 30 <= motor.delay_humano() <= 180
-        assert 120 <= motor.delay_humano(fora_horario=True) <= 900
+        assert 5 <= motor.delay_humano() <= 20
+        assert 5 <= motor.delay_humano(fora_horario=True) <= 20
 
 
 # ------------------------------------------------------------------ ferramentas

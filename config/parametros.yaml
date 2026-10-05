@@ -99,14 +99,14 @@ ia:
   iniciar_resgates_apenas_em_horario_comercial: true  # resgates/follow-ups só 09:00–19:00 seg–sex
   emojis_max_por_mensagem: 2
   baloes_por_resposta: { min: 1, max: 4 }
-  delay_resposta_segundos:            # simula tempo humano (log-normal)
-    minimo: 30
-    mediana: 90
-    maximo: 180
-    fora_horario_comercial: { minimo: 120, mediana: 300, maximo: 900 }
+  delay_resposta_segundos:            # simula tempo humano (log-normal) — reduzido em 05/10 a pedido da clínica ("lead esfria")
+    minimo: 5
+    mediana: 12
+    maximo: 20
+    fora_horario_comercial: { minimo: 5, mediana: 12, maximo: 20 }
   agrupamento_mensagens:              # debounce de rajadas
-    espera_padrao_segundos: 25
-    espera_apos_audio_segundos: 60
+    espera_padrao_segundos: 10
+    espera_apos_audio_segundos: 30
     espera_maxima_segundos: 90
     cancelar_e_regerar_se_chegar_nova_msg: true
   horarios:

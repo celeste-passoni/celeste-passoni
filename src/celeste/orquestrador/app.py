@@ -130,7 +130,7 @@ def responder(p: Pedido):
     enviados = 0
     for i, texto in enumerate(res.baloes):
         if i and SIMULAR_DELAY:
-            time.sleep(min(12.0, 1.5 + len(texto) / 25))  # "digitando" proporcional ao tamanho
+            time.sleep(min(6.0, 1.0 + len(texto) / 40))   # "digitando" proporcional ao tamanho
         wamid = mt.enviar_texto(conv["contato"], texto)
         ref.collection("mensagens").document(wamid).set({
             "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": res.modelo,
