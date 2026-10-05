@@ -94,8 +94,14 @@ def responder(p: Pedido):
 
     if conv.get("teste") or _e_numero_teste(conv.get("contato", "")):
         ts = TiSaudeSimulado()                      # lê a agenda real, não grava nada
-        conv["teste"] = True
-        ref.set({"teste": True, "tisaude_simulado": True}, merge=True)
+        # normaliza a conversa de teste (pode ter nascido antes do cadastro do número): frente da IA e status conversável
+        norm = {"teste": True, "tisaude_simulado": True}
+        if conv.get("frente") not in FRENTES_IA:
+            norm["frente"] = "leads_perdidos"
+        if conv.get("status") in ("Orientado à recepção", "Encaminhado à recepção", None):
+            norm["status"] = "Em conversa"
+        conv.update(norm)
+        ref.set(norm, merge=True)
     ctx = ferramentas_ia.Contexto(
         conversa=conv, telefone=conv["contato"], tisaude=ts, viacep=transcricao.viacep,
         enviar_video=lambda v: _enviar_video(mt, ref, conv, v),

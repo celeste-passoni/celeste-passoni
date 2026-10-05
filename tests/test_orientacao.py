@@ -81,3 +81,10 @@ def test_aviso_recebimento(monkeypatch):
     monkeypatch.setattr(orq, "_svc", lambda: (None, mt, None))
     r = orq.aviso_recebimento(orq.PedidoAviso(conversa_id="c1"))
     assert r["wamid"] == "wamid.a" and "encaminhada para a nossa equipe" in mt.enviar_texto.call_args.args[1]
+
+
+def test_normalizacao_conversa_teste_no_codigo():
+    import inspect
+    from celeste.orquestrador import app as orq
+    src = inspect.getsource(orq.responder)
+    assert 'norm["frente"] = "leads_perdidos"' in src and 'norm["status"] = "Em conversa"' in src
