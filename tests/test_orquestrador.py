@@ -297,3 +297,14 @@ def test_contexto_numero_de_outra_pessoa():
     assert "outra pessoa" in c and "Arthur" in c and "confirme" in c
     c2 = prompt.contexto_lead({"nome": "Arthur Cezar", "contato": "5511", "id_paciente_tisaude": 4942, "paciente_tisaude_nome": "ARTHUR SPERRY CEZAR FILHO"})
     assert "JÁ É PACIENTE" in c2
+
+
+def test_cancelar_exige_motivo_solucao_e_confirmacao():
+    ts = MagicMock(); conv = {"id": "c1"}
+    ctx = _ctx(conv, ts); ctx.atualizar = lambda campos: conv.update(campos)
+    base = {"id_agendamento": 1, "motivo_do_lead": "", "solucao_oferecida": "", "lead_confirmou_apos_solucao": False}
+    s, erro = ferramentas_ia.executar("cancelar", dict(base), ctx); assert erro and "motivo" in s and not ts.cancelar.called
+    s, erro = ferramentas_ia.executar("cancelar", dict(base, motivo_do_lead="vai viajar"), ctx); assert erro and "solução" in s
+    s, erro = ferramentas_ia.executar("cancelar", dict(base, motivo_do_lead="vai viajar", solucao_oferecida="remarcar sexta 10h"), ctx); assert erro and "confirmou" in s
+    s, erro = ferramentas_ia.executar("cancelar", dict(base, motivo_do_lead="vai viajar", solucao_oferecida="remarcar sexta 10h", lead_confirmou_apos_solucao=True), ctx)
+    assert not erro and ts.cancelar.called and conv["motivo_cancelamento"] == "vai viajar"

@@ -44,9 +44,13 @@ FERRAMENTAS: list[dict] = [
     {"name": "reagendar", "description": "Muda data/hora de uma consulta que a Celeste agendou. O novo horário deve vir de buscar_horarios.",
      "strict": True, "input_schema": {"type": "object", "properties": {"id_agendamento": {"type": "integer"}, "data": {"type": "string"}, "hora": {"type": "string"}},
                                       "required": ["id_agendamento", "data", "hora"], "additionalProperties": False}},
-    {"name": "cancelar", "description": "Desmarca uma consulta que a Celeste agendou, a pedido do lead.",
-     "strict": True, "input_schema": {"type": "object", "properties": {"id_agendamento": {"type": "integer"}, "motivo": {"type": "string"}},
-                                      "required": ["id_agendamento", "motivo"], "additionalProperties": False}},
+    {"name": "cancelar", "description": "Desmarca uma consulta que a Celeste agendou. SÓ pode ser chamada depois de: (1) perguntar ao lead o motivo, (2) oferecer uma solução para o motivo (remarcar, valor, dúvida) com escassez, e (3) o lead confirmar que mesmo assim quer cancelar. Chamar antes disso devolve erro.",
+     "strict": True, "input_schema": {"type": "object", "properties": {
+         "id_agendamento": {"type": "integer"},
+         "motivo_do_lead": {"type": "string", "description": "o motivo que o LEAD disse, com as palavras dele (ex.: 'vai viajar na data', 'achou caro'); vazio se ele não disse"},
+         "solucao_oferecida": {"type": "string", "description": "o que você ofereceu para resolver o motivo (ex.: 'remarcar para sexta 10h ou 15h')"},
+         "lead_confirmou_apos_solucao": {"type": "boolean", "description": "true só se o lead, DEPOIS de ouvir a solução, repetiu que quer cancelar"}},
+         "required": ["id_agendamento", "motivo_do_lead", "solucao_oferecida", "lead_confirmou_apos_solucao"], "additionalProperties": False}},
     {"name": "encaminhar_recepcao", "description": "Encerra a conversa encaminhando o lead à recepção humana (só nos 4 motivos permitidos). Avisa a equipe pelo WhatsApp com um resumo.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "motivo": {"type": "string", "enum": ["paciente_em_tratamento", "assunto_clinico", "reclamacao_reembolso", "pediu_pessoa"]},
@@ -141,8 +145,16 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         return {"ok": True, "data": a.get("data"), "hora": a.get("hora")}
 
     if nome == "cancelar":
-        ctx.ts.cancelar(int(e["id_agendamento"]), e.get("motivo", ""))
-        ctx.atualizar({"status": "Irá nos retornar", "id_agendamento_tisaude": None})
+        motivo = (e.get("motivo_do_lead") or "").strip()
+        solucao = (e.get("solucao_oferecida") or "").strip()
+        if len(motivo) < 4:
+            raise ValueError("ainda não há motivo: pergunte ao lead com empatia o que aconteceu antes de cancelar")
+        if len(solucao) < 4:
+            raise ValueError("ainda não houve tentativa de solução: ofereça uma saída para o motivo (remarcar com horários de buscar_horarios, valor, dúvida) com escassez, e só cancele se o lead insistir")
+        if not e.get("lead_confirmou_apos_solucao"):
+            raise ValueError("o lead ainda não confirmou o cancelamento depois da solução oferecida; aguarde a resposta dele")
+        ctx.ts.cancelar(int(e["id_agendamento"]), f"{motivo} | oferecido: {solucao}")
+        ctx.atualizar({"status": "Irá nos retornar", "id_agendamento_tisaude": None, "motivo_cancelamento": motivo, "solucao_oferecida": solucao})
         return {"ok": True}
 
     if nome == "encaminhar_recepcao":
