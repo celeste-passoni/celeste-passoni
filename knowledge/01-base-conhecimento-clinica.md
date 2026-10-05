@@ -2,7 +2,7 @@
 
 > Extraída do histórico real de 528 mil mensagens do MarketZap (jun/2025 – set/2026).
 > **Fonte da verdade dos valores: [`config/parametros.yaml`](../config/parametros.yaml).** Este documento é a versão legível; os números abaixo devem ser mantidos iguais aos do YAML (na implementação, este arquivo será renderizado a partir dele).
-> Decisões confirmadas pela clínica em 21/09/2026: agenda da Dra. seg–sex 12h–17h; antecedência 10 min; parcelamento do tratamento 10x; atendente "Celeste"; operação 24/7.
+> Decisões confirmadas pela clínica em 21/09/2026: agenda da Dra. seg–sex 12h–17h; antecedência 15 min (05/10/2026); parcelamento do tratamento 10x; atendente "Celeste"; operação 24/7.
 
 ## 1. Identidade
 
@@ -67,7 +67,7 @@ Se um lead citar a promoção de R$ 900: "foi um valor promocional válido de ou
   - Biópsia (Punção Incisional Histopatológica Guiada pela Tricoscopia): R$ 8.400, parcelável; feita na própria clínica, amostra enviada a laboratório. Na maioria dos casos o diagnóstico é fechado sem procedimento invasivo.
 - **Somente presencial.** Não há consulta online/telemedicina, porque a tricoscopia e a avaliação clínica precisam ser feitas ao vivo.
 - Transplante capilar: a clínica realiza.
-- **Antecedência no dia da consulta:** "chegue com até 10 minutos de antecedência" (`politicas.antecedencia_minutos`; versão vigente desde ago/2026 — a antiga era 30 min). Em caso de atraso, o atendimento pode ser remanejado para o próximo horário disponível ou reagendado.
+- **Antecedência no dia da consulta:** "chegue com até 15 minutos de antecedência" (`politicas.antecedencia_minutos`; 15 min desde 05/10/2026; antes 10, e antes disso 30). Em caso de atraso, o atendimento pode ser remanejado para o próximo horário disponível ou reagendado.
 - Pix CNPJ citado: 48.985.939/0001-89 ("POR UM FIO") — usado para produtos/fórmulas, não para consulta.
 
 ## 5. Processo de agendamento (como é feito hoje, manualmente)

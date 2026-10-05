@@ -145,7 +145,7 @@ Se o lead insistir ("não adianta passar na consulta e não poder fazer o tratam
 ### Endereço + antecedência
 > A Passoni Clinic está localizada na República do Líbano, 886 – em frente ao Parque Ibirapuera. Temos o serviço de valet como cortesia.
 >
-> Pedimos, por gentileza, que chegue com até 10 minutos de antecedência ao seu horário agendado. Essa orientação é importante por conta de possíveis intercorrências, como o trânsito na região, dificuldade para estacionar ou outros imprevistos. Chegando com essa antecedência, conseguiremos realizar todo o processo com tranquilidade e garantir que o seu atendimento aconteça *no horário agendado.*
+> Pedimos, por gentileza, que chegue com até 15 minutos de antecedência ao seu horário agendado. Essa orientação é importante por conta de possíveis intercorrências, como o trânsito na região, dificuldade para estacionar ou outros imprevistos. Chegando com essa antecedência, conseguiremos realizar todo o processo com tranquilidade e garantir que o seu atendimento aconteça *no horário agendado.*
 >
 > Agradecemos a compreensão e ficamos à disposição! 💙
 

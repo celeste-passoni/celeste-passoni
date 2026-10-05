@@ -63,7 +63,7 @@ levar_no_dia: "exames realizados no último ano"
 
 politicas:
   retorno_cortesia_dias: 30
-  antecedencia_minutos: 10            # versão vigente (ago/set 2026); antes era 30
+  antecedencia_minutos: 15            # alterado em 05/10/2026 (antes 10; antes disso 30)
   consulta_parcela: false
   formas_pagamento_consulta: ["cartão de crédito", "cartão de débito", "pix", "dinheiro"]
   tratamento_parcela_max: 10          # "até 10x sem juros no cartão"
