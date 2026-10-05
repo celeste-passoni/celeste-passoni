@@ -14,7 +14,7 @@ from celeste.orquestrador import ferramentas_ia, motor, prompt
 def test_camadas_estaveis_renderiza_sem_placeholders_criticos():
     s = prompt.camadas_estaveis("leads_perdidos")
     assert "Celeste" in s
-    assert "5511916069009" in s  # link da recepção renderizado
+    assert "5511916069009" not in s  # a Celeste nunca escreve o número da recepção (vai por botão)
     assert "{{ia.nome_atendente}}" not in s
     assert "PARÂMETROS DA CLÍNICA" in s and "INSTRUÇÃO DA FRENTE" in s
 
@@ -136,7 +136,7 @@ def test_motor_ciclo_de_ferramenta_e_custo():
     assert abs(res.custo_usd - (2 * (1000 * 5 + 100 * 25) / 1e6 + 20000 * 0.5 / 1e6)) < 1e-9
     # contexto do lead foi injetado na 1ª mensagem; system tem cache_control
     kwargs = cliente.beta.messages.create.call_args_list[0].kwargs
-    assert kwargs["system"][0]["cache_control"] == {"type": "ephemeral"}
+    assert kwargs["system"][0]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}
     assert "Nome: Ana" in kwargs["messages"][0]["content"]
     assert kwargs["model"] == "claude-opus-5"
 

@@ -100,7 +100,7 @@ class Motor:
                   modelo: Optional[str] = None) -> Resultado:
         """historico: mensagens no formato da API (user/assistant), a última sendo do lead. `modelo` opcional força outro modelo."""
         system = [
-            {"type": "text", "text": prompt.camadas_estaveis(frente), "cache_control": {"type": "ephemeral"}},
+            {"type": "text", "text": prompt.camadas_estaveis(frente), "cache_control": {"type": "ephemeral", "ttl": "1h"}},
             {"type": "text", "text": prompt.formato_saida()},
         ]
         messages = list(historico)

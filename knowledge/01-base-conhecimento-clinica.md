@@ -1,8 +1,10 @@
 # Base de Conhecimento — Passoni Clinic
 
+<!-- prompt:skip -->
 > Extraída do histórico real de 528 mil mensagens do MarketZap (jun/2025 – set/2026).
 > **Fonte da verdade dos valores: [`config/parametros.yaml`](../config/parametros.yaml).** Este documento é a versão legível; os números abaixo devem ser mantidos iguais aos do YAML (na implementação, este arquivo será renderizado a partir dele).
 > Decisões confirmadas pela clínica em 21/09/2026: agenda da Dra. seg–sex 12h–17h; antecedência 15 min (05/10/2026); parcelamento do tratamento 10x; atendente "Celeste"; operação 24/7.
+<!-- /prompt:skip -->
 
 ## 1. Identidade
 
@@ -10,7 +12,9 @@
 - **Especialidade:** ciência capilar e tricologia — clínica 100% dedicada a diagnóstico, prevenção e tratamento de doenças do couro cabeludo e dos fios. Atende "desde os casos mais simples até os mais complexos". Atende todas as idades (inclusive adolescentes e crianças).
 - **Endereço:** Av. República do Líbano, 886 – Moema, São Paulo/SP – em frente ao Parque Ibirapuera. **Valet como cortesia.**
 - **Horário da recepção/atendimento:** segunda a sexta, 09h00 às 19h00.
+<!-- prompt:skip -->
 - **Recesso de fim de ano:** em 2025 a Dra. Luciana atendeu até 18/12 e a agenda reabriu em 12/01. Confirmar datas para 2026.
+<!-- /prompt:skip -->
 
 ## 2. Profissionais
 
@@ -39,6 +43,7 @@ Se um lead perguntar "quem é a equipe médica?", responder que a consulta é fe
 
 **Terminologia:** o que a IA agenda é sempre a **Consulta** (no TI Saúde: "PC - CONSULTA DRA. LUCIANA" ou "PC - CONSULTA EQUIPE MÉDICA") — não chamar de "avaliação". "Avaliação médica/clínica" é apenas uma etapa dentro da consulta.
 
+<!-- prompt:skip -->
 ### Histórico de preços (para não confundir leads antigos)
 | Período | Dra. Luciana | Equipe / Dr. Lucas |
 |---|---|---|
@@ -46,8 +51,9 @@ Se um lead perguntar "quem é a equipe médica?", responder que a consulta é fe
 | out–dez/2025 (promoção) | "de R$ 1.500 por R$ 900" | R$ 500 |
 | jan–fev/2026 | R$ 1.000 | R$ 500 |
 | mar/2026 → hoje | **R$ 1.200** | **R$ 800** |
+<!-- /prompt:skip -->
 
-Se um lead citar a promoção de R$ 900: "foi um valor promocional válido de outubro a dezembro do ano passado; em janeiro os valores foram ajustados". O valor da consulta com a Dra. é tabelado e igual para todos os pacientes — não há exceções nem desconto.
+Se um lead citar valores antigos (R$ 1.000, R$ 900 promocional, R$ 500): "foram valores de 2025; em 2026 os valores foram ajustados". O valor da consulta com a Dra. é tabelado e igual para todos os pacientes — não há exceções nem desconto.
 
 ## 3. O que está incluso na consulta (ambas as modalidades)
 
@@ -69,8 +75,11 @@ Se um lead citar a promoção de R$ 900: "foi um valor promocional válido de ou
 - Transplante capilar: a clínica realiza.
 - **Antecedência no dia da consulta:** "chegue com até 15 minutos de antecedência" (`politicas.antecedencia_minutos`; 15 min desde 05/10/2026; antes 10, e antes disso 30). Em caso de atraso, o atendimento pode ser remanejado para o próximo horário disponível ou reagendado.
 - **Preparo para a consulta:** vir com os **cabelos limpos e secos**, sem produtos (creme, gel, pomada, finalizador), para a tricoscopia enxergar bem o couro cabeludo e os fios. É o único preparo; não há jejum nem exame prévio obrigatório. Levar exames do último ano, se houver.
+<!-- prompt:skip -->
 - Pix CNPJ citado: 48.985.939/0001-89 ("POR UM FIO") — usado para produtos/fórmulas, não para consulta.
+<!-- /prompt:skip -->
 
+<!-- prompt:skip -->
 ## 5. Processo de agendamento (como é feito hoje, manualmente)
 
 1. Apresentar as duas modalidades (Dra. Luciana R$ 1.200 / Dr. Lucas R$ 800) e perguntar **"Qual a melhor opção para você?"**
@@ -89,30 +98,40 @@ Se um lead citar a promoção de R$ 900: "foi um valor promocional válido de ou
    Estado:
    ```
    (algumas versões incluem "Número de telefone com DDD")
+<!-- /prompt:skip -->
 
    **Regras do cadastro no TI Saúde (confirmadas pela clínica em 21/09/2026):** todos os campos do formulário "Novo Paciente" são obrigatórios — nome (gravado em MAIÚSCULAS), CPF (obrigatório por regra da clínica), data de nascimento, **sexo** (Masculino/Feminino), celular com DDD (o do WhatsApp), **e-mail**, **"Encaminhado por"** (lista fechada do sistema — ex.: INSTAGRAM DRA. LUCIANA, GOOGLE, CAMPANHA DE MENSAGENS, INSTAGRAM PASSONI CLINIC, ou nome de quem indicou), **endereço completo** (rua, número, bairro, cidade, estado) e **CEP válido**. Na tela, digitar o CEP preenche rua/bairro/cidade/UF automaticamente (só o número fica manual); a API não faz isso, então o sistema da IA consulta o CEP (ViaCEP) e preenche — a IA pede ao lead apenas **CEP + número + complemento**. Convênio sempre PARTICULAR. **Menor de idade:** coletar nome, parentesco e CPF do responsável. Carteira Nacional de Saúde e BSUID não são necessários. A IA deve pedir sexo e e-mail junto com o formulário (hoje o script das atendentes não pede sexo).
+<!-- prompt:skip -->
 4. Cadastrar no TI Saúde e agendar. Confirmar por escrito: "Sua consulta com a Dra. Luciana está agendada para o dia 12/05 às 13:30."
 5. Enviar endereço + valet + orientação de antecedência.
 6. Enviar vídeo de boas-vindas/pré-consulta.
 7. **Lembrete 2 dias antes** e no dia anterior: "Digite 1 para confirmar sua presença / Digite 2 para solicitar reagendamento". Sem confirmação, o horário pode ser cancelado automaticamente.
 8. Após confirmação: "Obrigada pela confirmação! 😊" + orientação de antecedência + mensagem automática "Em breve estaremos juntos e cuidaremos da saúde dos seus cabelos!".
+<!-- /prompt:skip -->
 
+<!-- prompt:skip -->
 ## 5b. Canais e encaminhamento à recepção (decisão da clínica em 22/09/2026)
 
 - O **número oficial da Meta (+55 11 94231-5926)** é de uso **exclusivo da IA e das automações**. Ninguém da recepção responde por ele.
 - A **recepção humana** atende pelo MarketZap, no número **+55 11 91606-9009** (`https://wa.me/5511916069009`).
+<!-- /prompt:skip -->
 - A IA resolve sozinha **tudo que é agendamento**: valores, modalidades, convênio, parcelamento, horários (só os da grade; sem encaixe), objeções ("vou pensar", "achou caro"), remarcar e cancelar consultas que ela marcou, dúvidas gerais sobre a consulta. Nada disso vai para a recepção.
 - A IA **encaminha à recepção** somente em 4 situações:
   1. o lead já é paciente / está em tratamento;
   2. assunto clínico — receita, exames, medicação, efeito do tratamento;
   3. reclamação ou cancelamento com reembolso;
   4. pedido explícito para falar com uma pessoa.
+<!-- prompt:skip -->
 - **Como encaminha:** responde ao lead com naturalidade — "Sobre a sua receita quem cuida é a nossa recepção, tá? É só tocar no botão *Falar com Recepção* aqui embaixo — ou, se preferir, elas te chamam ainda hoje 💛" — e o sistema envia em seguida, sozinho, um botão de link *Falar com Recepção* que abre a conversa com o número da recepção (a IA nunca escreve o link nem o número). O caso é registrado no painel (aba Encaminhados à recepção) e a conversa é encerrada com status "Encaminhado à recepção: <motivo>". Se o lead voltar falando de consulta, a IA retoma.
 - **Aviso à equipe:** o número da recepção é de API (MarketZap) e não recebe mensagens de outro número de API, então o template `aviso_lead_encaminhado` não chega lá; o aviso à equipe será por WhatsApp comum de alguém da recepção e/ou e-mail (a definir).
+<!-- /prompt:skip -->
 - Pedidos fora da política (consulta online, desconto, tratamento sem consulta, horário fora da grade) **não** são encaminhados: a IA explica a política, oferece o que existe e, sem interesse, encerra cordialmente.
+<!-- prompt:skip -->
 - Meta operacional: encaminhamentos abaixo de 5% das conversas nas frentes Leads Perdidos e Novos Leads; acima disso o painel alerta (sinal de base com pacientes ativos ou de falha da IA).
 - O painel mede também se a recepção **fez contato com o lead encaminhado em até 24 h**, cruzando o telefone com `bronze.mktzap_conversas` no BigQuery — sem ninguém precisar marcar nada.
+<!-- /prompt:skip -->
 
+<!-- prompt:skip -->
 ## 6. Ativos de mídia (vídeos que as atendentes enviam)
 
 | Uso | Frequência | URL (S3 MarketZap) |
@@ -127,6 +146,11 @@ Se um lead citar a promoção de R$ 900: "foi um valor promocional válido de ou
 | Sobre a clínica / currículo da Dra. | 186x | https://mktzap-media-storage-master.s3.amazonaws.com/channels_attachments/waent/934/75c97a7f09f89de0a0138a831161397025a04604 |
 
 > Esses arquivos precisam ser baixados e re-hospedados (ou enviados via Media API da Meta) — as URLs do S3 do MarketZap podem expirar.
+<!-- /prompt:skip -->
+
+## 6. Vídeos
+
+Você envia vídeos pela ferramenta `enviar_video` (institucional, dra_luciana, dr_lucas, boas_vindas_consulta, como_funciona_consulta, casos_sucesso, tecnologias, sobre_clinica); o momento de cada um está nos parâmetros.
 
 ## 7. Perguntas frequentes dos leads e resposta padrão
 

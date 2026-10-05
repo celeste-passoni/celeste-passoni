@@ -46,6 +46,15 @@ def renderizar(texto: str, dados: dict) -> str:
     return re.sub(r"\{\{([^{}]+)\}\}", sub, texto)
 
 
+_SKIP = re.compile(r"<!--\s*prompt:skip\s*-->.*?<!--\s*/prompt:skip\s*-->\s*", re.S)
+
+
+def para_modelo(texto: str) -> str:
+    """Remove dos documentos os blocos marcados para não ir ao modelo (histórico, operacional, repetições)."""
+    texto = _SKIP.sub("", texto)
+    return re.sub(r"\n{3,}", "\n\n", texto).strip()
+
+
 @lru_cache(maxsize=8)
 def camadas_estaveis(frente: str) -> str:
     p = config.parametros()
@@ -54,10 +63,10 @@ def camadas_estaveis(frente: str) -> str:
                            "pre_cadastro_observacao", "pre_cadastro_menor_de_idade", "encaminhado_por", "procedimentos_permitidos")
          if k in p}, allow_unicode=True, sort_keys=False) + "```"]
     for nome in ARQUIVOS_CONHECIMENTO:
-        partes.append(renderizar((config.RAIZ / "knowledge" / nome).read_text(encoding="utf-8"), p))
+        partes.append(para_modelo(renderizar((config.RAIZ / "knowledge" / nome).read_text(encoding="utf-8"), p)))
     prompt_frente = (config.RAIZ / "prompts" / PROMPTS_FRENTE[frente]).read_text(encoding="utf-8")
     prompt_frente = prompt_frente.split("---", 1)[1] if "\n---\n" in prompt_frente else prompt_frente  # tira o cabeçalho de notas
-    partes.append("# INSTRUÇÃO DA FRENTE\n\n" + renderizar(prompt_frente, p))
+    partes.append("# INSTRUÇÃO DA FRENTE\n\n" + para_modelo(renderizar(prompt_frente, p)))
     return "\n\n---\n\n".join(partes)
 
 

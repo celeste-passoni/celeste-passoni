@@ -294,9 +294,10 @@ modelos:
   max_tokens_resposta: 1500
   max_chamadas_por_resposta: 8         # limite do ciclo de ferramentas por vez do lead
   precos_usd_por_milhao:
-    claude-opus-5:     { entrada: 5.0,  saida: 25.0, cache_leitura: 0.5,  cache_escrita: 6.25 }
-    claude-sonnet-5:   { entrada: 2.0,  saida: 10.0, cache_leitura: 0.2,  cache_escrita: 2.5 }
-    claude-haiku-4-5:  { entrada: 1.0,  saida: 5.0,  cache_leitura: 0.1,  cache_escrita: 1.25 }
+    # cache_escrita = gravação com TTL de 1 h (2× a entrada); com TTL de 5 min seria 1,25× (6.25 / 2.5 / 1.25)
+    claude-opus-5:     { entrada: 5.0,  saida: 25.0, cache_leitura: 0.5,  cache_escrita: 10.0 }
+    claude-sonnet-5:   { entrada: 2.0,  saida: 10.0, cache_leitura: 0.2,  cache_escrita: 4.0 }
+    claude-haiku-4-5:  { entrada: 1.0,  saida: 5.0,  cache_leitura: 0.1,  cache_escrita: 2.0 }
   cap_diario_usd: 15.0                 # ao estourar, conversas ficam pausadas com alerta
 
 # ---------------------------------------------------------------------
