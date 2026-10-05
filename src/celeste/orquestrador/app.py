@@ -222,6 +222,10 @@ def lembrete(p: PedidoLembrete):
         raise HTTPException(404, "conversa não existe")
     if not conv.get("aberta") or conv.get("modo", "ia") != "ia" or conv.get("opt_out"):
         raise HTTPException(400, "conversa fechada, em modo humano ou opt-out")
+    if conv.get("frente") not in FRENTES_IA or not _pode_responder(conv.get("contato", "")):
+        raise HTTPException(400, "fora do modo de atendimento atual (lembrete só para quem a Celeste pode responder)")
+    if not (conv.get("primeira_msg_celeste_em") or conv.get("ultimo_template_em")):
+        raise HTTPException(400, "a Celeste ainda não conversou nesta conversa")
     conv["id"] = p.conversa_id
     inicio = time.time()
     mot, mt, ts = _svc()

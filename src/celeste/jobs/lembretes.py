@@ -61,6 +61,8 @@ def elegivel(conv: dict, agora: datetime) -> tuple[bool, str]:
             return False, "fora da janela de 24 h (precisa de template)"
     if not conv.get("ultima_msg_lead_em"):
         return False, "lead nunca respondeu (fica com a esteira de templates)"
+    if not (conv.get("primeira_msg_celeste_em") or conv.get("ultimo_template_em")):
+        return False, "a Celeste ainda não conversou aqui (só mensagens manuais/automáticas da equipe)"
     return True, "ok"
 
 
