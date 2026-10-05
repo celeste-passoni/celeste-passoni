@@ -105,6 +105,7 @@ def responder(p: Pedido):
     frente = conv.get("frente") or "leads_perdidos"
     if frente not in ("leads_perdidos",):
         frente = "leads_perdidos"  # única frente ativa no piloto
+    _pre_verificar_paciente(ref, conv, ts)   # consulta o TI Saúde pelo código, poupando uma chamada do modelo
     res = mot.responder(frente, conv, historico, ctx)
     _registrar_chamada(p.conversa_id, res, time.time() - inicio)
     if isinstance(ts, TiSaudeSimulado) and ts.simulados:
@@ -245,7 +246,8 @@ def lembrete(p: PedidoLembrete):
         enviar_video=lambda v: _enviar_video(mt, ref, conv, v),
         avisar_recepcao=lambda motivo, resumo: _avisar_recepcao(mt, conv, motivo, resumo),
         atualizar=lambda campos: (conv.update(campos), ref.set(campos, merge=True)))
-    res = mot.responder(conv.get("frente") or "leads_perdidos", conv, historico, ctx)
+    res = mot.responder(conv.get("frente") or "leads_perdidos", conv, historico, ctx,
+                        modelo=config.parametros()["modelos"].get("lembretes") or config.parametros()["modelos"]["auxiliar"])
     _registrar_chamada(p.conversa_id, res, time.time() - inicio)
     enviados = 0
     for i, texto in enumerate(res.baloes[:2]):
@@ -338,6 +340,24 @@ def _orientar_recepcao(ref, conv: dict, forcar: bool = False) -> dict:
              "orientacoes_enviadas": firestore.Increment(1),
              "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP, "total_msgs_celeste": firestore.Increment(1)}, merge=True)
     return {"ok": True, "enviado": 1, "orientado_recepcao": True}
+
+
+def _pre_verificar_paciente(ref, conv: dict, ts) -> None:
+    """Antes da 1ª resposta, verifica pelo código se o número já é paciente no TI Saúde (evita uma chamada do modelo só para isso)."""
+    if conv.get("paciente_verificado_em") or conv.get("id_paciente_tisaude"):
+        return
+    campos: dict = {"paciente_verificado_em": datetime.now(timezone.utc)}
+    try:
+        p = ts.buscar_paciente(celular=conv.get("contato", ""))
+        if p:
+            campos.update({"id_paciente_tisaude": p["id"], "paciente_tisaude_nome": p.get("nome")})
+        else:
+            campos["paciente_tisaude_ausente"] = True
+    except Exception as e:
+        log.warning("pré-verificação de paciente falhou: %s", e)
+        return
+    conv.update(campos)
+    ref.set(campos, merge=True)
 
 
 def _pode_responder(contato: str) -> bool:

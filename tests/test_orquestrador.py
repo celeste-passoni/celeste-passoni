@@ -261,3 +261,18 @@ def test_limpar_pontuacao(entrada, esperado):
 
 def test_separar_baloes_descarta_so_traco():
     assert motor.separar_baloes("Oi!\n---\n—\n---\nTudo bem?") == ["Oi!", "Tudo bem?"]
+
+
+def test_motor_modelo_forcado_haiku_sem_thinking():
+    cliente = MagicMock()
+    cliente.beta.messages.create.return_value = _resp("end_turn", [SimpleNamespace(type="text", text="Oi, ainda por aí?")], modelo="claude-haiku-4-5")
+    res = motor.Motor(cliente=cliente).responder("leads_perdidos", {"id": "c1"}, [{"role": "user", "content": "oi"}], _ctx(), modelo="claude-haiku-4-5")
+    kwargs = cliente.beta.messages.create.call_args.kwargs
+    assert kwargs["model"] == "claude-haiku-4-5" and "thinking" not in kwargs and res.modelo == "claude-haiku-4-5"
+
+
+def test_contexto_paciente_pre_verificado():
+    c = prompt.contexto_lead({"nome": "Ana", "contato": "5511", "id_paciente_tisaude": 6436, "paciente_tisaude_nome": "ANA"})
+    assert "JÁ É PACIENTE" in c and "6436" in c
+    c2 = prompt.contexto_lead({"nome": "Ana", "contato": "5511", "paciente_tisaude_ausente": True})
+    assert "NÃO cadastrado" in c2

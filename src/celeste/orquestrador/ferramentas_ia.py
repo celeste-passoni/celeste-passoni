@@ -16,7 +16,7 @@ from celeste.ferramentas import tisaude as ts
 log = logging.getLogger(__name__)
 
 FERRAMENTAS: list[dict] = [
-    {"name": "buscar_paciente", "description": "Procura o lead no TI Saúde pelo telefone do WhatsApp e/ou CPF, para não duplicar cadastro. Use antes de criar_paciente.",
+    {"name": "buscar_paciente", "description": "Procura o lead no TI Saúde por CPF. A busca pelo telefone já é feita automaticamente pelo sistema (veja o contexto do lead); use só quando o lead informar um CPF e o contexto disser que o número não está cadastrado.",
      "strict": True, "input_schema": {"type": "object", "properties": {"cpf": {"type": "string", "description": "CPF do lead, se já informado; senão string vazia"}},
                                       "required": ["cpf"], "additionalProperties": False}},
     {"name": "criar_paciente", "description": "Cria o cadastro do lead no TI Saúde. Só chame com TODOS os campos coletados; nunca para quem já existe.",

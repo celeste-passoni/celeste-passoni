@@ -78,24 +78,27 @@ class Motor:
         self.cfg = config.parametros()["modelos"]
 
     def _criar(self, modelo: str, system: list, messages: list) -> Any:
+        extras = {}
+        if "haiku" not in modelo:   # raciocínio adaptativo só nos modelos grandes
+            extras = {"thinking": {"type": "adaptive"}, "output_config": {"effort": self.cfg.get("esforco", "medium")}}
         return self.cliente.beta.messages.create(
             model=modelo, max_tokens=int(self.cfg["max_tokens_resposta"]),
             system=system, messages=messages, tools=ferramentas_ia.FERRAMENTAS,
-            thinking={"type": "adaptive"}, output_config={"effort": self.cfg.get("esforco", "medium")},
-            betas=["server-side-fallback-2026-07-01"], fallbacks="default",
+            betas=["server-side-fallback-2026-07-01"], fallbacks="default", **extras,
         )
 
-    def _chamar(self, system: list, messages: list) -> tuple[Any, str]:
-        """Principal com 1 retentativa; depois fallback para o modelo secundário."""
-        principal, secundario = self.cfg["conversa"], self.cfg["conversa_fallback"]
+    def _chamar(self, system: list, messages: list, modelo: Optional[str] = None) -> tuple[Any, str]:
+        """Principal com 1 retentativa; depois fallback para o modelo secundário. `modelo` força outro modelo (ex.: Haiku para lembretes)."""
+        principal, secundario = modelo or self.cfg["conversa"], self.cfg["conversa_fallback"]
         try:
             return self._criar(principal, system, messages), principal
         except (anthropic.APIConnectionError, anthropic.RateLimitError, anthropic.InternalServerError, anthropic.APITimeoutError) as e:
             log.warning("modelo principal falhou (%s); usando fallback %s", type(e).__name__, secundario)
             return self._criar(secundario, system, messages), secundario
 
-    def responder(self, frente: str, conversa: dict, historico: list[dict], ctx: ferramentas_ia.Contexto) -> Resultado:
-        """historico: mensagens no formato da API (user/assistant), a última sendo do lead."""
+    def responder(self, frente: str, conversa: dict, historico: list[dict], ctx: ferramentas_ia.Contexto,
+                  modelo: Optional[str] = None) -> Resultado:
+        """historico: mensagens no formato da API (user/assistant), a última sendo do lead. `modelo` opcional força outro modelo."""
         system = [
             {"type": "text", "text": prompt.camadas_estaveis(frente), "cache_control": {"type": "ephemeral"}},
             {"type": "text", "text": prompt.formato_saida()},
@@ -105,10 +108,11 @@ class Motor:
         if messages and isinstance(messages[0].get("content"), str):
             messages[0] = {"role": "user", "content": prompt.contexto_lead(conversa) + "\n\n" + messages[0]["content"]}
         tokens: dict = {}
-        custo, chamadas, usadas, modelo = 0.0, 0, [], self.cfg["conversa"]
+        custo, chamadas, usadas, forcado = 0.0, 0, [], modelo
+        modelo = forcado or self.cfg["conversa"]
         texto_acumulado = ""   # o modelo pode escrever balões ANTES de chamar uma ferramenta; nada se perde
         while True:
-            resp, modelo = self._chamar(system, messages)
+            resp, modelo = self._chamar(system, messages, forcado)
             chamadas += 1
             _somar(tokens, resp.usage)
             custo += _custo(resp.model or modelo, resp.usage)
