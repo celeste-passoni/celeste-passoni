@@ -290,3 +290,10 @@ def test_base_tem_preparo_e_prompt_tem_regra():
     kb = (config.RAIZ / "knowledge" / "01-base-conhecimento-clinica.md").read_text(encoding="utf-8")
     pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
     assert "cabelos limpos e secos" in kb and "Não inventa informação" in pr and "sinalizar_revisao" in pr
+
+
+def test_contexto_numero_de_outra_pessoa():
+    c = prompt.contexto_lead({"nome": "Tati", "contato": "5511", "id_paciente_tisaude": 4942, "paciente_tisaude_nome": "ARTHUR SPERRY CEZAR FILHO"})
+    assert "outra pessoa" in c and "Arthur" in c and "confirme" in c
+    c2 = prompt.contexto_lead({"nome": "Arthur Cezar", "contato": "5511", "id_paciente_tisaude": 4942, "paciente_tisaude_nome": "ARTHUR SPERRY CEZAR FILHO"})
+    assert "JÁ É PACIENTE" in c2

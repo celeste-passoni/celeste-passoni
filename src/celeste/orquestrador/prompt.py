@@ -65,7 +65,16 @@ def contexto_lead(conversa: dict) -> str:
     """Bloco volátil com o que se sabe do lead (vai na primeira mensagem do usuário)."""
     linhas = ["[CONTEXTO DO LEAD — não repita isto para o lead]"]
     if conversa.get("id_paciente_tisaude"):
-        linhas.append(f"- TI Saúde: JÁ É PACIENTE cadastrado (id {conversa['id_paciente_tisaude']}" + (f", nome {conversa['paciente_tisaude_nome']}" if conversa.get("paciente_tisaude_nome") else "") + "). Não chame buscar_paciente nem criar_paciente; use este id para agendar.")
+        nome_ts = (conversa.get("paciente_tisaude_nome") or "").strip()
+        nome_lead = (conversa.get("nome") or "").strip()
+        bate = bool(nome_ts and nome_lead) and nome_lead.split()[0].lower() in nome_ts.lower()
+        if bate or not nome_ts or conversa.get("identidade_confirmada"):
+            linhas.append(f"- TI Saúde: JÁ É PACIENTE cadastrado (id {conversa['id_paciente_tisaude']}" + (f", nome {nome_ts}" if nome_ts else "") + "). Não chame buscar_paciente nem criar_paciente; use este id para agendar.")
+        else:
+            linhas.append(f"- TI Saúde: este NÚMERO está no cadastro de outra pessoa: {nome_ts} (id {conversa['id_paciente_tisaude']}). "
+                          f"ANTES de agendar, confirme com naturalidade se a consulta é para {nome_ts.split()[0].title()} ou para quem está falando "
+                          f"(ex.: 'Vi aqui que esse número está no cadastro de {nome_ts.split()[0].title()}. A consulta é para ele(a) ou para você?'). "
+                          f"Se for para {nome_ts.split()[0].title()}, agende com o id {conversa['id_paciente_tisaude']}. Se for para outra pessoa, faça o pré-cadastro completo e use criar_paciente.")
     elif conversa.get("paciente_tisaude_ausente"):
         linhas.append("- TI Saúde: número NÃO cadastrado (já verificado pelo sistema). Não chame buscar_paciente; faça o pré-cadastro antes de agendar.")
     if conversa.get("origem") == "espontaneo":
