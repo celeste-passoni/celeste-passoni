@@ -246,3 +246,18 @@ def test_tisaude_simulado_nao_grava():
 def test_contexto_espontaneo():
     c = prompt.contexto_lead({"nome": "Ana", "contato": "5511", "frente": "leads_perdidos", "origem": "espontaneo"})
     assert "espontâneo" in c and "nenhum template" in c and "Origem: espontaneo" not in c
+
+
+@pytest.mark.parametrize("entrada,esperado", [
+    ("posso te enviar um vídeo — assim você conhece", "posso te enviar um vídeo, assim você conhece"),
+    ("não trabalhamos com descontos – os valores são tabelados", "não trabalhamos com descontos, os valores são tabelados"),
+    ("*Dra. Luciana – R$ 1.200,00*", "*Dra. Luciana, R$ 1.200,00*"),
+    ("- primeiro item\n- segundo item", "- primeiro item\n- segundo item"),
+    ("Oi! 😊 Tudo bem?", "Oi! 😊 Tudo bem?"),
+])
+def test_limpar_pontuacao(entrada, esperado):
+    assert motor.limpar_pontuacao(entrada) == esperado
+
+
+def test_separar_baloes_descarta_so_traco():
+    assert motor.separar_baloes("Oi!\n---\n—\n---\nTudo bem?") == ["Oi!", "Tudo bem?"]
