@@ -276,3 +276,17 @@ def test_contexto_paciente_pre_verificado():
     assert "JÁ É PACIENTE" in c and "6436" in c
     c2 = prompt.contexto_lead({"nome": "Ana", "contato": "5511", "paciente_tisaude_ausente": True})
     assert "NÃO cadastrado" in c2
+
+
+def test_sinalizar_revisao():
+    conv = {"id": "c1"}
+    ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos)
+    saida, erro = ferramentas_ia.executar("sinalizar_revisao", {"duvida": "tem algum preparo?"}, ctx)
+    assert not erro and conv["revisar"] and conv["duvidas_pendentes"] == ["tem algum preparo?"]
+
+
+def test_base_tem_preparo_e_prompt_tem_regra():
+    from celeste.comum import config
+    kb = (config.RAIZ / "knowledge" / "01-base-conhecimento-clinica.md").read_text(encoding="utf-8")
+    pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
+    assert "cabelos limpos e secos" in kb and "Não inventa informação" in pr and "sinalizar_revisao" in pr

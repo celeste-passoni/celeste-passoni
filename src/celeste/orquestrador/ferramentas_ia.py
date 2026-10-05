@@ -59,6 +59,9 @@ FERRAMENTAS: list[dict] = [
          "video": {"type": "string", "enum": ["institucional", "dra_luciana", "dr_lucas", "boas_vindas_consulta", "como_funciona_consulta", "casos_sucesso", "tecnologias", "sobre_clinica"]},
          "reenviar": {"type": "boolean", "description": "true só quando o lead CONFIRMOU que quer receber de novo um vídeo já enviado"}},
          "required": ["video", "reenviar"], "additionalProperties": False}},
+    {"name": "sinalizar_revisao", "description": "Marca a conversa para a equipe revisar quando o lead perguntou algo que NÃO está na base de conhecimento (você não inventa a resposta). Registre a dúvida exata.",
+     "strict": True, "input_schema": {"type": "object", "properties": {"duvida": {"type": "string", "description": "a pergunta do lead que ficou sem resposta na base"}},
+                                      "required": ["duvida"], "additionalProperties": False}},
     {"name": "atualizar_status", "description": "Registra o resultado da conversa quando ela chega a um desfecho sem agendamento (ex.: Irá nos retornar, Achou caro).",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "status": {"type": "string", "enum": ["Irá nos retornar", "Vamos retornar na data solicitada", "Achou caro", "Quer pelo convênio",
@@ -160,6 +163,11 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         wamid = ctx.enviar_video(e["video"])
         ctx.atualizar({"videos_enviados": enviados + [e["video"]]})
         return {"ok": True, "wamid": wamid}
+
+    if nome == "sinalizar_revisao":
+        pend = list(ctx.conversa.get("duvidas_pendentes") or []) + [e["duvida"][:300]]
+        ctx.atualizar({"revisar": True, "revisar_motivo": "dúvida fora da base de conhecimento", "duvidas_pendentes": pend})
+        return {"ok": True, "aviso": "equipe avisada; diga ao lead que vai confirmar e retornar"}
 
     if nome == "atualizar_status":
         status = e["status"]
