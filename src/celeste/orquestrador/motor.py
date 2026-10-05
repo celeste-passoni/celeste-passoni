@@ -39,10 +39,27 @@ def _somar(tot: dict, uso: Any) -> None:
         tot[k] = tot.get(k, 0) + (getattr(uso, k, 0) or 0)
 
 
+import re as _re
+_TRAVESSAO = _re.compile(r"\s*[—–]\s+|\s+-\s+(?=[a-záéíóúâêôãõç])")
+
+
+def limpar_pontuacao(texto: str) -> str:
+    """Travessão/hífen usado como pontuação no meio da frase vira vírgula (vício de escrita do modelo; soa artificial no WhatsApp)."""
+    out = []
+    for linha in texto.split("\n"):
+        if linha.lstrip().startswith(("-", "—", "–", "•")):   # marcador de lista no início da linha: mantém
+            out.append(linha); continue
+        linha = _TRAVESSAO.sub(", ", linha)
+        out.append(linha.replace(" ,", ",").replace(",,", ","))
+    return "\n".join(out)
+
+
 def separar_baloes(texto: str) -> list[str]:
     partes = [p.strip() for p in texto.replace("\r", "").split("\n---") if p.strip()]
     partes = [p[3:].strip() if p.startswith("---") else p for p in partes]
-    return [p for p in partes if p] or ([texto.strip()] if texto.strip() else [])
+    partes = [limpar_pontuacao(p) for p in partes]
+    partes = [p for p in partes if p and p.strip("-—– ")]       # descarta balão que seja só traço
+    return partes or ([limpar_pontuacao(texto.strip())] if texto.strip() else [])
 
 
 def delay_humano(fora_horario: bool = False) -> float:
