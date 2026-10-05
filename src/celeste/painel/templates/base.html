@@ -46,7 +46,7 @@ button,.btn{background:var(--navy);color:var(--bege);border:0;border-radius:6px;
     <a href="/frentes" class="{% if p.startswith('/frentes') %}ativo{% endif %}"><span class="ic">◈</span> Frentes de Trabalho</a>
     <a href="/templates" class="{% if p.startswith('/templates') %}ativo{% endif %}"><span class="ic">▤</span> Templates</a>
   </nav>
-  <div class="rodape">Passoni Clinic · atendimento por IA</div>
+  <div class="rodape">Passoni Clinic · atendimento por IA<br><span style="opacity:.9">WhatsApp da {{ nome_ia }}: {{ numero_ia }}</span></div>
 </aside>
 <main>{% block corpo %}{% endblock %}</main>
 </body>

@@ -97,6 +97,7 @@ def _oidc_post(url: str, caminho: str, corpo: dict, timeout=120):
 
 tpl.env.filters["local"] = _local
 tpl.env.globals["nome_ia"] = config.parametros()["ia"]["nome_atendente"]
+tpl.env.globals["numero_ia"] = "+55 11 94231-5926"   # número oficial da clínica na Meta (phone_number_id 1219345307926640)
 tpl.env.globals["FRENTES"] = FRENTES
 tpl.env.globals["rotulo_frente"] = lambda f, camp=None: (camp or "Campanha") if f == "campanha" else (FRENTES.get(f) or "Sem frente")
 
