@@ -223,6 +223,15 @@ def _resumo_conversa(c: dict) -> dict:
             "nao_lida": _nao_lida(c), "revisar": bool(c.get("revisar")), "teste": bool(c.get("teste"))}
 
 
+def _numeros_teste() -> set:
+    cfg = db.collection("config").document("atendimento").get().to_dict() or {}
+    return {str(n) for n in (cfg.get("numeros_teste") or [])}
+
+
+def _e_teste(c: dict, numeros: set) -> bool:
+    return bool(c.get("teste")) or (c.get("contato") in numeros)
+
+
 def _nao_lida(c: dict) -> bool:
     """Pendente = última mensagem é do lead e ninguém marcou como lida depois dela."""
     u = c.get("ultima") or {}
@@ -242,6 +251,9 @@ def atendimentos(request: Request, c: str = "", _=Depends(autenticar)):
 @app.get("/api/conversas")
 def api_conversas(frente: str = "", status: str = "", busca: str = "", abertas: str = "", _=Depends(autenticar)):
     docs = [dict(c.to_dict(), id=c.id) for c in db.collection("conversas").stream()]
+    numeros = _numeros_teste()
+    for c in docs:
+        c["teste"] = _e_teste(c, numeros)
     if frente == "sem_frente":
         docs = [c for c in docs if not c.get("frente")]
     elif frente.startswith("campanha:"):
@@ -292,7 +304,7 @@ def api_conversa(cid: str, _=Depends(autenticar)):
              "videos_enviados": c.get("videos_enviados") or [], "orientacoes_enviadas": c.get("orientacoes_enviadas") or 0,
              "orientado_recepcao_em": _json_dt(c.get("orientado_recepcao_em")), "janela_24h_ate": _json_dt(c.get("janela_24h_ate")),
              "custo": round(sum(x.get("custo_usd", 0) for x in chamadas), 4), "respostas_ia": len(chamadas), "revisar": bool(c.get("revisar")),
-             "teste": bool(c.get("teste")), "simulacoes": c.get("simulacoes_tisaude") or []}
+             "teste": _e_teste(c, _numeros_teste()), "simulacoes": c.get("simulacoes_tisaude") or []}
     return JSONResponse({"ficha": ficha, "mensagens": msgs})
 
 
