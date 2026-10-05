@@ -342,3 +342,14 @@ campanhas:
     - { tabela: controle_envio_inativos, acao: inativos_outubro, rotulo: "Inativos · outubro/2026" }
   # base fixa: sincronizar UMA vez pelo botão "Sincronizar agora" do painel (sem agendamento)
   # Conversas com frente "campanha" nunca são atendidas pela IA (em nenhum modo); a equipe direciona à recepção pelo painel.
+
+# ---------------------------------------------------------------------
+# Lembretes de retomada (a Celeste chama de volta quem ela escreveu e não respondeu)
+# ---------------------------------------------------------------------
+lembretes:
+  ativo: true
+  horas: [10, 12, 14, 16, 18]          # Cloud Scheduler roda nesses horários (America/Sao_Paulo)
+  dias_uteis: true
+  minimo_sem_resposta_min: 60          # só depois de 1 h sem resposta
+  max_por_conversa: 3
+  so_dentro_janela_24h: true           # texto livre só até 24 h da última msg do lead; depois, template (futuro)

@@ -209,6 +209,56 @@ def enviar_humano(p: PedidoEnviar):
     return {"ok": True, "wamid": wamid}
 
 
+class PedidoLembrete(BaseModel):
+    conversa_id: str
+
+
+@app.post("/lembrete")
+def lembrete(p: PedidoLembrete):
+    """Lembrete de retomada: mensagem curta e nova para o lead que parou de responder (chamado pelo job de lembretes)."""
+    ref = db.collection("conversas").document(p.conversa_id)
+    conv = ref.get().to_dict()
+    if not conv:
+        raise HTTPException(404, "conversa não existe")
+    if not conv.get("aberta") or conv.get("modo", "ia") != "ia" or conv.get("opt_out"):
+        raise HTTPException(400, "conversa fechada, em modo humano ou opt-out")
+    conv["id"] = p.conversa_id
+    inicio = time.time()
+    mot, mt, ts = _svc()
+    if conv.get("teste") or _e_numero_teste(conv.get("contato", "")):
+        ts = TiSaudeSimulado(); conv["teste"] = True
+    historico, _ = _historico(ref, mt)
+    n = int(conv.get("lembretes_enviados") or 0) + 1
+    ultima = (conv.get("ultima") or {}).get("em")
+    minutos = int((datetime.now(timezone.utc) - ultima).total_seconds() // 60) if ultima else 0
+    historico.append({"role": "user", "content": (
+        f"[SISTEMA — não é o lead falando] O lead está sem responder há {minutos} minutos. Este é o lembrete {n} de "
+        f"{config.parametros()['lembretes'].get('max_por_conversa', 3)}. Escreva UMA mensagem curta (1 balão, no máximo 2) para retomar a conversa "
+        "com naturalidade, diferente das anteriores, sem repetir informações já dadas e sem cobrar. Se fizer sentido, ofereça um próximo passo "
+        "concreto (ex.: um horário de buscar_horarios). Se for o último lembrete, deixe a porta aberta sem pressão.")})
+    ctx = ferramentas_ia.Contexto(
+        conversa=conv, telefone=conv["contato"], tisaude=ts, viacep=transcricao.viacep,
+        enviar_video=lambda v: _enviar_video(mt, ref, conv, v),
+        avisar_recepcao=lambda motivo, resumo: _avisar_recepcao(mt, conv, motivo, resumo),
+        atualizar=lambda campos: (conv.update(campos), ref.set(campos, merge=True)))
+    res = mot.responder(conv.get("frente") or "leads_perdidos", conv, historico, ctx)
+    _registrar_chamada(p.conversa_id, res, time.time() - inicio)
+    enviados = 0
+    for i, texto in enumerate(res.baloes[:2]):
+        if i:
+            time.sleep(min(8.0, 1.5 + len(texto) / 25))
+        wamid = mt.enviar_texto(conv["contato"], texto)
+        ref.collection("mensagens").document(wamid).set({
+            "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": res.modelo, "lembrete": n,
+            "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
+        enviados += 1
+    if enviados:
+        ref.set({"lembretes_enviados": n, "ultimo_lembrete_em": datetime.now(timezone.utc),
+                 "ultima": {"texto": res.baloes[0][:160], "direcao": "celeste", "tipo": "text", "em": datetime.now(timezone.utc)},
+                 "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP, "custo_usd": firestore.Increment(res.custo_usd)}, merge=True)
+    return {"ok": True, "enviado": enviados, "lembrete": n, "custo_usd": round(res.custo_usd, 5)}
+
+
 class PedidoAviso(BaseModel):
     conversa_id: str
 

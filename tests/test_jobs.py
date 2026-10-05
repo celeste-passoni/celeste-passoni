@@ -93,3 +93,26 @@ def test_horario_de_disparo():
     assert disparos.dentro_do_horario(datetime(2026, 10, 13, 10, 0, tzinfo=sp))
     assert not disparos.dentro_do_horario(datetime(2026, 10, 13, 18, 30, tzinfo=sp))
     assert not disparos.dentro_do_horario(datetime(2026, 10, 17, 10, 0, tzinfo=sp))  # sábado
+
+
+def test_lembretes_elegibilidade():
+    from datetime import datetime, timedelta, timezone
+    from celeste.jobs import lembretes
+    agora = datetime(2026, 10, 6, 15, 0, tzinfo=timezone.utc)
+    base = {"frente": "leads_perdidos", "aberta": True, "modo": "ia", "status": "Em conversa", "lembretes_enviados": 0,
+            "ultima": {"direcao": "celeste", "tipo": "text", "em": agora - timedelta(hours=2)},
+            "janela_24h_ate": agora + timedelta(hours=10), "ultima_msg_lead_em": agora - timedelta(hours=3)}
+    assert lembretes.elegivel(dict(base), agora)[0]
+    assert not lembretes.elegivel(dict(base, ultima={"direcao": "lead", "em": agora - timedelta(hours=2)}), agora)[0]     # lead respondeu
+    assert not lembretes.elegivel(dict(base, ultima={"direcao": "celeste", "tipo": "text", "em": agora - timedelta(minutes=30)}), agora)[0]  # < 1 h
+    assert not lembretes.elegivel(dict(base, status="Agendado"), agora)[0]
+    assert not lembretes.elegivel(dict(base, modo="humano"), agora)[0]
+    assert not lembretes.elegivel(dict(base, lembretes_enviados=3), agora)[0]
+    assert not lembretes.elegivel(dict(base, janela_24h_ate=agora - timedelta(hours=1)), agora)[0]     # fora da janela
+    assert not lembretes.elegivel(dict(base, frente=None), agora)[0]
+    assert not lembretes.elegivel(dict(base, ultima_msg_lead_em=None), agora)[0]                       # nunca respondeu
+    from zoneinfo import ZoneInfo
+    sp = ZoneInfo("America/Sao_Paulo")
+    assert lembretes.dentro_do_horario(datetime(2026, 10, 6, 14, 0, tzinfo=sp))
+    assert not lembretes.dentro_do_horario(datetime(2026, 10, 6, 15, 0, tzinfo=sp))
+    assert not lembretes.dentro_do_horario(datetime(2026, 10, 10, 10, 0, tzinfo=sp))   # sábado

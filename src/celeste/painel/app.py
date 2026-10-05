@@ -292,7 +292,8 @@ def api_conversa(cid: str, _=Depends(autenticar)):
             texto = "🔘 " + str(x.get("botao"))
         else:
             texto = x.get("texto") or f"[{x.get('tipo')}]"
-        msgs.append({"id": m.id, "direcao": x.get("direcao"), "texto": texto, "em": _json_dt(x.get("recebido_em")), "modelo": x.get("modelo"), "autor": x.get("autor")})
+        msgs.append({"id": m.id, "direcao": x.get("direcao"), "texto": texto, "em": _json_dt(x.get("recebido_em")),
+                     "modelo": (f"lembrete {x['lembrete']} · " if x.get("lembrete") else "") + (x.get("modelo") or ""), "autor": x.get("autor")})
     chamadas = [x.to_dict() for x in db.collection("chamadas_ia").where("conversa_id", "==", cid).stream()]
     lead = db.collection("leads").document(c.get("contato", "")).get().to_dict() or {}
     ficha = {"contato": c.get("contato"), "nome": c.get("nome"), "frente": c.get("frente"), "campanha": c.get("campanha"),

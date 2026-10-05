@@ -16,7 +16,9 @@ import sys
 
 from fastapi import FastAPI
 
-from celeste.jobs import base_leads, campanhas, disparos, espelho
+import os
+
+from celeste.jobs import base_leads, campanhas, disparos, espelho, lembretes
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI(title="Celeste · Jobs")
@@ -42,6 +44,11 @@ def job_campanhas():
     return campanhas.sincronizar()
 
 
+@app.post("/jobs/lembretes")
+def job_lembretes(dry_run: bool = False):
+    return lembretes.rodar(os.environ.get("URL_ORQUESTRADOR", ""), dry_run=dry_run)
+
+
 @app.post("/jobs/espelho")
 def job_espelho():
     return espelho.rodar()
@@ -49,7 +56,7 @@ def job_espelho():
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
-    ap.add_argument("job", choices=["carregar-base", "disparos", "espelho", "campanhas"])
+    ap.add_argument("job", choices=["carregar-base", "disparos", "espelho", "campanhas", "lembretes"])
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--forcar-horario", action="store_true")
     ap.add_argument("--limite", type=int)
@@ -60,6 +67,8 @@ def main(argv=None):
         r = disparos.rodar(dry_run=a.dry_run, forcar_horario=a.forcar_horario, limite=a.limite)
     elif a.job == "campanhas":
         r = campanhas.sincronizar()
+    elif a.job == "lembretes":
+        r = lembretes.rodar(os.environ.get("URL_ORQUESTRADOR", ""), forcar_horario=a.forcar_horario, dry_run=a.dry_run)
     else:
         r = espelho.rodar()
     print(json.dumps(r, ensure_ascii=False, indent=2, default=str))
