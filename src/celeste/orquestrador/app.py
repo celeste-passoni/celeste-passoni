@@ -245,8 +245,11 @@ def lembrete(p: PedidoLembrete):
     historico.append({"role": "user", "content": (
         f"[SISTEMA — não é o lead falando] O lead está sem responder há {minutos} minutos. Este é o lembrete {n} de "
         f"{config.parametros()['lembretes'].get('max_por_conversa', 3)}. Escreva UMA mensagem curta (1 balão, no máximo 2) para retomar a conversa "
-        "com naturalidade, diferente das anteriores, sem repetir informações já dadas e sem cobrar. Se fizer sentido, ofereça um próximo passo "
-        "concreto (ex.: um horário de buscar_horarios). Se for o último lembrete, deixe a porta aberta sem pressão.")})
+        "com naturalidade, diferente das anteriores e sem repetir informações já dadas. Seu objetivo é levar o lead a marcar a consulta: "
+        "demonstre escassez real da agenda (chame buscar_horarios e ofereça 1 ou 2 horários concretos dos próximos dias, dizendo que consegue "
+        "segurar aquele horário) e reforce o valor de não adiar a avaliação (tempo é cabelo). Termine sempre com um convite direto para fechar o horário. "
+        "PROIBIDO: perguntar se ainda tem interesse ou se 'faz sentido agora', oferecer 'deixar para depois', 'sem pressa', 'quando quiser' ou "
+        "qualquer frase que dê ao lead a opção de adiar. Se for o último lembrete, ainda assim ofereça um horário; apenas acrescente que fica à disposição.")})
     ctx = ferramentas_ia.Contexto(
         conversa=conv, telefone=conv["contato"], tisaude=ts, viacep=transcricao.viacep,
         enviar_video=lambda v: _enviar_video(mt, ref, conv, v),
