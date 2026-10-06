@@ -74,7 +74,7 @@ Se um lead citar valores antigos (R$ 1.000, R$ 900 promocional, R$ 500): "foram 
 - **Somente presencial.** Não há consulta online/telemedicina, porque a tricoscopia e a avaliação clínica precisam ser feitas ao vivo.
 - Transplante capilar: a clínica realiza.
 - **Antecedência no dia da consulta:** "chegue com até 15 minutos de antecedência" (`politicas.antecedencia_minutos`; 15 min desde 05/10/2026; antes 10, e antes disso 30). Em caso de atraso, o atendimento pode ser remanejado para o próximo horário disponível ou reagendado.
-- **Preparo para a consulta:** vir com os **cabelos limpos e secos**, sem produtos (creme, gel, pomada, finalizador), para a tricoscopia enxergar bem o couro cabeludo e os fios. É o único preparo; não há jejum nem exame prévio obrigatório. Levar exames do último ano, se houver.
+- **Preparo para a consulta:** vir com os **cabelos limpos e secos**, sem produtos (creme, gel, pomada, finalizador), para a tricoscopia enxergar bem o couro cabeludo e os fios. É o único preparo; não há jejum nem exame prévio obrigatório. Levar exames do último ano, se houver. **Quando falar disso:** só se o paciente perguntar sobre preparo, ou de forma espontânea somente DEPOIS de a consulta estar agendada, junto das orientações de chegada. Nunca antes do agendamento sem ser perguntado.
 <!-- prompt:skip -->
 - Pix CNPJ citado: 48.985.939/0001-89 ("POR UM FIO") — usado para produtos/fórmulas, não para consulta.
 <!-- /prompt:skip -->

@@ -349,7 +349,7 @@ campanhas:
 # Lembretes de retomada (a Celeste chama de volta quem ela escreveu e não respondeu)
 # ---------------------------------------------------------------------
 lembretes:
-  ativo: true
+  ativo: false                         # desligado em 06/10/2026 a pedido da clínica (mudava de assunto); scheduler pausado
   horas: [10, 12, 14, 16, 18]          # Cloud Scheduler roda nesses horários (America/Sao_Paulo)
   dias_uteis: true
   minimo_sem_resposta_min: 60          # só depois de 1 h sem resposta
