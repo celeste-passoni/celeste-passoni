@@ -80,7 +80,7 @@ async function abrir(id, manterScroll) {
   const msgsEl = $('#conv .msgs'); const noFim = !msgsEl || (msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 40);
   $('#conv').innerHTML = `
     <div class="topo"><span class="nome">${esc(f.nome || '(sem nome)')}</span> ${tagFrente(f.frente, f.rotulo)} <span class="tag mini">${esc(f.status || '')}</span>
-      ${f.modo === 'humano' ? '<span class="tag mini humano">modo humano</span>' : ''}${f.teste ? '<span class="tag mini alerta">TESTE · TI Saúde simulado</span>' : ''} <a class="muted" style="font-size:12px" href="https://wa.me/${f.contato}" target="_blank">${f.contato}</a></div>
+      ${f.modo === 'humano' ? '<span class="tag mini humano">modo humano</span>' : ''}${f.teste ? (f.tisaude_real ? '<span class="tag mini alerta" style="background:#b42318;color:#fff">TESTE · agenda REAL no TI Saúde</span>' : '<span class="tag mini alerta">TESTE · TI Saúde simulado</span>') : ''} <a class="muted" style="font-size:12px" href="https://wa.me/${f.contato}" target="_blank">${f.contato}</a></div>
     <div class="msgs">${j.mensagens.map(m => `<div class="balao ${m.direcao}">${esc(m.texto)}<div class="meta">${hora(m.em)}${m.direcao === 'humano' ? ' · equipe' : m.modelo ? ' · ' + esc(m.modelo) : ''}</div></div>`).join('')}</div>
     <div class="rodape">
       <div class="acoes">

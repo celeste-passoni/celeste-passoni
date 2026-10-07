@@ -93,9 +93,11 @@ def responder(p: Pedido):
             pass
 
     if conv.get("teste") or _e_numero_teste(conv.get("contato", "")):
-        ts = TiSaudeSimulado()                      # lê a agenda real, não grava nada
+        escrita_real = _escreve_no_tisaude(conv.get("contato", ""))
+        if not escrita_real:
+            ts = TiSaudeSimulado()                  # lê a agenda real, não grava nada
         # normaliza a conversa de teste (pode ter nascido antes do cadastro do número): frente da IA e status conversável
-        norm = {"teste": True, "tisaude_simulado": True}
+        norm = {"teste": True, "tisaude_simulado": not escrita_real}
         if conv.get("frente") not in FRENTES_IA:
             norm["frente"] = "leads_perdidos"
         if conv.get("status") in ("Orientado à recepção", "Encaminhado à recepção", None):
@@ -167,6 +169,11 @@ def _e_numero_teste(contato: str) -> bool:
     return contato in {str(n) for n in (_cfg_atendimento().get("numeros_teste") or [])}
 
 
+def _escreve_no_tisaude(contato: str) -> bool:
+    """Número de teste autorizado a agendar DE VERDADE no TI Saúde (lista `numeros_teste_escrita_real`); os demais testes só simulam."""
+    return contato in {str(n) for n in (_cfg_atendimento().get("numeros_teste_escrita_real") or [])}
+
+
 class PedidoModo(BaseModel):
     conversa_id: str
     modo: str          # "humano" | "ia"
@@ -236,7 +243,7 @@ def lembrete(p: PedidoLembrete):
     conv["id"] = p.conversa_id
     inicio = time.time()
     mot, mt, ts = _svc()
-    if conv.get("teste") or _e_numero_teste(conv.get("contato", "")):
+    if (conv.get("teste") or _e_numero_teste(conv.get("contato", ""))) and not _escreve_no_tisaude(conv.get("contato", "")):
         ts = TiSaudeSimulado(); conv["teste"] = True
     historico, _ = _historico(ref, mt)
     n = int(conv.get("lembretes_enviados") or 0) + 1

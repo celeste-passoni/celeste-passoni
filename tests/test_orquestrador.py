@@ -370,3 +370,12 @@ def test_criar_paciente_nao_reaproveita_id_de_outra_pessoa():
 def test_contexto_numero_compartilhado_pede_cpf():
     c = prompt.contexto_lead({"nome": "Tati", "contato": "5511", "pacientes_mesmo_numero": [{"id": 1, "nome": "ARTHUR X"}, {"id": 2, "nome": "CAIO TESTE"}]})
     assert "2 pessoas" in c and "CPF" in c and "buscar_paciente" in c and "Arthur X" in c
+
+
+def test_numero_teste_com_escrita_real(monkeypatch):
+    from celeste.orquestrador import app as oapp
+    monkeypatch.setattr(oapp, "_cfg_atendimento", lambda: {"modo": "teste", "numeros_teste": ["5511980567117", "5511900000001"],
+                                                            "numeros_teste_escrita_real": ["5511980567117"]})
+    assert oapp._e_numero_teste("5511980567117") and oapp._escreve_no_tisaude("5511980567117")
+    assert oapp._e_numero_teste("5511900000001") and not oapp._escreve_no_tisaude("5511900000001")
+    assert not oapp._escreve_no_tisaude("5511999999999")

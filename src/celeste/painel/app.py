@@ -306,7 +306,7 @@ def api_conversa(cid: str, _=Depends(autenticar)):
              "videos_enviados": c.get("videos_enviados") or [], "orientacoes_enviadas": c.get("orientacoes_enviadas") or 0,
              "orientado_recepcao_em": _json_dt(c.get("orientado_recepcao_em")), "janela_24h_ate": _json_dt(c.get("janela_24h_ate")),
              "custo": round(sum(x.get("custo_usd", 0) for x in chamadas), 4), "respostas_ia": len(chamadas), "revisar": bool(c.get("revisar")),
-             "teste": _e_teste(c, _numeros_teste()), "simulacoes": c.get("simulacoes_tisaude") or []}
+             "teste": _e_teste(c, _numeros_teste()), "tisaude_real": c.get("tisaude_simulado") is False, "simulacoes": c.get("simulacoes_tisaude") or []}
     return JSONResponse({"ficha": ficha, "mensagens": msgs})
 
 
