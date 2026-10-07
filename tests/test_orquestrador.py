@@ -308,3 +308,65 @@ def test_cancelar_exige_motivo_solucao_e_confirmacao():
     s, erro = ferramentas_ia.executar("cancelar", dict(base, motivo_do_lead="vai viajar", solucao_oferecida="remarcar sexta 10h"), ctx); assert erro and "confirmou" in s
     s, erro = ferramentas_ia.executar("cancelar", dict(base, motivo_do_lead="vai viajar", solucao_oferecida="remarcar sexta 10h", lead_confirmou_apos_solucao=True), ctx)
     assert not erro and ts.cancelar.called and conv["motivo_cancelamento"] == "vai viajar"
+
+
+# ------------------------------------------------------------------ identificação do paciente (CPF manda)
+def _ts_fake(por_celular, por_cpf):
+    from celeste.ferramentas import tisaude
+    ts = tisaude.TiSaude.__new__(tisaude.TiSaude)
+    def req(metodo, caminho, *, params=None, **kw):
+        if "celular" in (params or {}):
+            return {"data": por_celular}
+        return {"data": [p for p in por_cpf if params.get("busca") in (p["cpf"], p["nome"])]}
+    ts._req = req
+    return ts
+
+
+def test_buscar_paciente_cpf_decide_mesmo_com_telefone_de_outra_pessoa():
+    pai = {"id": 4942, "nome": "ARTHUR SPERRY CEZAR FILHO", "cpf": "11111111111"}
+    tati = {"id": 2301, "nome": "TATIANA FREITAS", "cpf": "22222222222"}
+    ts = _ts_fake([pai, tati], [pai, tati])
+    assert ts.buscar_paciente(celular="5511980567117", cpf="222.222.222-22")["id"] == 2301
+    assert ts.buscar_paciente(celular="5511980567117") is None                      # ambíguo sem nome
+    assert ts.buscar_paciente(celular="5511980567117", nome="Tatiana Freitas")["id"] == 2301   # desempate pelo nome
+    assert ts.buscar_paciente(cpf="33333333333") is None                            # CPF não cadastrado não cai para o telefone
+    assert len(ts.listar_por_celular("5511980567117")) == 2
+
+
+def test_ferramenta_buscar_paciente_por_cpf_confirma_identidade():
+    ts = MagicMock(); ts.buscar_paciente.return_value = {"id": 2301, "nome": "TATIANA FREITAS"}
+    conv = {"id": "c1", "id_paciente_tisaude": 4942, "paciente_tisaude_nome": "ARTHUR SPERRY CEZAR FILHO"}
+    ctx = _ctx(conv, ts); ctx.atualizar = lambda campos: conv.update(campos)
+    saida, erro = ferramentas_ia.executar("buscar_paciente", {"cpf": "698.005.450-34", "nome_completo": ""}, ctx)
+    assert not erro and '"id": 2301' in saida
+    assert ts.buscar_paciente.call_args.kwargs == {"cpf": "69800545034"}            # só CPF, nunca o telefone junto
+    assert conv["id_paciente_tisaude"] == 2301 and conv["identidade_confirmada"] and conv["paciente_tisaude_nome"] == "TATIANA FREITAS"
+    ts.buscar_paciente.return_value = None
+    saida, erro = ferramentas_ia.executar("buscar_paciente", {"cpf": "69800545034", "nome_completo": ""}, ctx)
+    assert not erro and '"encontrado": false' in saida and "criar_paciente" in saida
+    saida, erro = ferramentas_ia.executar("buscar_paciente", {"cpf": "123", "nome_completo": ""}, ctx)
+    assert erro and "11 dígitos" in saida
+
+
+def test_criar_paciente_nao_reaproveita_id_de_outra_pessoa():
+    ts = MagicMock(); ts.buscar_paciente.return_value = None; ts.criar_paciente.return_value = {"id": 777}
+    conv = {"id": "c1", "id_paciente_tisaude": 4942, "paciente_tisaude_nome": "ARTHUR SPERRY CEZAR FILHO"}
+    ctx = _ctx(conv, ts); ctx.atualizar = lambda campos: conv.update(campos)
+    e = {"nome": "Tatiana Freitas", "cpf": "69800545034", "nascimento": "01/01/1990", "sexo": "Feminino", "email": "a@b", "como_conheceu": "GOOGLE",
+         "cep": "01001000", "numero": "1", "complemento": "", "responsavel": "", "parentesco_responsavel": "", "cpf_responsavel": ""}
+    saida, erro = ferramentas_ia.executar("criar_paciente", e, ctx)
+    assert not erro and '"id": 777' in saida and conv["id_paciente_tisaude"] == 777
+    # mesmo nome do cadastro do número → reaproveita
+    conv2 = {"id": "c2", "id_paciente_tisaude": 4942, "paciente_tisaude_nome": "ARTHUR SPERRY CEZAR FILHO"}
+    saida, erro = ferramentas_ia.executar("criar_paciente", {**e, "nome": "Arthur Cezar"}, _ctx(conv2, ts))
+    assert '"id": 4942' in saida
+    # CPF já existe em outro cadastro → adota em vez de duplicar
+    ts.buscar_paciente.return_value = {"id": 2301, "nome": "TATIANA FREITAS"}
+    conv3 = {"id": "c3"}; ctx3 = _ctx(conv3, ts); ctx3.atualizar = lambda campos: conv3.update(campos)
+    saida, erro = ferramentas_ia.executar("criar_paciente", e, ctx3)
+    assert not erro and '"id": 2301' in saida and conv3["identidade_confirmada"]
+
+
+def test_contexto_numero_compartilhado_pede_cpf():
+    c = prompt.contexto_lead({"nome": "Tati", "contato": "5511", "pacientes_mesmo_numero": [{"id": 1, "nome": "ARTHUR X"}, {"id": 2, "nome": "CAIO TESTE"}]})
+    assert "2 pessoas" in c and "CPF" in c and "buscar_paciente" in c and "Arthur X" in c

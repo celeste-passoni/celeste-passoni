@@ -26,7 +26,7 @@ class TiSaudeFake:
     def __init__(self, real=None):
         self.real, self._pacientes, self._agend = real, {}, {}
 
-    def buscar_paciente(self, *, celular="", cpf=""):
+    def buscar_paciente(self, *, celular="", cpf="", nome=""):
         return self._pacientes.get("x")
 
     def criar_paciente(self, dados):

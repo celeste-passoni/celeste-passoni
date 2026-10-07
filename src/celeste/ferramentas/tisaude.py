@@ -57,6 +57,31 @@ def profissionais() -> dict[str, Profissional]:
     return out
 
 
+def _normalizar_nome(s: str) -> str:
+    import unicodedata
+    s = unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode()
+    return " ".join(s.lower().split())
+
+
+def mesma_pessoa(nome_cadastro: str, nome_informado: str) -> bool:
+    """Nome completo igual, ou primeiro nome igual (o lead costuma dar só o primeiro nome)."""
+    a, b = _normalizar_nome(nome_cadastro), _normalizar_nome(nome_informado)
+    if not a or not b:
+        return False
+    return a == b or a.split()[0] == b.split()[0]
+
+
+def escolher_por_nome(lista: list[dict], nome: str) -> Optional[dict]:
+    """Entre vários cadastros, o único cujo nome bate com o informado; None se nenhum ou mais de um."""
+    if not nome:
+        return None
+    exatos = [p for p in lista if _normalizar_nome(p.get("nome") or "") == _normalizar_nome(nome)]
+    if len(exatos) == 1:
+        return exatos[0]
+    parecidos = [p for p in lista if mesma_pessoa(p.get("nome") or "", nome)]
+    return parecidos[0] if len(parecidos) == 1 else None
+
+
 def _so_digitos(s: str) -> str:
     return re.sub(r"\D", "", s or "")
 
@@ -102,17 +127,33 @@ class TiSaude:
         return dados
 
     # ------------------------------------------------------------- pacientes
-    def buscar_paciente(self, *, celular: str = "", cpf: str = "") -> Optional[dict]:
-        """Busca por celular (só dígitos) e depois por CPF; devolve o primeiro encontrado ou None."""
-        if celular:
-            dados = self._req("GET", "/pacientes", params={"celular": _so_digitos(celular)[-11:]})
-            for p in dados.get("data", []):
+    def listar_por_celular(self, celular: str) -> list[dict]:
+        """Todos os cadastros com este celular (um número da família pode estar em vários pacientes)."""
+        dados = self._req("GET", "/pacientes", params={"celular": _so_digitos(celular)[-11:]})
+        return [p for p in dados.get("data", []) if str(p.get("deletado") or "0") not in ("1", "True")]
+
+    def buscar_por_cpf(self, cpf: str) -> Optional[dict]:
+        """Busca exata por CPF (o parâmetro `busca` da API aceita CPF; conferimos dígito a dígito)."""
+        cpf = _so_digitos(cpf)
+        if len(cpf) != 11:
+            return None
+        dados = self._req("GET", "/pacientes", params={"busca": cpf})
+        for p in dados.get("data", []):
+            if _so_digitos(p.get("cpf") or "") == cpf:
                 return p
+        return None
+
+    def buscar_paciente(self, *, celular: str = "", cpf: str = "", nome: str = "") -> Optional[dict]:
+        """O CPF identifica a pessoa: se informado, decide sozinho (não cai para o celular, que pode ser de outra pessoa).
+        Sem CPF: pelo celular; se o número tiver vários cadastros, escolhe pelo nome; se continuar ambíguo, None."""
         if cpf:
-            dados = self._req("GET", "/pacientes", params={"busca": _so_digitos(cpf)})
-            for p in dados.get("data", []):
-                if _so_digitos(p.get("cpf", "")) == _so_digitos(cpf):
-                    return p
+            return self.buscar_por_cpf(cpf)
+        if celular:
+            lista = self.listar_por_celular(celular)
+            if len(lista) == 1:
+                return lista[0]
+            if len(lista) > 1:
+                return escolher_por_nome(lista, nome)
         return None
 
     def criar_paciente(self, dados: dict) -> dict:

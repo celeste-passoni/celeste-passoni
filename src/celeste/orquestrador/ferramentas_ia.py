@@ -6,6 +6,7 @@ Os guarda-corpos moram aqui e no cliente TI Saúde, não no prompt.
 from __future__ import annotations
 
 import json
+import re
 import logging
 from datetime import date, datetime, timezone
 from typing import Any, Callable
@@ -16,9 +17,11 @@ from celeste.ferramentas import tisaude as ts
 log = logging.getLogger(__name__)
 
 FERRAMENTAS: list[dict] = [
-    {"name": "buscar_paciente", "description": "Procura o lead no TI Saúde por CPF. A busca pelo telefone já é feita automaticamente pelo sistema (veja o contexto do lead); use só quando o lead informar um CPF e o contexto disser que o número não está cadastrado.",
-     "strict": True, "input_schema": {"type": "object", "properties": {"cpf": {"type": "string", "description": "CPF do lead, se já informado; senão string vazia"}},
-                                      "required": ["cpf"], "additionalProperties": False}},
+    {"name": "buscar_paciente", "description": "Procura o lead no TI Saúde pelo CPF (identificação exata) ou, sem CPF, pelo nome completo entre os cadastros deste telefone. Use sempre que o lead disser que já tem cadastro ou informar o CPF, inclusive quando o contexto disser que o número está no cadastro de outra pessoa: o CPF decide quem é. A busca só pelo telefone já foi feita pelo sistema.",
+     "strict": True, "input_schema": {"type": "object", "properties": {
+         "cpf": {"type": "string", "description": "CPF informado pelo lead (11 dígitos, com ou sem pontuação); vazio se não informou"},
+         "nome_completo": {"type": "string", "description": "nome completo informado pelo lead, para desempatar quando o telefone tem vários cadastros; vazio se não tiver"}},
+         "required": ["cpf", "nome_completo"], "additionalProperties": False}},
     {"name": "criar_paciente", "description": "Cria o cadastro do lead no TI Saúde. Só chame com TODOS os campos coletados; nunca para quem já existe.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "nome": {"type": "string"}, "cpf": {"type": "string"}, "nascimento": {"type": "string", "description": "dd/mm/AAAA"},
@@ -84,6 +87,11 @@ class Contexto:
         self.encerrar = False
 
 
+def _mesma_pessoa(nome_cadastro: str, nome_informado: str) -> bool:
+    from celeste.ferramentas.tisaude import mesma_pessoa
+    return mesma_pessoa(nome_cadastro, nome_informado)
+
+
 def executar(nome: str, entrada: dict, ctx: Contexto) -> tuple[str, bool]:
     """Executa a ferramenta; retorna (resultado_json, is_error)."""
     try:
@@ -96,20 +104,36 @@ def executar(nome: str, entrada: dict, ctx: Contexto) -> tuple[str, bool]:
 
 def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
     if nome == "buscar_paciente":
-        p = ctx.ts.buscar_paciente(celular=ctx.telefone, cpf=e.get("cpf", ""))
-        if p:
-            ctx.atualizar({"id_paciente_tisaude": p["id"]})
-            return {"encontrado": True, "id": p["id"], "nome": p.get("nome")}
-        return {"encontrado": False}
+        cpf = re.sub(r"\D", "", e.get("cpf") or "")
+        nome_c = (e.get("nome_completo") or "").strip()
+        if cpf:
+            if len(cpf) != 11:
+                raise ValueError("CPF deve ter 11 dígitos; peça ao lead para conferir")
+            p = ctx.ts.buscar_paciente(cpf=cpf)
+            if not p:
+                return {"encontrado": False, "aviso": "nenhum paciente com este CPF; confira os dígitos com o lead e, se estiverem certos, faça o pré-cadastro e chame criar_paciente"}
+        elif nome_c:
+            p = ctx.ts.buscar_paciente(celular=ctx.telefone, nome=nome_c)
+            if not p:
+                return {"encontrado": False, "aviso": "não localizei com segurança pelo nome; peça o CPF ao lead e chame buscar_paciente de novo"}
+        else:
+            raise ValueError("informe o CPF (ou o nome completo) do lead")
+        ctx.atualizar({"id_paciente_tisaude": p["id"], "paciente_tisaude_nome": p.get("nome"), "identidade_confirmada": True, "pacientes_mesmo_numero": []})
+        return {"encontrado": True, "id": p["id"], "nome": p.get("nome"), "aviso": "é este o paciente; use este id para agendar"}
 
     if nome == "criar_paciente":
-        if ctx.conversa.get("id_paciente_tisaude"):
+        if ctx.conversa.get("id_paciente_tisaude") and (ctx.conversa.get("identidade_confirmada")
+                                                        or _mesma_pessoa(ctx.conversa.get("paciente_tisaude_nome") or "", e["nome"])):
             return {"id": ctx.conversa["id_paciente_tisaude"], "aviso": "paciente já existia; use este id"}
         end = ctx.viacep(e["cep"])
         if not end:
             raise ValueError("CEP inválido: peça ao lead para conferir o CEP")
         if _menor(e["nascimento"]) and not (e.get("responsavel") and e.get("cpf_responsavel")):
             raise ValueError("menor de idade: colete nome, parentesco e CPF do responsável antes de cadastrar")
+        existente = ctx.ts.buscar_paciente(cpf=e["cpf"])   # CPF já cadastrado (ex.: no número de um parente): adota o cadastro em vez de duplicar
+        if isinstance(existente, dict) and existente.get("id"):
+            ctx.atualizar({"id_paciente_tisaude": existente["id"], "paciente_tisaude_nome": existente.get("nome"), "identidade_confirmada": True})
+            return {"id": existente["id"], "aviso": f"este CPF já está cadastrado como {existente.get('nome')}; use este id para agendar (não criei cadastro novo)"}
         p = ctx.ts.criar_paciente({"nome": e["nome"], "cpf": e["cpf"], "nascimento": e["nascimento"], "sexo": e["sexo"],
                                    "celular": ctx.telefone, "email": e["email"], "indicado": e["como_conheceu"], "cep": e["cep"],
                                    "n": e["numero"], "apt": e.get("complemento", ""), **end,

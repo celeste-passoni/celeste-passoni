@@ -83,7 +83,13 @@ def contexto_lead(conversa: dict) -> str:
             linhas.append(f"- TI Saúde: este NÚMERO está no cadastro de outra pessoa: {nome_ts} (id {conversa['id_paciente_tisaude']}). "
                           f"ANTES de agendar, confirme com naturalidade se a consulta é para {nome_ts.split()[0].title()} ou para quem está falando "
                           f"(ex.: 'Vi aqui que esse número está no cadastro de {nome_ts.split()[0].title()}. A consulta é para ele(a) ou para você?'). "
-                          f"Se for para {nome_ts.split()[0].title()}, agende com o id {conversa['id_paciente_tisaude']}. Se for para outra pessoa, faça o pré-cadastro completo e use criar_paciente.")
+                          f"Se for para {nome_ts.split()[0].title()}, agende com o id {conversa['id_paciente_tisaude']}. Se for para outra pessoa: pergunte se ela já tem cadastro na clínica "
+                          f"e peça o CPF; chame buscar_paciente com o CPF (é o CPF que identifica a pessoa, não o telefone). Só se o CPF não existir, faça o pré-cadastro completo e use criar_paciente.")
+    elif conversa.get("pacientes_mesmo_numero"):
+        nomes = ", ".join((p.get("nome") or "?").title() for p in conversa["pacientes_mesmo_numero"])
+        linhas.append(f"- TI Saúde: este NÚMERO está no cadastro de {len(conversa['pacientes_mesmo_numero'])} pessoas ({nomes}). Quem está falando pode ser uma delas ou outra pessoa. "
+                      "Antes de agendar, pergunte com naturalidade se já é paciente da clínica e peça o CPF; chame buscar_paciente com o CPF (é o CPF que identifica a pessoa, não o telefone). "
+                      "Nunca diga que o CPF 'está vinculado a outra pessoa' sem o resultado de buscar_paciente. Só se o CPF não existir, faça o pré-cadastro e use criar_paciente.")
     elif conversa.get("paciente_tisaude_ausente"):
         linhas.append("- TI Saúde: número NÃO cadastrado (já verificado pelo sistema). Não chame buscar_paciente; faça o pré-cadastro antes de agendar.")
     if conversa.get("origem") == "espontaneo":

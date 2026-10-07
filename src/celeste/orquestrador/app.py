@@ -357,11 +357,16 @@ def _pre_verificar_paciente(ref, conv: dict, ts) -> None:
         return
     campos: dict = {"paciente_verificado_em": datetime.now(timezone.utc)}
     try:
-        p = ts.buscar_paciente(celular=conv.get("contato", ""))
-        if p:
-            campos.update({"id_paciente_tisaude": p["id"], "paciente_tisaude_nome": p.get("nome")})
-        else:
+        lista = ts.listar_por_celular(conv.get("contato", ""))
+        if not lista:
             campos["paciente_tisaude_ausente"] = True
+        elif len(lista) == 1:
+            campos.update({"id_paciente_tisaude": lista[0]["id"], "paciente_tisaude_nome": lista[0].get("nome")})
+        else:   # número compartilhado (família): só assume se o nome do lead bater com um único cadastro; senão a Celeste pergunta o CPF
+            campos["pacientes_mesmo_numero"] = [{"id": p["id"], "nome": p.get("nome")} for p in lista[:10]]
+            escolhido = tisaude.escolher_por_nome(lista, conv.get("nome") or "")
+            if escolhido:
+                campos.update({"id_paciente_tisaude": escolhido["id"], "paciente_tisaude_nome": escolhido.get("nome")})
     except Exception as e:
         log.warning("pré-verificação de paciente falhou: %s", e)
         return
