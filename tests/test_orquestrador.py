@@ -418,7 +418,7 @@ def test_atualizar_paciente_reenvia_registro_inteiro_e_bloqueia_nome_cpf():
     assert enviados["nome"] == "TESTE IA BIA - APAGAR" and enviados["cpf"] == "27313332785"       # preservados
     assert enviados["nascimento"] == "01/01/1990" and enviados["sexo"] == "Feminino"             # formatos de entrada
     assert enviados["apt"] == "TESTE IA" and enviados["convenio"] == 1 and enviados["nomemae"] == "MAE"
-    assert "id" not in enviados and "status" not in enviados
+    assert "status" not in enviados and "cliente" not in enviados
     with pytest.raises(ValueError):
         ts.atualizar_paciente(6436, {"nome": "OUTRO"})
     with pytest.raises(ValueError):
