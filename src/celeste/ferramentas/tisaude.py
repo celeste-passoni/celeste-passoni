@@ -82,6 +82,28 @@ def escolher_por_nome(lista: list[dict], nome: str) -> Optional[dict]:
     return parecidos[0] if len(parecidos) == 1 else None
 
 
+CONECTIVOS = {"de", "da", "do", "das", "dos", "e", "d"}
+
+
+def nome_completo_valido(nome: str) -> tuple[bool, str]:
+    """Nome completo sem abreviações: 2+ palavras, nenhuma com ponto, nenhuma de 1 letra (exceto conectivos)."""
+    partes = [p for p in (nome or "").replace("  ", " ").strip().split(" ") if p]
+    if len(partes) < 2:
+        return False, "nome incompleto: peça nome e sobrenome completos"
+    for p in partes:
+        if "." in p or (len(p.strip("'")) == 1 and p.lower() not in CONECTIVOS):
+            return False, f"'{p}' parece abreviação: a clínica exige o nome completo, sem abreviações (ex.: 'Maria A. Silva' não serve; precisa 'Maria Aparecida Silva')"
+    return True, ""
+
+
+def _iso_para_br(d: str) -> str:
+    """'1990-01-01' (como o TI Saúde devolve) → '01/01/1990' (como ele exige na entrada)."""
+    d = (d or "").strip()[:10]
+    if len(d) == 10 and d[4] == "-" and d[7] == "-":
+        return f"{d[8:10]}/{d[5:7]}/{d[0:4]}"
+    return d
+
+
 def _so_digitos(s: str) -> str:
     return re.sub(r"\D", "", s or "")
 
@@ -194,6 +216,64 @@ class TiSaude:
         if not criado.get("id"):
             raise TiSaudeErro(f"criar_paciente sem id: {criado}")
         return criado
+
+    CAMPOS_IMUTAVEIS = ("nome", "cpf")
+    CAMPOS_EDITAVEIS = ("nascimento", "sexo", "celular", "email", "indicado", "cep", "n", "apt", "endereco", "bairro", "cidade", "uf",
+                        "responsavel", "parentesco_responsavel", "cpf_responsavel")
+    _NAO_REENVIAR = {"id", "cliente", "status", "timestamp", "deletado", "idConvenio", "idConvenioCliente", "complemento", "data",
+                     "profilepicture", "alteradoPor_idPacienteEmpresa", "idPacienteEmpresa", "idUsuario", "preenchidoPor", "medico",
+                     "nascimento", "sexo", "apt", "convenio", "celular_whatsapp"}
+
+    def dados_paciente(self, id_paciente: int) -> dict:
+        return self._req("GET", f"/paciente/{int(id_paciente)}")
+
+    def atualizar_paciente(self, id_paciente: int, mudancas: dict) -> dict:
+        """Atualiza dados cadastrais de um paciente existente. NUNCA nome ou CPF.
+
+        `POST /paciente/salvar` substitui o registro inteiro (campos ausentes são apagados), então lemos o cadastro
+        atual, reenviamos tudo o que ele tem e aplicamos só as mudanças pedidas.
+        """
+        proibidos = [k for k in mudancas if k in self.CAMPOS_IMUTAVEIS]
+        if proibidos:
+            raise ValueError(f"nome e CPF não podem ser alterados pela IA ({proibidos}); só a recepção faz isso")
+        desconhecidos = [k for k in mudancas if k not in self.CAMPOS_EDITAVEIS]
+        if desconhecidos:
+            raise ValueError(f"campos não editáveis: {desconhecidos}")
+        atual = self.dados_paciente(id_paciente)
+        if not atual.get("id") or not atual.get("cpf"):
+            raise TiSaudeErro(f"paciente {id_paciente} não encontrado para atualizar")
+        ativo = self.buscar_por_cpf(atual["cpf"])     # cadastro excluído não aparece na busca; salvar nele criaria um duplicado
+        if not ativo or int(ativo.get("id") or 0) != int(id_paciente):
+            raise TiSaudeErro(f"cadastro {id_paciente} está inativo ou o CPF pertence a outro cadastro ativo; a recepção precisa resolver")
+        payload = {k: v for k, v in atual.items() if k not in self._NAO_REENVIAR and isinstance(v, (str, int)) and str(v).strip() != ""}
+        payload.update({
+            "id": int(id_paciente),                   # com o id, o TI Saúde atualiza ESTE registro (sem id ele casa pelo CPF e pode criar outro)
+            "nome": atual["nome"], "cpf": _so_digitos(atual["cpf"]),
+            "nascimento": _iso_para_br(atual.get("nascimento") or ""),
+            "sexo": (atual.get("sexo") or "").strip().capitalize(),
+            "apt": str(atual.get("complemento") or atual.get("apt") or "").strip(),
+            "convenio": int(atual.get("idConvenio") or atual.get("idConvenioCliente") or 1),
+        })
+        for k, v in mudancas.items():
+            v = str(v).strip()
+            if k == "nascimento":
+                if not re.fullmatch(r"\d{2}/\d{2}/\d{4}", v):
+                    raise ValueError("nascimento deve estar em dd/mm/AAAA")
+            elif k == "sexo":
+                v = v.capitalize()
+                if v not in ("Masculino", "Feminino"):
+                    raise ValueError("sexo deve ser Masculino ou Feminino")
+            elif k in ("celular", "cep", "cpf_responsavel"):
+                v = _so_digitos(v)[-11:] if k == "celular" else _so_digitos(v)
+            elif k in ("indicado", "endereco", "bairro", "cidade", "uf"):
+                v = v.upper()
+            payload[k] = v
+        salvo = self._req("POST", "/paciente/salvar", data=payload)
+        if not salvo.get("id"):
+            raise TiSaudeErro(f"atualizar_paciente sem id: {salvo}")
+        if int(salvo["id"]) != int(id_paciente):
+            raise TiSaudeErro(f"o TI Saúde devolveu o id {salvo['id']} em vez de {id_paciente}: pode ter criado um cadastro duplicado; avisar a recepção")
+        return salvo
 
     # --------------------------------------------------------------- horários
     def _grade_livre(self, prof: Profissional, dia: date) -> list[str]:

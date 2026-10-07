@@ -73,14 +73,14 @@ def test_buscar_horarios_e_agendar_ok():
 
 
 def test_criar_paciente_exige_responsavel_para_menor():
-    e = {"nome": "Jo", "cpf": "1", "nascimento": "01/01/2015", "sexo": "Feminino", "email": "a@b", "como_conheceu": "GOOGLE",
+    e = {"nome": "Joana Silva", "cpf": "1", "nascimento": "01/01/2015", "sexo": "Feminino", "email": "a@b", "como_conheceu": "GOOGLE",
          "cep": "01001000", "numero": "1", "complemento": "", "responsavel": "", "parentesco_responsavel": "", "cpf_responsavel": ""}
     saida, erro = ferramentas_ia.executar("criar_paciente", e, _ctx())
     assert erro and "responsável" in saida
 
 
 def test_criar_paciente_cep_invalido():
-    e = {"nome": "Jo", "cpf": "1", "nascimento": "01/01/1990", "sexo": "Feminino", "email": "a@b", "como_conheceu": "GOOGLE",
+    e = {"nome": "Joana Silva", "cpf": "1", "nascimento": "01/01/1990", "sexo": "Feminino", "email": "a@b", "como_conheceu": "GOOGLE",
          "cep": "00000", "numero": "1", "complemento": "", "responsavel": "", "parentesco_responsavel": "", "cpf_responsavel": ""}
     saida, erro = ferramentas_ia.executar("criar_paciente", e, _ctx())
     assert erro and "CEP" in saida
@@ -379,3 +379,81 @@ def test_numero_teste_com_escrita_real(monkeypatch):
     assert oapp._e_numero_teste("5511980567117") and oapp._escreve_no_tisaude("5511980567117")
     assert oapp._e_numero_teste("5511900000001") and not oapp._escreve_no_tisaude("5511900000001")
     assert not oapp._escreve_no_tisaude("5511999999999")
+
+
+# ------------------------------------------------------------------ cadastro: alteração (exceto nome/CPF) e nome completo
+def test_nome_completo_sem_abreviacoes():
+    from celeste.ferramentas.tisaude import nome_completo_valido
+    assert nome_completo_valido("Maria Aparecida da Silva")[0]
+    assert nome_completo_valido("João e Silva")[0]
+    for ruim in ("Tati", "Maria A. Silva", "J Carlos Souza", "MARIA A SILVA"):
+        ok, motivo = nome_completo_valido(ruim)
+        assert not ok and motivo, ruim
+
+
+def test_criar_paciente_recusa_nome_abreviado():
+    e = {"nome": "Maria A. Silva", "cpf": "69800545034", "nascimento": "01/01/1990", "sexo": "Feminino", "email": "a@b", "como_conheceu": "GOOGLE",
+         "cep": "01001000", "numero": "1", "complemento": "", "responsavel": "", "parentesco_responsavel": "", "cpf_responsavel": ""}
+    saida, erro = ferramentas_ia.executar("criar_paciente", e, _ctx())
+    assert erro and "abreviação" in saida
+
+
+def test_atualizar_paciente_reenvia_registro_inteiro_e_bloqueia_nome_cpf():
+    from celeste.ferramentas import tisaude
+    ts = tisaude.TiSaude.__new__(tisaude.TiSaude)
+    atual = {"cliente": 12054, "id": 6436, "nome": "TESTE IA BIA - APAGAR", "cpf": "27313332785", "nascimento": "1990-01-01", "sexo": "FEMININO",
+             "email": "A@B.C", "celular": "11999990000", "idConvenio": 1, "endereco": "RUA X", "n": "886", "complemento": "TESTE IA",
+             "bairro": "VILA", "cidade": "SÃO PAULO", "uf": "SP", "cep": "04131000", "indicado": "GOOGLE", "status": 1, "rg": "", "nomemae": "MAE"}
+    enviados = {}
+    def req(metodo, caminho, *, params=None, data=None, **kw):
+        if metodo == "GET" and caminho == "/pacientes":
+            return {"data": [dict(atual)]}            # busca por CPF: cadastro ativo
+        if metodo == "GET":
+            return dict(atual)
+        enviados.update(data); return {"id": 6436}
+    ts._req = req
+    r = ts.atualizar_paciente(6436, {"email": "novo@x.com", "celular": "(11) 98888-7777"})
+    assert r["id"] == 6436 and enviados["id"] == 6436                                             # id vai no payload
+    assert enviados["email"] == "novo@x.com" and enviados["celular"] == "11988887777"
+    assert enviados["nome"] == "TESTE IA BIA - APAGAR" and enviados["cpf"] == "27313332785"       # preservados
+    assert enviados["nascimento"] == "01/01/1990" and enviados["sexo"] == "Feminino"             # formatos de entrada
+    assert enviados["apt"] == "TESTE IA" and enviados["convenio"] == 1 and enviados["nomemae"] == "MAE"
+    assert "id" not in enviados and "status" not in enviados
+    with pytest.raises(ValueError):
+        ts.atualizar_paciente(6436, {"nome": "OUTRO"})
+    with pytest.raises(ValueError):
+        ts.atualizar_paciente(6436, {"cpf": "1"})
+    with pytest.raises(ValueError):
+        ts.atualizar_paciente(6436, {"nascimento": "1990-01-01"})
+    # TI Saúde devolve outro id (criou duplicado) → erro, nunca silencioso
+    ts._req = lambda m, c, *, params=None, data=None, **kw: ({"data": [dict(atual)]} if c == "/pacientes" else dict(atual)) if m == "GET" else {"id": 9999}
+    with pytest.raises(tisaude.TiSaudeErro):
+        ts.atualizar_paciente(6436, {"email": "x@y.z"})
+    # cadastro excluído (não aparece na busca) → erro antes de salvar
+    ts._req = lambda m, c, *, params=None, data=None, **kw: ({"data": []} if c == "/pacientes" else dict(atual)) if m == "GET" else {"id": 6436}
+    with pytest.raises(tisaude.TiSaudeErro):
+        ts.atualizar_paciente(6436, {"email": "x@y.z"})
+
+
+def test_ferramenta_atualizar_cadastro():
+    ts = MagicMock(); ts.atualizar_paciente.return_value = {"id": 2301}
+    vazio = {"email": "", "celular": "", "nascimento": "", "sexo": "", "cep": "", "numero": "", "complemento": "", "como_conheceu": "",
+             "responsavel": "", "parentesco_responsavel": "", "cpf_responsavel": ""}
+    # sem paciente identificado
+    saida, erro = ferramentas_ia.executar("atualizar_cadastro", {**vazio, "email": "n@x.com"}, _ctx({"id": "c1"}, ts))
+    assert erro and "CPF" in saida
+    # número compartilhado sem identidade confirmada
+    saida, erro = ferramentas_ia.executar("atualizar_cadastro", {**vazio, "email": "n@x.com"},
+                                          _ctx({"id": "c1", "id_paciente_tisaude": 4942, "pacientes_mesmo_numero": [{"id": 1, "nome": "A B"}]}, ts))
+    assert erro and "vários cadastros" in saida
+    # ok: e-mail + endereço por CEP
+    conv = {"id": "c1", "id_paciente_tisaude": 2301, "identidade_confirmada": True}
+    ctx = _ctx(conv, ts); ctx.atualizar = lambda campos: conv.update(campos)
+    saida, erro = ferramentas_ia.executar("atualizar_cadastro", {**vazio, "email": "n@x.com", "cep": "01001000", "numero": "10"}, ctx)
+    assert not erro and '"ok": true' in saida
+    mud = ts.atualizar_paciente.call_args.args[1]
+    assert mud["email"] == "n@x.com" and mud["cep"] == "01001000" and mud["n"] == "10" and mud["endereco"] == "R"
+    assert conv["cadastro_campos_atualizados"]
+    # nada para atualizar
+    saida, erro = ferramentas_ia.executar("atualizar_cadastro", vazio, ctx)
+    assert erro and "nome e CPF" in saida

@@ -33,6 +33,18 @@ FERRAMENTAS: list[dict] = [
          "cpf_responsavel": {"type": "string"}},
          "required": ["nome", "cpf", "nascimento", "sexo", "email", "como_conheceu", "cep", "numero", "complemento", "responsavel", "parentesco_responsavel", "cpf_responsavel"],
          "additionalProperties": False}},
+    {"name": "atualizar_cadastro", "description": "Atualiza dados cadastrais do paciente já identificado nesta conversa (e-mail, celular, data de nascimento, sexo, endereço por CEP/número/complemento, como conheceu, responsável). NUNCA altera nome nem CPF: se o lead pedir isso, diga que a correção de nome/CPF é feita pela recepção, registre com sinalizar_revisao e siga com o agendamento. Deixe vazios os campos que não mudam.",
+     "strict": True, "input_schema": {"type": "object", "properties": {
+         "email": {"type": "string"}, "celular": {"type": "string", "description": "novo celular com DDD; vazio se não muda"},
+         "nascimento": {"type": "string", "description": "dd/mm/AAAA; vazio se não muda"},
+         "sexo": {"type": "string", "enum": ["Masculino", "Feminino", ""]},
+         "cep": {"type": "string", "description": "novo CEP (o endereço é preenchido pelo sistema); vazio se não muda"},
+         "numero": {"type": "string", "description": "número da residência; obrigatório se o CEP mudou"},
+         "complemento": {"type": "string"},
+         "como_conheceu": {"type": "string", "description": "valor do sistema para 'Encaminhado por'; vazio se não muda"},
+         "responsavel": {"type": "string"}, "parentesco_responsavel": {"type": "string"}, "cpf_responsavel": {"type": "string"}},
+         "required": ["email", "celular", "nascimento", "sexo", "cep", "numero", "complemento", "como_conheceu", "responsavel", "parentesco_responsavel", "cpf_responsavel"],
+         "additionalProperties": False}},
     {"name": "buscar_horarios", "description": "Lista horários LIVRES de consulta para um profissional nos próximos dias. Só ofereça horários vindos daqui.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "profissional": {"type": "string", "enum": ["dra_luciana", "dr_lucas"]},
@@ -92,6 +104,11 @@ def _mesma_pessoa(nome_cadastro: str, nome_informado: str) -> bool:
     return mesma_pessoa(nome_cadastro, nome_informado)
 
 
+def _nome_completo_valido(nome: str) -> tuple[bool, str]:
+    from celeste.ferramentas.tisaude import nome_completo_valido
+    return nome_completo_valido(nome)
+
+
 def executar(nome: str, entrada: dict, ctx: Contexto) -> tuple[str, bool]:
     """Executa a ferramenta; retorna (resultado_json, is_error)."""
     try:
@@ -121,7 +138,33 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         ctx.atualizar({"id_paciente_tisaude": p["id"], "paciente_tisaude_nome": p.get("nome"), "identidade_confirmada": True, "pacientes_mesmo_numero": []})
         return {"encontrado": True, "id": p["id"], "nome": p.get("nome"), "aviso": "é este o paciente; use este id para agendar"}
 
+    if nome == "atualizar_cadastro":
+        idp = ctx.conversa.get("id_paciente_tisaude")
+        if not idp:
+            raise ValueError("paciente ainda não identificado: localize pelo CPF (buscar_paciente) antes de alterar o cadastro")
+        if ctx.conversa.get("pacientes_mesmo_numero") and not ctx.conversa.get("identidade_confirmada"):
+            raise ValueError("este número tem vários cadastros: confirme a identidade pelo CPF (buscar_paciente) antes de alterar")
+        mapa = {"email": "email", "celular": "celular", "nascimento": "nascimento", "sexo": "sexo", "como_conheceu": "indicado",
+                "complemento": "apt", "numero": "n", "responsavel": "responsavel", "parentesco_responsavel": "parentesco_responsavel",
+                "cpf_responsavel": "cpf_responsavel"}
+        mud = {mapa[k]: str(v).strip() for k, v in e.items() if k in mapa and str(v or "").strip()}
+        if str(e.get("cep") or "").strip():
+            end = ctx.viacep(e["cep"])
+            if not end:
+                raise ValueError("CEP inválido: peça ao lead para conferir o CEP")
+            if not str(e.get("numero") or "").strip():
+                raise ValueError("CEP novo exige o número da residência")
+            mud.update({"cep": e["cep"], **end})
+        if not mud:
+            raise ValueError("nenhum campo para atualizar; lembre: nome e CPF não podem ser alterados")
+        r = ctx.ts.atualizar_paciente(int(idp), mud)
+        ctx.atualizar({"cadastro_atualizado_em": datetime.now(timezone.utc), "cadastro_campos_atualizados": sorted(mud)})
+        return {"ok": True, "atualizado": sorted(mud), "id": r.get("id", idp), "aviso": "cadastro atualizado; confirme ao lead o que foi alterado"}
+
     if nome == "criar_paciente":
+        ok, motivo = _nome_completo_valido(e["nome"])
+        if not ok:
+            raise ValueError(motivo)
         if ctx.conversa.get("id_paciente_tisaude") and (ctx.conversa.get("identidade_confirmada")
                                                         or _mesma_pessoa(ctx.conversa.get("paciente_tisaude_nome") or "", e["nome"])):
             return {"id": ctx.conversa["id_paciente_tisaude"], "aviso": "paciente já existia; use este id"}

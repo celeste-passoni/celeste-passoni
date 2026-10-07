@@ -27,6 +27,15 @@ class TiSaudeSimulado(TiSaude):
         log.info("TI Saúde SIMULADO criar_paciente: %s", dados.get("nome"))
         return fake
 
+    def atualizar_paciente(self, id_paciente: int, mudancas: dict) -> dict:
+        proibidos = [k for k in mudancas if k in self.CAMPOS_IMUTAVEIS]
+        if proibidos:
+            raise ValueError(f"nome e CPF não podem ser alterados pela IA ({proibidos}); só a recepção faz isso")
+        fake = {"id": id_paciente, "simulado": True}
+        self.simulados.append({"acao": "atualizar_paciente", "dados": {"id": id_paciente, "campos": sorted(mudancas)}, "retorno": fake})
+        log.info("TI Saúde SIMULADO atualizar_paciente %s: %s", id_paciente, sorted(mudancas))
+        return fake
+
     def agendar_consulta(self, *, id_paciente: int, profissional_id: str, data: date, hora: str, observacoes: str) -> dict:
         fake = {"id": random.randint(900000, 999999), "status": 0, "data": data.strftime("%d/%m/%Y"), "hora": hora, "simulado": True}
         self.simulados.append({"acao": "agendar_consulta", "dados": {"id_paciente": id_paciente, "profissional": profissional_id,
