@@ -479,3 +479,11 @@ def test_aquecer_cache_envia_max_tokens_zero_com_mesmo_prefixo():
     assert kw["system"][0]["text"] == m._system("leads_perdidos")[0]["text"]   # mesmo prefixo da conversa real
     assert kw["tools"] == ferramentas_ia.FERRAMENTAS and "thinking" in kw
     assert r["cache_lido"] == 21000 and r["custo_usd"] == round(21000 * 0.2 / 1e6 + 1 * 4 / 1e6, 5)
+
+
+def test_prompt_tem_regra_de_continuidade():
+    pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
+    assert "## Continuidade: retome de onde parou" in pr
+    assert "uma única vez por conversa" in pr and "Nunca faça a mesma pergunta duas vezes" in pr
+    assert pr.index("## Continuidade") < pr.index("## Roteiro da conversa")
+    assert "NÃO volte para a descoberta" in pr
