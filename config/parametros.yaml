@@ -287,8 +287,8 @@ frentes:
 # Modelos de IA e preços (US$ por milhão de tokens; API Anthropic, 22/09/2026)
 # ---------------------------------------------------------------------
 modelos:
-  conversa: "claude-opus-5"           # principal
-  conversa_fallback: "claude-sonnet-5" # se o principal falhar (5xx, limite, timeout) após 1 retentativa
+  conversa: "claude-opus-5-5"         # principal (trocado de claude-opus-5 em 08/10/2026: mesma categoria, 20% mais barato, cache 2,5× mais barato)
+  conversa_fallback: "claude-sonnet-5-5" # se o principal falhar (5xx, limite, timeout) após 1 retentativa
   auxiliar: "claude-haiku-4-5"         # resumos e classificação
   lembretes: "claude-haiku-4-5"        # lembretes de retomada (frase curta; 1/10 do custo do Opus)
   esforco: "medium"                    # low | medium | high — profundidade de raciocínio na conversa
@@ -296,10 +296,14 @@ modelos:
   max_chamadas_por_resposta: 8         # limite do ciclo de ferramentas por vez do lead
   precos_usd_por_milhao:
     # cache_escrita = gravação com TTL de 1 h (2× a entrada); com TTL de 5 min seria 1,25× (6.25 / 2.5 / 1.25)
+    claude-opus-5-5:   { entrada: 4.0,  saida: 20.0, cache_leitura: 0.2,  cache_escrita: 8.0 }
+    claude-sonnet-5-5: { entrada: 2.0,  saida: 10.0, cache_leitura: 0.1,  cache_escrita: 4.0 }
+    claude-haiku-5-5:  { entrada: 0.1,  saida: 0.5,  cache_leitura: 0.01, cache_escrita: 0.2 }
     claude-opus-5:     { entrada: 5.0,  saida: 25.0, cache_leitura: 0.5,  cache_escrita: 10.0 }
     claude-sonnet-5:   { entrada: 2.0,  saida: 10.0, cache_leitura: 0.2,  cache_escrita: 4.0 }
     claude-haiku-4-5:  { entrada: 1.0,  saida: 5.0,  cache_leitura: 0.1,  cache_escrita: 2.0 }
   cap_diario_usd: 15.0                 # ao estourar, conversas ficam pausadas com alerta
+  aquecer_cache: true                  # job a cada 50 min reenvia o prompt fixo com max_tokens=0: mantém o cache de 1 h vivo (custa só uma leitura, ~US$ 0,004)
 
 # ---------------------------------------------------------------------
 # Disparos de templates (Leads Perdidos) — controlados pelo painel

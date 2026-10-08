@@ -49,6 +49,19 @@ def job_lembretes(dry_run: bool = False):
     return lembretes.rodar(os.environ.get("URL_ORQUESTRADOR", ""), dry_run=dry_run)
 
 
+@app.post("/jobs/aquecer-cache")
+def job_aquecer_cache():
+    """Keep-alive do cache do prompt da Celeste: repassa ao orquestrador (privado) com token de identidade."""
+    import requests
+    from google.auth.transport.requests import Request as GRequest
+    from google.oauth2 import id_token
+    url = os.environ.get("URL_ORQUESTRADOR", "")
+    tok = id_token.fetch_id_token(GRequest(), url)
+    r = requests.post(f"{url}/aquecer-cache", headers={"Authorization": f"Bearer {tok}"}, timeout=300)
+    r.raise_for_status()
+    return r.json()
+
+
 @app.post("/jobs/espelho")
 def job_espelho():
     return espelho.rodar()

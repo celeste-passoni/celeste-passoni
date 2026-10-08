@@ -116,7 +116,7 @@ def _uso(**k):
     return SimpleNamespace(**base)
 
 
-def _resp(stop, content, modelo="claude-opus-5", uso=None):
+def _resp(stop, content, modelo="claude-opus-5-5", uso=None):
     return SimpleNamespace(stop_reason=stop, content=content, model=modelo, usage=uso or _uso())
 
 
@@ -132,13 +132,13 @@ def test_motor_ciclo_de_ferramenta_e_custo():
     res = m.responder("leads_perdidos", {"id": "c1", "contato": "55", "nome": "Ana"}, [{"role": "user", "content": "oi"}], _ctx(ts=ts))
     assert res.baloes == ["Tenho terça 10h", "Te serve?"]
     assert res.chamadas == 2 and res.ferramentas[0]["nome"] == "buscar_horarios"
-    # custo: 2×(1000 in ×5 + 100 out ×25)/1M + 20000 cache ×0.5/1M
-    assert abs(res.custo_usd - (2 * (1000 * 5 + 100 * 25) / 1e6 + 20000 * 0.5 / 1e6)) < 1e-9
+    # custo (opus 5.5): 2×(1000 in ×4 + 100 out ×20)/1M + 20000 cache ×0.2/1M
+    assert abs(res.custo_usd - (2 * (1000 * 4 + 100 * 20) / 1e6 + 20000 * 0.2 / 1e6)) < 1e-9
     # contexto do lead foi injetado na 1ª mensagem; system tem cache_control
     kwargs = cliente.beta.messages.create.call_args_list[0].kwargs
     assert kwargs["system"][0]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}
     assert "Nome: Ana" in kwargs["messages"][0]["content"]
-    assert kwargs["model"] == "claude-opus-5"
+    assert kwargs["model"] == "claude-opus-5-5"
 
 
 def test_motor_fallback_para_sonnet():
@@ -146,11 +146,11 @@ def test_motor_fallback_para_sonnet():
     req = MagicMock()
     cliente.beta.messages.create.side_effect = [
         anthropic.InternalServerError("boom", response=MagicMock(status_code=500, headers={}), body=None),
-        _resp("end_turn", [SimpleNamespace(type="text", text="Oi!")], modelo="claude-sonnet-5"),
+        _resp("end_turn", [SimpleNamespace(type="text", text="Oi!")], modelo="claude-sonnet-5-5"),
     ]
     res = motor.Motor(cliente=cliente).responder("leads_perdidos", {"id": "c1"}, [{"role": "user", "content": "oi"}], _ctx())
-    assert res.modelo == "claude-sonnet-5" and res.baloes == ["Oi!"]
-    assert cliente.beta.messages.create.call_args_list[1].kwargs["model"] == "claude-sonnet-5"
+    assert res.modelo == "claude-sonnet-5-5" and res.baloes == ["Oi!"]
+    assert cliente.beta.messages.create.call_args_list[1].kwargs["model"] == "claude-sonnet-5-5"
 
 
 def test_motor_refusal():
@@ -457,3 +457,25 @@ def test_ferramenta_atualizar_cadastro():
     # nada para atualizar
     saida, erro = ferramentas_ia.executar("atualizar_cadastro", vazio, ctx)
     assert erro and "nome e CPF" in saida
+
+
+# ------------------------------------------------------------------ modelo e cache
+def test_modelo_principal_tem_preco_cadastrado():
+    cfg = config.parametros()["modelos"]
+    for m in (cfg["conversa"], cfg["conversa_fallback"], cfg["lembretes"], cfg["auxiliar"]):
+        assert m in cfg["precos_usd_por_milhao"], m
+    assert cfg["conversa"] == "claude-opus-5-5"
+
+
+def test_aquecer_cache_envia_max_tokens_zero_com_mesmo_prefixo():
+    cliente = MagicMock()
+    cliente.beta.messages.create.return_value = SimpleNamespace(model="claude-opus-5-5", content=[], stop_reason="max_tokens",
+        usage=SimpleNamespace(input_tokens=1, output_tokens=0, cache_read_input_tokens=21000, cache_creation_input_tokens=0))
+    m = motor.Motor(cliente=cliente)
+    r = m.aquecer("leads_perdidos")
+    kw = cliente.beta.messages.create.call_args.kwargs
+    assert kw["max_tokens"] == 0 and kw["model"] == "claude-opus-5-5"
+    assert kw["system"][0]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}
+    assert kw["system"][0]["text"] == m._system("leads_perdidos")[0]["text"]   # mesmo prefixo da conversa real
+    assert kw["tools"] == ferramentas_ia.FERRAMENTAS and "thinking" in kw
+    assert r["cache_lido"] == 21000 and r["custo_usd"] == round(21000 * 0.2 / 1e6 + 1 * 4 / 1e6, 5)

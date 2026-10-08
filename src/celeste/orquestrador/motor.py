@@ -77,12 +77,27 @@ class Motor:
         self.cliente = cliente or anthropic.Anthropic(api_key=config.segredo("ANTHROPIC_API_KEY"), max_retries=1, timeout=90.0)
         self.cfg = config.parametros()["modelos"]
 
-    def _criar(self, modelo: str, system: list, messages: list) -> Any:
+    def _system(self, frente: str) -> list:
+        """O 1º bloco (estável, com cache de 1 h) é idêntico entre a conversa real e o keep-alive; o 2º é volátil (data/hora)."""
+        return [
+            {"type": "text", "text": prompt.camadas_estaveis(frente), "cache_control": {"type": "ephemeral", "ttl": "1h"}},
+            {"type": "text", "text": prompt.formato_saida()},
+        ]
+
+    def aquecer(self, frente: str) -> dict:
+        """Keep-alive do cache: reenvia tools + prompt fixo com max_tokens=0. A API só faz o prefill (grava ou renova o cache)
+        e devolve content vazio; custo = leitura de cache (ou uma gravação, se tinha expirado). Nada é gerado."""
+        resp = self._criar(self.cfg["conversa"], self._system(frente), [{"role": "user", "content": "."}], max_tokens=0)
+        uso = resp.usage
+        return {"frente": frente, "modelo": resp.model or self.cfg["conversa"], "custo_usd": round(_custo(resp.model or self.cfg["conversa"], uso), 5),
+                "cache_lido": getattr(uso, "cache_read_input_tokens", 0) or 0, "cache_gravado": getattr(uso, "cache_creation_input_tokens", 0) or 0}
+
+    def _criar(self, modelo: str, system: list, messages: list, max_tokens: Optional[int] = None) -> Any:
         extras = {}
         if "haiku" not in modelo:   # raciocínio adaptativo só nos modelos grandes
             extras = {"thinking": {"type": "adaptive"}, "output_config": {"effort": self.cfg.get("esforco", "medium")}}
         return self.cliente.beta.messages.create(
-            model=modelo, max_tokens=int(self.cfg["max_tokens_resposta"]),
+            model=modelo, max_tokens=int(self.cfg["max_tokens_resposta"]) if max_tokens is None else max_tokens,
             system=system, messages=messages, tools=ferramentas_ia.FERRAMENTAS,
             betas=["server-side-fallback-2026-07-01"], fallbacks="default", **extras,
         )
@@ -99,10 +114,7 @@ class Motor:
     def responder(self, frente: str, conversa: dict, historico: list[dict], ctx: ferramentas_ia.Contexto,
                   modelo: Optional[str] = None) -> Resultado:
         """historico: mensagens no formato da API (user/assistant), a última sendo do lead. `modelo` opcional força outro modelo."""
-        system = [
-            {"type": "text", "text": prompt.camadas_estaveis(frente), "cache_control": {"type": "ephemeral", "ttl": "1h"}},
-            {"type": "text", "text": prompt.formato_saida()},
-        ]
+        system = self._system(frente)
         messages = list(historico)
         # contexto volátil do lead entra junto da primeira mensagem do usuário (não invalida o cache do system)
         if messages and isinstance(messages[0].get("content"), str):

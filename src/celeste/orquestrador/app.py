@@ -179,6 +179,26 @@ class PedidoModo(BaseModel):
     modo: str          # "humano" | "ia"
 
 
+@app.post("/aquecer-cache")
+def aquecer_cache():
+    """Keep-alive do cache do prompt fixo (chamado pelo job celeste-aquecer-cache a cada 50 min)."""
+    if not config.parametros()["modelos"].get("aquecer_cache", True):
+        return {"ok": True, "ignorado": "modelos.aquecer_cache = false"}
+    mot, _, _ = _svc()
+    saida = []
+    for frente in FRENTES_IA:
+        try:
+            r = mot.aquecer(frente)
+            saida.append(r)
+            db.collection("custos_diarios").document(datetime.now(ZoneInfo(config.FUSO)).strftime("%Y-%m-%d")).set(
+                {"aquecer_cache_usd": firestore.Increment(r["custo_usd"]), "aquecer_cache_vezes": firestore.Increment(1)}, merge=True)
+        except Exception as e:
+            log.warning("aquecer cache (%s) falhou: %s", frente, e)
+            saida.append({"frente": frente, "erro": str(e)[:200]})
+    log.info("aquecer cache: %s", saida)
+    return {"ok": True, "resultado": saida}
+
+
 @app.post("/modo")
 def mudar_modo(p: PedidoModo):
     """'humano' pausa a Celeste nesta conversa (a equipe responde pelo painel); 'ia' devolve para ela."""
