@@ -484,6 +484,16 @@ def test_aquecer_cache_envia_max_tokens_zero_com_mesmo_prefixo():
 def test_prompt_tem_regra_de_continuidade():
     pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
     assert "## Continuidade: retome de onde parou" in pr
-    assert "uma única vez por conversa" in pr and "Nunca faça a mesma pergunta duas vezes" in pr
-    assert pr.index("## Continuidade") < pr.index("## Roteiro da conversa")
-    assert "NÃO volte para a descoberta" in pr
+    assert "nunca faça a mesma pergunta duas vezes" in pr and "nunca atribua ao lead algo que ele não disse" in pr
+    assert "não faz perguntas de investigação sobre o cabelo" in pr          # estilo da atendente de referência
+    assert "Lhe atende?" in pr and "Qual seria a melhor opção para você?" in pr
+    assert "Me chamo {{ia.nome_atendente}}, sou concierge" in pr
+
+
+def test_renderizar_lista_por_id_e_prompt_sem_placeholders():
+    import re
+    assert prompt.renderizar("{{consultas.dr_lucas.valor_texto}}", config.parametros()) == "R$ 800,00"
+    assert prompt.renderizar("{{consultas.dra_luciana.agenda_texto}}", config.parametros()).startswith("de segunda a sexta")
+    prompt.camadas_estaveis.cache_clear()
+    t = prompt.camadas_estaveis("leads_perdidos")
+    assert not re.findall(r"\{\{[^}]+\}\}", t), re.findall(r"\{\{[^}]+\}\}", t)

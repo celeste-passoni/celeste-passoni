@@ -29,6 +29,11 @@ def _lookup(dados: dict, caminho: str) -> Any:
     for parte in caminho.split("."):
         if isinstance(cur, dict) and parte in cur:
             cur = cur[parte]
+        elif isinstance(cur, list):   # lista de itens com `id` (ex.: consultas.dra_luciana.valor_texto)
+            achado = next((x for x in cur if isinstance(x, dict) and str(x.get("id")) == parte), None)
+            if achado is None:
+                return None
+            cur = achado
         else:
             return None
     return cur
@@ -62,6 +67,7 @@ def camadas_estaveis(frente: str) -> str:
         {k: p[k] for k in ("clinica", "consultas", "consulta_inclui", "levar_no_dia", "politicas", "pre_cadastro_campos",
                            "pre_cadastro_observacao", "pre_cadastro_menor_de_idade", "encaminhado_por", "procedimentos_permitidos")
          if k in p}, allow_unicode=True, sort_keys=False) + "```"]
+    partes[0] = renderizar(partes[0], p)
     for nome in ARQUIVOS_CONHECIMENTO:
         partes.append(para_modelo(renderizar((config.RAIZ / "knowledge" / nome).read_text(encoding="utf-8"), p)))
     prompt_frente = (config.RAIZ / "prompts" / PROMPTS_FRENTE[frente]).read_text(encoding="utf-8")

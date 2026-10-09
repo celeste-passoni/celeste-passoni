@@ -39,6 +39,7 @@ consultas:
       dias: "segunda a sexta"
       inicio: "12:00"
       fim: "17:00"
+    agenda_texto: "de segunda a sexta-feira, das 12h às 17h"
     ofertar: true
   - id: dr_lucas
     profissional: "Dr. Lucas Vieira"
@@ -53,6 +54,7 @@ consultas:
       dias: "segunda a sexta"
       inicio: "09:00"
       fim: "17:00"
+    agenda_texto: "de segunda a sexta-feira, das 9h às 17h"
     ofertar: true
 
 consulta_inclui:
