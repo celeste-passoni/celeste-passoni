@@ -497,3 +497,12 @@ def test_renderizar_lista_por_id_e_prompt_sem_placeholders():
     prompt.camadas_estaveis.cache_clear()
     t = prompt.camadas_estaveis("leads_perdidos")
     assert not re.findall(r"\{\{[^}]+\}\}", t), re.findall(r"\{\{[^}]+\}\}", t)
+
+
+def test_prompt_tem_quebra_de_objecoes_das_atendentes():
+    pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
+    assert "## Quebra de objeções" in pr
+    for trecho in ("Os agendamentos são realizados por todos os setores da clínica", "Você já tem algum diagnóstico?",
+                   "Na consulta eu infelizmente não consigo", "fundamental que a consulta seja realizada de forma presencial",
+                   "não moram na capital", "sua experiência será diferente", "Gostaria apenas de entender o motivo da sua decisão"):
+        assert trecho in pr, trecho
