@@ -293,7 +293,7 @@ modelos:
   conversa_fallback: "claude-sonnet-5-5" # se o principal falhar (5xx, limite, timeout) após 1 retentativa
   auxiliar: "claude-haiku-4-5"         # resumos e classificação
   lembretes: "claude-haiku-4-5"        # lembretes de retomada (frase curta; 1/10 do custo do Opus)
-  esforco: "high"                      # low | medium | high — subido para high em 09/10/2026 (entender o contexto antes de responder)
+  esforco: "medium"                    # low | medium | high — a clínica preferiu medium (09/10/2026)
   max_tokens_resposta: 1500
   max_chamadas_por_resposta: 8         # limite do ciclo de ferramentas por vez do lead
   precos_usd_por_milhao:
