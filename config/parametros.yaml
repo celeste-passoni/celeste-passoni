@@ -357,7 +357,7 @@ campanhas:
 lembretes:
   # Retomada no mesmo dia, no padrão das atendentes de referência: texto FIXO por etapa (src/celeste/orquestrador/lembretes_texto.py),
   # sem modelo (custo zero). Medido nelas: mediana ~5 h após a última msg sem resposta, 25% em até 2 h.
-  ativo: false                         # refeito em 09/10/2026; fica PAUSADO (scheduler também) até a clínica liberar
+  ativo: true                          # refeito em 09/10/2026; o liga/desliga é o scheduler celeste-lembretes (pausado fora dos testes)
   horas: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]   # Cloud Scheduler roda de hora em hora nesses horários (America/Sao_Paulo)
   dias_uteis: true
   minimo_sem_resposta_min: 120         # 1º lembrete: 2 h depois da última mensagem da Celeste sem resposta
