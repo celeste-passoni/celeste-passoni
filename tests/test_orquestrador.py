@@ -518,3 +518,11 @@ def test_prompt_v2_exemplos_e_regras():
     t = prompt.camadas_estaveis("leads_perdidos")
     assert "### Exemplo 1 —" in t and t.index("### Exemplo 1 —") < t.index("# INSTRUÇÃO DA FRENTE")
     assert not re.findall(r"\{\{[^}]+\}\}", t)
+
+
+def test_video_e_adiado_para_depois_dos_baloes():
+    from celeste.orquestrador import app as oapp
+    import inspect
+    src = inspect.getsource(oapp.responder)
+    assert "videos_pendentes" in src and src.index("for v in videos_pendentes") > src.index("for i, texto in enumerate(res.baloes)")
+    assert "ArrayRemove(videos_pendentes)" in src

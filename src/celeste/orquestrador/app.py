@@ -104,9 +104,10 @@ def responder(p: Pedido):
             norm["status"] = "Em conversa"
         conv.update(norm)
         ref.set(norm, merge=True)
+    videos_pendentes: list[str] = []   # o vídeo vai DEPOIS dos balões de texto (ordem das atendentes); a ferramenta só agenda
     ctx = ferramentas_ia.Contexto(
         conversa=conv, telefone=conv["contato"], tisaude=ts, viacep=transcricao.viacep,
-        enviar_video=lambda v: _enviar_video(mt, ref, conv, v),
+        enviar_video=lambda v: (videos_pendentes.append(v), "adiado-para-depois-dos-baloes")[1],
         avisar_recepcao=lambda motivo, resumo: _avisar_recepcao(mt, conv, motivo, resumo),
         atualizar=lambda campos: (conv.update(campos), ref.set(campos, merge=True)),
     )
@@ -127,6 +128,8 @@ def responder(p: Pedido):
         time.sleep(motor.delay_humano(fora_horario=not _horario_comercial()))
     if ref.get().to_dict().get("debounce_versao") != p.versao:
         log.info("mensagem nova chegou durante a geração; resposta descartada (conversa %s)", p.conversa_id)
+        if videos_pendentes:   # o vídeo não foi enviado: desfaz a marcação para a próxima resposta poder mandá-lo
+            ref.set({"videos_enviados": firestore.ArrayRemove(videos_pendentes)}, merge=True)
         return {"ok": True, "ignorado": "regerar"}
 
     enviados = 0
@@ -138,6 +141,13 @@ def responder(p: Pedido):
             "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": res.modelo,
             "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
         enviados += 1
+    for v in videos_pendentes:   # por último, como a atendente de referência faz
+        if SIMULAR_DELAY:
+            time.sleep(2.0)
+        try:
+            _enviar_video(mt, ref, conv, v); enviados += 1
+        except Exception as e:
+            log.warning("vídeo %s não enviado: %s", v, e)
     if conv.get("status") == "Encaminhado à recepção" and ctx.encerrar:
         rec = config.parametros()["ia"]["recepcao"]
         try:
