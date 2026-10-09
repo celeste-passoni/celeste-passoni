@@ -317,27 +317,26 @@ disparos:
   horario: { dias_uteis: true, inicio: 9, fim: 18 }   # hora local (America/Sao_Paulo)
   intervalo_entre_envios_segundos: [4, 12]            # ritmo humano entre um lead e outro
   priorizar: "mais_recentes"            # mais_recentes | mais_antigos
-  templates:                            # nome na Meta (idioma pt_BR); {{1}} = primeiro nome
-    T1: resgate_lembramos_de_voce
-    T2: resgate_poucos_horarios
-    T3: resgate_o_que_dificultou
-    T4: resgate_agenda_do_mes
-    T5: resgate_hoje_a_tarde
-  status_apos_template: { T1: "Template enviado (1°)", T2: "Template enviado (1°)", T3: "Template enviado (2°)",
-                          T4: "Template enviado (1°)", T5: "Template enviado (2°)" }
-  passos:                               # sequência completa; apos_dias = dias após o passo anterior (ou após o fim do ciclo)
+  # Os MESMOS templates que a clínica usa hoje no MarketZap (decisão de 09/10/2026); textos em src/celeste/jobs/templates_texto.py
+  templates:                            # nome na Meta (idioma pt_BR); {{1}} = primeiro nome (T1 e T4)
+    T1: resgate_revisando_agenda        # "Estávamos revisando nossa agenda… tempo é cabelo"
+    T2: resgate_me_da_um_oi             # "Nosso sistema encerra as conversas após 24h… me dá um oi"
+    T3: resgate_duas_modalidades        # script das duas modalidades, enviado frio
+    T4: resgate_demonstrou_interesse    # "Vimos que você demonstrou interesse… Podemos retomar?"
+  status_apos_template: { T1: "Template enviado (1°)", T2: "Template enviado (2°)", T3: "Template enviado (2°)", T4: "Template enviado (1°)" }
+  passos:                               # cadência medida na atendente de referência (medianas): 3 d, 3 d, 8 d, 3 d
     - { template: T1, apos_dias: 0,  ciclo: 1 }
     - { template: T2, apos_dias: 3,  ciclo: 1 }
-    - { template: T3, apos_dias: 7,  ciclo: 1 }
-    - { template: T4, apos_dias: 40, ciclo: 2 }
-    - { template: T5, apos_dias: 7,  ciclo: 2, so_se_horario_livre_hoje_a_tarde: true }
-  reiniciar_no_passo: 3                 # após o último passo, pausa e volta ao índice 3 (T4)
-  pausa_apos_ultimo_passo_dias: 90
+    - { template: T3, apos_dias: 3,  ciclo: 1 }
+    - { template: T4, apos_dias: 8,  ciclo: 1 }
+    - { template: T2, apos_dias: 3,  ciclo: 1 }
+  reiniciar_no_passo: 2                 # após o último passo, pausa e volta ao índice 2 (T3 → T4 → T2)
+  pausa_apos_ultimo_passo_dias: 30
   template_por_status:                  # recontato de quem respondeu e parou (dias em leads_perdidos.recontato_por_status_ia)
     "Irá nos retornar": T2
     "Vamos retornar na data solicitada": T2
-    "Achou caro": T3
-    "Quer pelo convênio": T3
+    "Achou caro": T1
+    "Quer pelo convênio": T1
     "Mora em outro Estado": T4
     "Está em outra clínica": T4
 

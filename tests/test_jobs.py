@@ -41,32 +41,38 @@ def _lead(**k):
     return base
 
 
-def test_esteira_ciclo_1():
+def test_esteira_segue_cadencia_da_atendente_de_referencia():
+    # T1 (revisando agenda) → +3 d T2 (me dá um oi) → +3 d T3 (duas modalidades) → +8 d T4 (demonstrou interesse) → +3 d T2
     d0 = disparos.decidir(_lead(), AGORA)
     assert d0 and d0.template == "T1" and d0.novo_passo == 1
-    # T2 só depois de 3 dias
     assert disparos.decidir(_lead(status_ia="Template enviado (1°)", passo=1, ultimo_template_em=AGORA - timedelta(days=2)), AGORA) is None
     d2 = disparos.decidir(_lead(status_ia="Template enviado (1°)", passo=1, ultimo_template_em=AGORA - timedelta(days=3)), AGORA)
-    assert d2 and d2.template == "T2"
-    d3 = disparos.decidir(_lead(status_ia="Template enviado (1°)", passo=2, ultimo_template_em=AGORA - timedelta(days=7)), AGORA)
+    assert d2 and d2.template == "T2" and d2.novo_passo == 2
+    d3 = disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=2, ultimo_template_em=AGORA - timedelta(days=3)), AGORA)
     assert d3 and d3.template == "T3" and d3.novo_passo == 3
+    assert disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=3, ultimo_template_em=AGORA - timedelta(days=7)), AGORA) is None
+    d4 = disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=3, ultimo_template_em=AGORA - timedelta(days=8)), AGORA)
+    assert d4 and d4.template == "T4" and d4.novo_passo == 4
+    d5 = disparos.decidir(_lead(status_ia="Template enviado (1°)", passo=4, ultimo_template_em=AGORA - timedelta(days=3)), AGORA)
+    assert d5 and d5.template == "T2" and d5.novo_passo == 5
 
 
-def test_ciclo_2_e_pausa_longa():
-    # após T3 (passo 3) espera 40 dias para T4
-    assert disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=3, ultimo_template_em=AGORA - timedelta(days=39)), AGORA) is None
-    d4 = disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=3, ultimo_template_em=AGORA - timedelta(days=40)), AGORA)
-    assert d4 and d4.template == "T4"
-    # T5 exige tarde livre hoje
-    l5 = _lead(status_ia="Template enviado (1°)", passo=4, ultimo_template_em=AGORA - timedelta(days=7))
-    assert disparos.decidir(l5, AGORA, tarde_livre_hoje=False) is None
-    assert disparos.decidir(l5, AGORA, tarde_livre_hoje=True).template == "T5"
-    # fim da esteira: pausa de 90 dias e volta ao T4
-    fim = _lead(status_ia="Template enviado (2°)", passo=5, ultimo_template_em=AGORA - timedelta(days=89))
+def test_pausa_e_reinicio_da_esteira():
+    # fim da esteira: pausa de 30 dias e volta ao índice 2 (T3)
+    fim = _lead(status_ia="Template enviado (2°)", passo=5, ultimo_template_em=AGORA - timedelta(days=29))
     assert disparos.decidir(fim, AGORA) is None
-    fim["ultimo_template_em"] = AGORA - timedelta(days=91)
+    fim["ultimo_template_em"] = AGORA - timedelta(days=31)
     r = disparos.decidir(fim, AGORA)
-    assert r and r.template == "T4" and r.novo_passo == 4
+    assert r and r.template == "T3" and r.novo_passo == 3
+
+
+def test_templates_sao_os_da_clinica():
+    from celeste.jobs import templates_texto as tt
+    assert set(tt.TEMPLATES) == {"T1", "T2", "T3", "T4"}
+    assert "tempo é cabelo" in tt.TEMPLATES["T1"]["corpo"] and "me dá um oi" in tt.TEMPLATES["T2"]["corpo"]
+    assert "duas formas" in tt.TEMPLATES["T3"]["corpo"] and "demonstrou interesse" in tt.TEMPLATES["T4"]["corpo"]
+    assert tt.parametros("T1", "Ana") == ["Ana"] and tt.parametros("T2", "Ana") == [] and tt.parametros("T3", "Ana") == []
+    assert tt.renderizar("T4", "Ana").startswith("Olá Ana😀")
 
 
 def test_quem_respondeu_sai_da_esteira():
@@ -80,7 +86,7 @@ def test_recontato_por_objecao():
     caro = _lead(status_ia="Achou caro", passo=1, ultimo_template_em=AGORA - timedelta(days=31), ultima_msg_lead_em=AGORA - timedelta(days=29))
     assert disparos.decidir(caro, AGORA) is None          # 30 dias após a última msg do lead
     caro["ultima_msg_lead_em"] = AGORA - timedelta(days=30)
-    assert disparos.decidir(caro, AGORA).template == "T3"
+    assert disparos.decidir(caro, AGORA).template == "T1"   # "Achou caro" → tempo é cabelo
     data = _lead(status_ia="Vamos retornar na data solicitada", passo=1, ultimo_template_em=AGORA - timedelta(days=10), proximo_recontato_em="2026-10-13")
     assert disparos.decidir(data, AGORA).template == "T2"
     data["proximo_recontato_em"] = "2026-10-20"

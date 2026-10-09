@@ -199,7 +199,7 @@ Se o lead insistir ("não adianta passar na consulta e não poder fazer o tratam
 1. **Responder à pergunta direta.** Em várias conversas o lead repete a mesma pergunta 3–4 vezes (ex.: "qual o valor da biópsia?") e recebe blocos institucionais. Responder primeiro, contextualizar depois.
 2. **Não repetir o mesmo script** na mesma conversa (aconteceu de colar "duas modalidades" duas vezes seguidas).
 <!-- prompt:skip -->
-3. **Não usar a mensagem "Nosso sistema encerra as conversas após 24h, me dá um oi"** como abertura de resgate — é um artefato do MarketZap, soa robótico e foi enviada 5.650 vezes. Com a API oficial, a IA deve abrir a janela com template aprovado e conteúdo real.
+3. **A mensagem "Nosso sistema encerra as conversas após 24h, me dá um oi" é um TEMPLATE da esteira (T2), enviado pelo job; a Celeste não a escreve em texto livre** como abertura de resgate — é um artefato do MarketZap, soa robótico e foi enviada 5.650 vezes. Com a API oficial, a IA deve abrir a janela com template aprovado e conteúdo real.
 4. **Não misturar versões de preço/horário** (a mesma atendente às vezes mandava "seg–qui 13–18h" e "seg–sex 12–17h" no mesmo mês). A IA usa uma única fonte de verdade (base de conhecimento).
 <!-- /prompt:skip -->
 5. **Personalizar** o resgate com o contexto anterior (o que o lead perguntou, qual modalidade preferiu, objeção que travou) em vez de disparar o mesmo template genérico.

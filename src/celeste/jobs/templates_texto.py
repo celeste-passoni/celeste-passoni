@@ -1,58 +1,67 @@
 # -*- coding: utf-8 -*-
-"""Texto dos templates de resgate (espelho do que está aprovado na Meta; fonte: prompts/templates-leads-perdidos.md).
+"""Texto dos templates de resgate — os MESMOS que a clínica usa hoje no MarketZap (Leads Perdidos), palavra por palavra.
 
+Fonte: conversas da atendente de referência (ago–out/2026). Decisão da clínica em 09/10/2026: manter os mesmos templates.
 Usado para gravar no histórico da conversa o que o lead de fato recebeu, para o modelo não repetir a apresentação
-e para o painel/relatórios mostrarem a mensagem. {1} = primeiro nome; T4 {2} = mês; T5 {2} = horário, {3} = profissional.
+e para o painel/relatórios mostrarem a mensagem. {1} = primeiro nome (só nos templates que o usam).
+
+Volumes e resposta em até 3 dias, medidos nos 2 meses (atendente de referência):
+  T1 revisando agenda (tempo é cabelo)  1.488 envios ·  5%
+  T2 "me dá um oi"                      4.576 envios ·  7%
+  T3 duas modalidades (frio)            3.874 envios · 10%
+  T4 demonstrou interesse               2.090 envios ·  5%
 """
 from __future__ import annotations
 
-RODAPE = "Se preferir não receber mais mensagens, responda SAIR."
+RODAPE = "Se preferir não receber mais mensagens, responda SAIR."   # rodapé do template na Meta (opt-out); o corpo é o da clínica
 
 TEMPLATES: dict[str, dict] = {
     "T1": {
-        "nome": "resgate_lembramos_de_voce",
-        "corpo": ("Olá, {1}, tudo bem? 😊 Aqui é a Celeste, da Passoni Clinic.\n\n"
-                  "Estávamos revisando nossa agenda e lembramos de você: há um tempo conversamos sobre sua consulta com a "
-                  "Dra. Luciana Passoni e esse cuidado acabou não acontecendo.\n\n"
-                  "Sabemos que a rotina faz algumas decisões ficarem para depois. Mas, quando falamos em saúde capilar, "
-                  "o momento da avaliação faz toda a diferença. Porque tempo é cabelo. 🤍\n\n"
-                  "Se ainda fizer sentido para você, é só me responder por aqui que eu vejo um horário."),
-        "botoes": ["Quero ver horários", "Tenho uma dúvida", "Agora não"],
+        "nome": "resgate_revisando_agenda",
+        "corpo": ("Olá {1}! 😀 tudo bem?\n\n"
+                  "Estávamos revisando nossa agenda e lembramos de você!\n\n"
+                  "Há algum tempo tivemos um contato sobre sua avaliação na Passoni Clinic, mas percebemos que esse cuidado "
+                  "acabou não acontecendo.\n\n"
+                  "Sabemos que a rotina muitas vezes faz com que algumas decisões fiquem para depois.\n"
+                  "Mas, quando falamos em saúde capilar, o momento da avaliação pode fazer toda a diferença.\n\n"
+                  "Porque tempo é cabelo. 🤍\n\n"
+                  "Se ainda fizer sentido para você, me envie um “OI” por aqui.\n"
+                  "Vou ter prazer em verificar um novo horário para sua avaliação.\n\n"
+                  "Será um prazer receber você na Passoni Clinic!"),
+        "botoes": [],
     },
     "T2": {
-        "nome": "resgate_poucos_horarios",
-        "corpo": ("Oi, {1}! 😊 Celeste, da Passoni Clinic.\n\n"
-                  "Passando para avisar que a agenda desta e da próxima semana está com poucos horários para consulta — "
-                  "com a Dra. Luciana e com o Dr. Lucas Vieira, nosso Diretor Médico.\n\n"
-                  "Quer que eu reserve um para você? Me diz o melhor dia e período que eu confiro na hora."),
-        "botoes": ["Sim, quero reservar", "Prefiro outra semana", "Agora não"],
+        "nome": "resgate_me_da_um_oi",
+        "corpo": ("Olá, tudo bem? ☺️\n"
+                  "Nosso sistema encerra as conversas automaticamente após 24h ⏳.\n\n"
+                  "Por gentileza, me dá um oi por aqui 💬 que consigo te atender! 💖"),
+        "botoes": [],
     },
     "T3": {
-        "nome": "resgate_o_que_dificultou",
-        "corpo": ("{1}, tudo bem? Aqui é a Celeste, da Passoni Clinic. 🤍\n\n"
-                  "Vi que você chegou a se interessar pela consulta, mas não seguimos com o agendamento. "
-                  "Existe algo que esteja dificultando marcar agora?\n\n"
-                  "Podemos ver outras opções de data e horário, ou esclarecer qualquer dúvida — sobre a consulta, "
-                  "os valores ou como funciona o tratamento."),
-        "botoes": ["Dúvida sobre valor", "Dúvida sobre horário", "Outra dúvida"],
+        "nome": "resgate_duas_modalidades",
+        "corpo": ("Olá 😀!\n\n"
+                  "Na Passoni Clinic, você pode agendar sua consulta de duas formas:\n\n"
+                  "🔹 Dra. Luciana Passoni - R$ 1.200,00.\n"
+                  "A consulta é iniciada pelos tricologistas, que realizam a anamnese e a tricoscopia.\n"
+                  "Em seguida, a Dra. Luciana faz a avaliação médica, define o diagnóstico e indica o tratamento personalizado.\n\n"
+                  "🔹 Dr. Lucas Vieira - R$ 800,00.\n"
+                  "Diretor Médico da Passoni Clinic e tricologista, ele realiza toda a consulta, desde a avaliação clínica até o "
+                  "diagnóstico e a definição do tratamento.\n\n"
+                  "Em ambas as modalidades, o objetivo é fechar o seu diagnóstico e indicar o tratamento mais adequado para o seu caso.\n\n"
+                  "Ao finalizar todo o tratamento, você tem direito a um retorno como cortesia, que para a modalidade de cortesia, "
+                  "deverá ser realizado em até 30 dias após a última sessão, sem desmarcações.\n\n"
+                  "Esse retorno, ocorrerá com a equipe de tricologistas, para lhe apresentar o plano de manutenção preventiva. "
+                  "E durante o seu tratamento, essa mesma equipe, realizará discussões clínicas sobre a sua evolução."),
+        "botoes": [],
     },
     "T4": {
-        "nome": "resgate_agenda_do_mes",
-        "corpo": ("Olá, {1}! 😊 Celeste, da Passoni Clinic.\n\n"
-                  "Abrimos a agenda de consultas de {2} com a Dra. Luciana Passoni e com o Dr. Lucas Vieira. "
-                  "Como você já tinha conversado com a gente, quis te avisar antes de os horários preencherem.\n\n"
-                  "A consulta inclui a avaliação médica completa e o exame de tricoscopia, que analisa em detalhes "
-                  "o couro cabeludo e os fios.\n\n"
-                  "Quer que eu veja um horário para você?"),
-        "botoes": ["Quero agendar", "Me conta mais", "Agora não"],
-    },
-    "T5": {
-        "nome": "resgate_hoje_a_tarde",
-        "corpo": ("{1}, boa tarde! Celeste, da Passoni Clinic. 😊\n\n"
-                  "Surgiu um horário hoje às {2} para consulta com o {3}, aqui na clínica "
-                  "(Moema, em frente ao Parque Ibirapuera, com valet).\n\n"
-                  "Se conseguir vir, eu reservo para você agora mesmo. Me responde por aqui?"),
-        "botoes": ["Consigo hoje", "Outro dia", "Agora não"],
+        "nome": "resgate_demonstrou_interesse",
+        "corpo": ("Olá {1}😀 esperamos que estejas bem?\n\n"
+                  "Vimos que você demonstrou interesse em vir na Passoni Clinic, cuidar da saúde capilar, mas infelizmente "
+                  "acabou não acontecendo.\n\n"
+                  "Podemos retomar o seu atendimento?\n"
+                  "Me responda, que consigo te atender!"),
+        "botoes": [],
     },
 }
 
@@ -60,20 +69,18 @@ MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "a
 
 
 def parametros(codigo: str, primeiro_nome: str, **extras) -> list[str]:
-    """Lista de parâmetros do corpo, na ordem {{1}}, {{2}}, {{3}} — o que vai à API da Meta."""
-    p = [primeiro_nome or "tudo bem"]
-    if codigo == "T4":
-        p.append(extras.get("mes", ""))
-    if codigo == "T5":
-        p += [extras.get("horario", ""), extras.get("profissional", "")]
-    return p
+    """Lista de parâmetros do corpo, na ordem {{1}}, {{2}}… — o que vai à API da Meta. Só os templates com {1} levam o nome."""
+    corpo = TEMPLATES[codigo]["corpo"]
+    return [primeiro_nome or "tudo bem"] if "{1}" in corpo else []
 
 
 def renderizar(codigo: str, primeiro_nome: str, **extras) -> str:
-    """Texto completo como o lead vê: corpo + rodapé + botões (para histórico e relatórios)."""
+    """Texto completo como o lead vê: corpo + rodapé (para histórico e relatórios)."""
     t = TEMPLATES[codigo]
-    valores = {str(i + 1): v for i, v in enumerate(parametros(codigo, primeiro_nome, **extras))}
     corpo = t["corpo"]
-    for k, v in valores.items():
-        corpo = corpo.replace("{" + k + "}", v)
-    return f"{corpo}\n\n_{RODAPE}_\n\n[botões: {' · '.join(t['botoes'])}]"
+    for i, v in enumerate(parametros(codigo, primeiro_nome, **extras), start=1):
+        corpo = corpo.replace("{" + str(i) + "}", v)
+    saida = f"{corpo}\n\n_{RODAPE}_"
+    if t["botoes"]:
+        saida += f"\n\n[botões: {' · '.join(t['botoes'])}]"
+    return saida
