@@ -488,6 +488,8 @@ def test_prompt_tem_regra_de_continuidade():
     assert "não faz perguntas de investigação sobre o cabelo" in pr          # estilo da atendente de referência
     assert "Lhe atende?" in pr and "Qual seria a melhor opção para você?" in pr
     assert "Me chamo {{ia.nome_atendente}}, sou concierge" in pr
+    assert "aqui é a {{ia.nome_atendente}}, concierge da Passoni Clinic, e estou aqui para te ajudar" in pr
+    assert "NUNCA mais de três" in pr and "Em que posso ajudar" not in pr.split("## Se o lead escreveu primeiro")[1].split("## Assunto fora")[0]
 
 
 def test_renderizar_lista_por_id_e_prompt_sem_placeholders():
