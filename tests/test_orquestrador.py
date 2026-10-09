@@ -506,3 +506,16 @@ def test_prompt_tem_quebra_de_objecoes_das_atendentes():
                    "Na consulta eu infelizmente não consigo", "fundamental que a consulta seja realizada de forma presencial",
                    "não moram na capital", "sua experiência será diferente", "Gostaria apenas de entender o motivo da sua decisão"):
         assert trecho in pr, trecho
+
+
+def test_lembrete_texto_por_etapa():
+    from celeste.orquestrador import lembretes_texto as lt
+    base = {"nome": "ana paula", "ultima": {"direcao": "celeste", "texto": "Terei às 15h00 e 16h00. Qual horário melhor lhe atende?"}}
+    assert lt.texto_lembrete(dict(base, horarios_oferecidos=["2026-10-13 15:00"]), 1) == "Ana, algum desses horários lhe atende?"
+    assert lt.texto_lembrete(dict(base, horarios_oferecidos=["2026-10-13 15:00"]), 2).startswith("Os agendamentos são realizados por todos os setores")
+    cad = dict(base, ultima={"direcao": "celeste", "texto": "Por gentileza, poderia me informar os dados abaixo para realizarmos o seu pré-cadastro"})
+    assert lt.texto_lembrete(cad, 1) == "Olá, gostaria de dar continuidade ao agendamento?"
+    assert lt.texto_lembrete(base, 1) == "Aguardo seu retorno, Ana! 💛"
+    assert lt.texto_lembrete(base, 2) == "Oi Ana, conseguiu verificar?"
+    assert lt.texto_lembrete(dict(base, nome=""), 1) == "Aguardo seu retorno! 💛"
+    assert lt.texto_lembrete(dict(base, horarios_oferecidos=["x"], status="Agendado"), 1) == "Aguardo seu retorno, Ana! 💛"

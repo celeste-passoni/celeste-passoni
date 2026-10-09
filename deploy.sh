@@ -65,7 +65,7 @@ deploy_jobs() {
   agendar celeste-carregar-base "0 6 * * *"        /jobs/carregar-base
   agendar celeste-disparos      "*/30 9-18 * * 1-5" /jobs/disparos
   agendar celeste-espelho       "30 23 * * *"       /jobs/espelho
-  agendar celeste-lembretes     "0 10,12,14,16,18 * * 1-5" /jobs/lembretes
+  agendar celeste-lembretes     "0 9-19 * * 1-5"  /jobs/lembretes      # retomada no mesmo dia; fica PAUSADO até a clínica liberar
   agendar celeste-aquecer-cache "0,50 6-23 * * *"  /jobs/aquecer-cache   # 06:00 até 23:50 (cache vale até 00:50)
 }
 

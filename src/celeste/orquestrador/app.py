@@ -24,7 +24,7 @@ from pydantic import BaseModel
 from celeste.comum import config
 from celeste.ferramentas import meta, tisaude, transcricao
 from celeste.ferramentas.tisaude_simulado import TiSaudeSimulado
-from celeste.orquestrador import ferramentas_ia, motor
+from celeste.orquestrador import ferramentas_ia, lembretes_texto, motor
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("orquestrador")
@@ -249,7 +249,7 @@ class PedidoLembrete(BaseModel):
 
 @app.post("/lembrete")
 def lembrete(p: PedidoLembrete):
-    """Lembrete de retomada: mensagem curta e nova para o lead que parou de responder (chamado pelo job de lembretes)."""
+    """Retomada no mesmo dia (chamada pelo job de lembretes): texto fixo por etapa, como as atendentes fazem. Sem modelo."""
     ref = db.collection("conversas").document(p.conversa_id)
     conv = ref.get().to_dict()
     if not conv:
@@ -260,45 +260,21 @@ def lembrete(p: PedidoLembrete):
         raise HTTPException(400, "fora do modo de atendimento atual (lembrete só para quem a Celeste pode responder)")
     if not (conv.get("primeira_msg_celeste_em") or conv.get("ultimo_template_em")):
         raise HTTPException(400, "a Celeste ainda não conversou nesta conversa")
-    conv["id"] = p.conversa_id
-    inicio = time.time()
-    mot, mt, ts = _svc()
-    if (conv.get("teste") or _e_numero_teste(conv.get("contato", ""))) and not _escreve_no_tisaude(conv.get("contato", "")):
-        ts = TiSaudeSimulado(); conv["teste"] = True
-    historico, _ = _historico(ref, mt)
+    if (conv.get("ultima") or {}).get("direcao") not in ("celeste", "template"):
+        raise HTTPException(400, "a última mensagem não é da Celeste")
     n = int(conv.get("lembretes_enviados") or 0) + 1
-    ultima = (conv.get("ultima") or {}).get("em")
-    minutos = int((datetime.now(timezone.utc) - ultima).total_seconds() // 60) if ultima else 0
-    historico.append({"role": "user", "content": (
-        f"[SISTEMA — não é o lead falando] O lead está sem responder há {minutos} minutos. Este é o lembrete {n} de "
-        f"{config.parametros()['lembretes'].get('max_por_conversa', 3)}. Escreva UMA mensagem curta (1 balão, no máximo 2) para retomar a conversa "
-        "com naturalidade, diferente das anteriores e sem repetir informações já dadas. Seu objetivo é levar o lead a marcar a consulta: "
-        "demonstre escassez real da agenda (chame buscar_horarios e ofereça 1 ou 2 horários concretos dos próximos dias, dizendo que consegue "
-        "segurar aquele horário) e reforce o valor de não adiar a avaliação (tempo é cabelo). Termine sempre com um convite direto para fechar o horário. "
-        "PROIBIDO: perguntar se ainda tem interesse ou se 'faz sentido agora', oferecer 'deixar para depois', 'sem pressa', 'quando quiser' ou "
-        "qualquer frase que dê ao lead a opção de adiar. Se for o último lembrete, ainda assim ofereça um horário; apenas acrescente que fica à disposição.")})
-    ctx = ferramentas_ia.Contexto(
-        conversa=conv, telefone=conv["contato"], tisaude=ts, viacep=transcricao.viacep,
-        enviar_video=lambda v: _enviar_video(mt, ref, conv, v),
-        avisar_recepcao=lambda motivo, resumo: _avisar_recepcao(mt, conv, motivo, resumo),
-        atualizar=lambda campos: (conv.update(campos), ref.set(campos, merge=True)))
-    res = mot.responder(conv.get("frente") or "leads_perdidos", conv, historico, ctx,
-                        modelo=config.parametros()["modelos"].get("lembretes") or config.parametros()["modelos"]["auxiliar"])
-    _registrar_chamada(p.conversa_id, res, time.time() - inicio)
-    enviados = 0
-    for i, texto in enumerate(res.baloes[:2]):
-        if i:
-            time.sleep(min(8.0, 1.5 + len(texto) / 25))
-        wamid = mt.enviar_texto(conv["contato"], texto)
-        ref.collection("mensagens").document(wamid).set({
-            "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": res.modelo, "lembrete": n,
-            "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
-        enviados += 1
-    if enviados:
-        ref.set({"lembretes_enviados": n, "ultimo_lembrete_em": datetime.now(timezone.utc),
-                 "ultima": {"texto": res.baloes[0][:160], "direcao": "celeste", "tipo": "text", "em": datetime.now(timezone.utc)},
-                 "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP, "custo_usd": firestore.Increment(res.custo_usd)}, merge=True)
-    return {"ok": True, "enviado": enviados, "lembrete": n, "custo_usd": round(res.custo_usd, 5)}
+    texto = lembretes_texto.texto_lembrete(conv, n)
+    _, mt, _ = _svc()
+    wamid = mt.enviar_texto(conv["contato"], texto)
+    agora = datetime.now(timezone.utc)
+    ref.collection("mensagens").document(wamid).set({
+        "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": "script", "lembrete": n,
+        "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
+    ref.set({"lembretes_enviados": n, "ultimo_lembrete_em": agora,
+             "ultima": {"texto": texto[:160], "direcao": "celeste", "tipo": "text", "em": agora},
+             "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP}, merge=True)
+    log.info("lembrete %s (%s) enviado à conversa %s", n, lembretes_texto.etapa(conv), p.conversa_id)
+    return {"ok": True, "enviado": 1, "lembrete": n, "etapa": lembretes_texto.etapa(conv), "custo_usd": 0.0}
 
 
 class PedidoAviso(BaseModel):

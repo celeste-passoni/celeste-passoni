@@ -111,10 +111,12 @@ def test_lembretes_elegibilidade():
             "primeira_msg_celeste_em": agora - timedelta(hours=4)}
     assert lembretes.elegivel(dict(base), agora)[0]
     assert not lembretes.elegivel(dict(base, ultima={"direcao": "lead", "em": agora - timedelta(hours=2)}), agora)[0]     # lead respondeu
-    assert not lembretes.elegivel(dict(base, ultima={"direcao": "celeste", "tipo": "text", "em": agora - timedelta(minutes=30)}), agora)[0]  # < 1 h
+    assert not lembretes.elegivel(dict(base, ultima={"direcao": "celeste", "tipo": "text", "em": agora - timedelta(minutes=90)}), agora)[0]  # < 2 h
     assert not lembretes.elegivel(dict(base, status="Agendado"), agora)[0]
     assert not lembretes.elegivel(dict(base, modo="humano"), agora)[0]
-    assert not lembretes.elegivel(dict(base, lembretes_enviados=3), agora)[0]
+    assert not lembretes.elegivel(dict(base, lembretes_enviados=2), agora)[0]                          # máx. 2 por fio
+    assert not lembretes.elegivel(dict(base, lembretes_enviados=1, ultimo_lembrete_em=agora - timedelta(hours=2)), agora)[0]   # < 3 h desde o 1º
+    assert lembretes.elegivel(dict(base, lembretes_enviados=1, ultimo_lembrete_em=agora - timedelta(hours=4)), agora)[0]
     assert not lembretes.elegivel(dict(base, janela_24h_ate=agora - timedelta(hours=1)), agora)[0]     # fora da janela
     assert not lembretes.elegivel(dict(base, frente=None), agora)[0]
     assert not lembretes.elegivel(dict(base, ultima_msg_lead_em=None), agora)[0]                       # nunca respondeu
@@ -122,5 +124,5 @@ def test_lembretes_elegibilidade():
     from zoneinfo import ZoneInfo
     sp = ZoneInfo("America/Sao_Paulo")
     assert lembretes.dentro_do_horario(datetime(2026, 10, 6, 14, 0, tzinfo=sp))
-    assert not lembretes.dentro_do_horario(datetime(2026, 10, 6, 15, 0, tzinfo=sp))
+    assert not lembretes.dentro_do_horario(datetime(2026, 10, 6, 20, 0, tzinfo=sp))
     assert not lembretes.dentro_do_horario(datetime(2026, 10, 10, 10, 0, tzinfo=sp))   # sábado

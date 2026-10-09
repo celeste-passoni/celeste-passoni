@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Lembretes de retomada: a Celeste chama de volta quem ela escreveu e não respondeu.
+"""Retomada no mesmo dia, no padrão das atendentes de referência: texto fixo por etapa, sem modelo.
 
-Roda nos horários de `lembretes.horas` (Cloud Scheduler). Para cada conversa elegível, pede ao orquestrador
-(POST /lembrete) uma mensagem curta e nova. Só dentro da janela de 24 h do WhatsApp (texto livre); fora dela,
-a retomada depende de template aprovado (futuro).
+Roda de hora em hora em `lembretes.horas` (Cloud Scheduler). Para cada conversa elegível, pede ao orquestrador
+(POST /lembrete) o envio do texto da etapa. Só dentro da janela de 24 h do WhatsApp; fora dela, só template.
 """
 from __future__ import annotations
 
@@ -53,8 +52,11 @@ def elegivel(conv: dict, agora: datetime) -> tuple[bool, str]:
     em = ultima.get("em")
     if not em or (agora - em) < timedelta(minutes=int(c.get("minimo_sem_resposta_min", 60))):
         return False, "ainda dentro do tempo mínimo"
-    if int(conv.get("lembretes_enviados") or 0) >= int(c.get("max_por_conversa", 3)):
+    if int(conv.get("lembretes_enviados") or 0) >= int(c.get("max_por_conversa", 2)):
         return False, "máximo de lembretes atingido"
+    ult_lemb = conv.get("ultimo_lembrete_em")
+    if ult_lemb and (agora - ult_lemb) < timedelta(minutes=int(c.get("intervalo_entre_lembretes_min", 180))):
+        return False, "ainda dentro do intervalo entre lembretes"
     if c.get("so_dentro_janela_24h", True):
         janela = conv.get("janela_24h_ate")
         if not janela or janela <= agora:

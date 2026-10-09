@@ -355,9 +355,12 @@ campanhas:
 # Lembretes de retomada (a Celeste chama de volta quem ela escreveu e não respondeu)
 # ---------------------------------------------------------------------
 lembretes:
-  ativo: false                         # desligado em 06/10/2026 a pedido da clínica (mudava de assunto); scheduler pausado
-  horas: [10, 12, 14, 16, 18]          # Cloud Scheduler roda nesses horários (America/Sao_Paulo)
+  # Retomada no mesmo dia, no padrão das atendentes de referência: texto FIXO por etapa (src/celeste/orquestrador/lembretes_texto.py),
+  # sem modelo (custo zero). Medido nelas: mediana ~5 h após a última msg sem resposta, 25% em até 2 h.
+  ativo: false                         # refeito em 09/10/2026; fica PAUSADO (scheduler também) até a clínica liberar
+  horas: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]   # Cloud Scheduler roda de hora em hora nesses horários (America/Sao_Paulo)
   dias_uteis: true
-  minimo_sem_resposta_min: 60          # só depois de 1 h sem resposta
-  max_por_conversa: 3
-  so_dentro_janela_24h: true           # texto livre só até 24 h da última msg do lead; depois, template (futuro)
+  minimo_sem_resposta_min: 120         # 1º lembrete: 2 h depois da última mensagem da Celeste sem resposta
+  intervalo_entre_lembretes_min: 180   # 2º lembrete: 3 h depois do 1º
+  max_por_conversa: 2                  # por fio: o contador zera quando o lead responde
+  so_dentro_janela_24h: true           # texto livre só até 24 h da última msg do lead; depois, só template
