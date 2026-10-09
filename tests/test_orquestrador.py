@@ -481,17 +481,6 @@ def test_aquecer_cache_envia_max_tokens_zero_com_mesmo_prefixo():
     assert r["cache_lido"] == 21000 and r["custo_usd"] == round(21000 * 0.2 / 1e6 + 1 * 4 / 1e6, 5)
 
 
-def test_prompt_tem_regra_de_continuidade():
-    pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
-    assert "## Continuidade: retome de onde parou" in pr
-    assert "nunca faça a mesma pergunta duas vezes" in pr and "nunca atribua ao lead algo que ele não disse" in pr
-    assert "não faz perguntas de investigação sobre o cabelo" in pr          # estilo da atendente de referência
-    assert "Lhe atende?" in pr and "Qual seria a melhor opção para você?" in pr
-    assert "Me chamo {{ia.nome_atendente}}, sou concierge" in pr
-    assert "aqui é a {{ia.nome_atendente}}, concierge da Passoni Clinic, e estou aqui para te ajudar" in pr
-    assert "NUNCA mais de três" in pr and "Em que posso ajudar" not in pr.split("## Se o lead escreveu primeiro")[1].split("## Assunto fora")[0]
-
-
 def test_renderizar_lista_por_id_e_prompt_sem_placeholders():
     import re
     assert prompt.renderizar("{{consultas.dr_lucas.valor_texto}}", config.parametros()) == "R$ 800,00"
@@ -499,15 +488,6 @@ def test_renderizar_lista_por_id_e_prompt_sem_placeholders():
     prompt.camadas_estaveis.cache_clear()
     t = prompt.camadas_estaveis("leads_perdidos")
     assert not re.findall(r"\{\{[^}]+\}\}", t), re.findall(r"\{\{[^}]+\}\}", t)
-
-
-def test_prompt_tem_quebra_de_objecoes_das_atendentes():
-    pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
-    assert "## Quebra de objeções" in pr
-    for trecho in ("Os agendamentos são realizados por todos os setores da clínica", "Você já tem algum diagnóstico?",
-                   "Na consulta eu infelizmente não consigo", "fundamental que a consulta seja realizada de forma presencial",
-                   "não moram na capital", "sua experiência será diferente", "Gostaria apenas de entender o motivo da sua decisão"):
-        assert trecho in pr, trecho
 
 
 def test_lembrete_texto_por_etapa():
@@ -521,3 +501,20 @@ def test_lembrete_texto_por_etapa():
     assert lt.texto_lembrete(base, 2) == "Oi Ana, conseguiu verificar?"
     assert lt.texto_lembrete(dict(base, nome=""), 1) == "Aguardo seu retorno! 💛"
     assert lt.texto_lembrete(dict(base, horarios_oferecidos=["x"], status="Agendado"), 1) == "Aguardo seu retorno, Ana! 💛"
+
+
+def test_prompt_v2_exemplos_e_regras():
+    pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
+    ex = (config.RAIZ / "knowledge" / "03-exemplos-de-conversas.md").read_text(encoding="utf-8")
+    assert "Exemplos de conversas reais" in pr and "Como você conversa: igual às atendentes dos exemplos" in pr
+    assert ex.count("### Exemplo") >= 50 and "- **Celeste:**" in ex and "- **Lead:**" in ex
+    import re
+    assert not re.search(r"(?i)maria fernanda|raiane|@[\w.]+\.|\d{3}\.\d{3}\.\d{3}-\d{2}", ex)   # anonimizado
+    for trecho in ("Pedido de cancelamento — ordem obrigatória", "Quando encaminhar à recepção", "Nome completo, sem abreviações",
+                   "nome e CPF nunca mudam por você", "só os retornados por `buscar_horarios`", "Qual seria a melhor opção para você?",
+                   "Os agendamentos são realizados por todos os setores da clínica", "Não inventa informação", "sinalizar_revisao"):
+        assert trecho in pr, trecho
+    prompt.camadas_estaveis.cache_clear()
+    t = prompt.camadas_estaveis("leads_perdidos")
+    assert "### Exemplo 1 —" in t and t.index("### Exemplo 1 —") < t.index("# INSTRUÇÃO DA FRENTE")
+    assert not re.findall(r"\{\{[^}]+\}\}", t)

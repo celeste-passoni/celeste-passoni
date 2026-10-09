@@ -20,7 +20,7 @@ import yaml
 
 from celeste.comum import config
 
-ARQUIVOS_CONHECIMENTO = ["01-base-conhecimento-clinica.md", "02-guia-de-linguagem.md"]
+ARQUIVOS_CONHECIMENTO = ["01-base-conhecimento-clinica.md", "02-guia-de-linguagem.md", "03-exemplos-de-conversas.md"]
 PROMPTS_FRENTE = {"leads_perdidos": "leads-perdidos-v0.md"}
 
 
