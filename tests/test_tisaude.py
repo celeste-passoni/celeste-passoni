@@ -67,6 +67,7 @@ def test_buscar_horarios_desconta_ocupados_e_antecedencia(cli, monkeypatch):
     c, sess = cli
     hoje = datetime.now(tisaude.TZ).date()
     dia = hoje + timedelta(days=(7 - hoje.weekday()) % 7 or 7)  # próxima segunda
+    monkeypatch.setitem(tisaude.config.parametros(), "feriados", [])   # o teste não depende do calendário de feriados
     sess.request.return_value = Resp([{"data": dia.isoformat(), "hora": "10:00:00", "status": 0, "deletado": 0}])
     sess.get.return_value = Resp([{"horario": "10:00:00"}, {"horario": "11:00:00"}, {"horario": "15:00:00"}])
     livres = c.buscar_horarios("dr_lucas", dias=(dia - hoje).days, a_partir_de=dia)

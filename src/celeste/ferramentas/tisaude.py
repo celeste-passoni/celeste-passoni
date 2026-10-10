@@ -296,10 +296,11 @@ class TiSaude:
         fim = inicio + timedelta(days=dias or int(cfg.get("dias_a_frente", 14)))
         limite = agora + timedelta(hours=float(cfg.get("antecedencia_minima_horas", 2)))
         ocupados = self._ocupados(prof, inicio, fim)
+        feriados = {str(f)[:10] for f in (config.parametros().get("feriados") or [])}
         livres = []
         d = inicio
         while d <= fim:
-            if d.weekday() < 5:
+            if d.weekday() < 5 and d.isoformat() not in feriados:
                 for h in self._grade_livre(prof, d):
                     if (d.isoformat(), h) in ocupados:
                         continue

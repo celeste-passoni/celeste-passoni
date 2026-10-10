@@ -98,13 +98,23 @@ def contexto_lead(conversa: dict) -> str:
                       "Nunca diga que o CPF 'está vinculado a outra pessoa' sem o resultado de buscar_paciente. Só se o CPF não existir, faça o pré-cadastro e use criar_paciente.")
     elif conversa.get("paciente_tisaude_ausente"):
         linhas.append("- TI Saúde: número NÃO cadastrado (já verificado pelo sistema). Não chame buscar_paciente; faça o pré-cadastro antes de agendar.")
+    ag = conversa.get("agendamento") or {}
+    if conversa.get("id_agendamento_tisaude"):
+        ida = conversa["id_agendamento_tisaude"]
+        prof = {"dra_luciana": "Dra. Luciana Passoni", "dr_lucas": "Dr. Lucas Vieira"}.get(ag.get("profissional"), ag.get("profissional") or "")
+        quando = f"{_br(ag.get('data'))} às {str(ag.get('hora') or '')[:5]}" if ag.get("data") else "data não registrada"
+        if 900000 <= int(ida) <= 999999:   # ids simulados (TiSaudeSimulado); os reais têm 8 dígitos
+            linhas.append(f"- CONSULTA (SIMULAÇÃO DE TESTE, id {ida}): {quando} com {prof}. Este agendamento NÃO existe no TI Saúde real; foi só simulado.")
+        else:
+            linhas.append(f"- CONSULTA AGENDADA NO TI SAÚDE (id {ida}): {quando} com {prof}, status {ag.get('status') or 'Marcado'}. "
+                          "ESTA É A VERDADE ATUAL, lida do sistema agora. Ela só muda quando você chama reagendar ou cancelar e a ferramenta confirma. "
+                          "NUNCA deduza que um agendamento falhou ou mudou a partir de buscar_horarios: o horário do lead nunca aparece como livre justamente porque está reservado para ele.")
     if conversa.get("origem") == "espontaneo":
         linhas.append("- Origem: espontâneo (o lead escreveu primeiro; nenhum template foi enviado a ele)")
     for rotulo, chave in (("Nome", "nome"), ("Telefone", "contato"), ("Frente", "frente"), ("Origem", "origem") if conversa.get("origem") != "espontaneo" else ("", ""),
                           ("Último contato anterior", "ultimo_contato_anterior"), ("Resumo da conversa anterior", "resumo_contexto"),
                           ("Objeção anterior", "objecao_anterior"), ("Modalidade de interesse", "modalidade_interesse"),
-                          ("Template que originou", "template_origem"), ("Status atual", "status"), ("Paciente TI Saúde id", "id_paciente_tisaude"),
-                          ("Agendamento TI Saúde id", "id_agendamento_tisaude")):
+                          ("Template que originou", "template_origem"), ("Status atual", "status"), ("Paciente TI Saúde id", "id_paciente_tisaude")):
         v = conversa.get(chave) if chave else None
         if v:
             linhas.append(f"- {rotulo}: {v}")
@@ -112,6 +122,17 @@ def contexto_lead(conversa: dict) -> str:
 
 
 DIAS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
+
+
+def _br(iso: str | None) -> str:
+    """'2026-10-12' → 'segunda-feira, 12/10/2026'."""
+    if not iso:
+        return ""
+    try:
+        d = datetime.fromisoformat(str(iso)[:10])
+        return f"{DIAS[d.weekday()]}, {d.strftime('%d/%m/%Y')}"
+    except ValueError:
+        return str(iso)
 
 
 def formato_saida(agora: datetime | None = None) -> str:

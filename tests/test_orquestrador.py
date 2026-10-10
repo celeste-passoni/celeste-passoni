@@ -526,3 +526,23 @@ def test_video_e_adiado_para_depois_dos_baloes():
     src = inspect.getsource(oapp.responder)
     assert "videos_pendentes" in src and src.index("for v in videos_pendentes") > src.index("for i, texto in enumerate(res.baloes)")
     assert "ArrayRemove(videos_pendentes)" in src
+
+
+def test_contexto_mostra_consulta_agendada_e_simulada():
+    c = prompt.contexto_lead({"nome": "Tati", "contato": "5511", "id_agendamento_tisaude": 47187558,
+                              "agendamento": {"data": "2026-10-12", "hora": "11:00", "profissional": "dr_lucas", "status": "Marcado"}})
+    assert "CONSULTA AGENDADA NO TI SAÚDE (id 47187558): segunda-feira, 12/10/2026 às 11:00 com Dr. Lucas Vieira" in c
+    assert "NUNCA deduza" in c
+    s = prompt.contexto_lead({"nome": "Tati", "contato": "5511", "id_agendamento_tisaude": 951836, "agendamento": {"data": "2026-10-13", "hora": "10:00", "profissional": "dr_lucas"}})
+    assert "SIMULAÇÃO DE TESTE" in s and "NÃO existe no TI Saúde real" in s
+
+
+def test_buscar_horarios_pula_feriados(monkeypatch):
+    from celeste.ferramentas import tisaude
+    from datetime import date
+    ts = tisaude.TiSaude.__new__(tisaude.TiSaude)
+    ts._ocupados = lambda prof, de, ate: set()
+    ts._grade_livre = lambda prof, dia: ["11:00:00", "15:00:00"]
+    livres = ts.buscar_horarios("dr_lucas", dias=3, a_partir_de=date(2026, 10, 12))
+    datas = {l["data"] for l in livres}
+    assert "2026-10-12" not in datas and "2026-10-13" in datas      # 12/10 é feriado no YAML
