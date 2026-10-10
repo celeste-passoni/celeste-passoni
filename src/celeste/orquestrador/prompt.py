@@ -106,8 +106,8 @@ def contexto_lead(conversa: dict) -> str:
         if 900000 <= int(ida) <= 999999:   # ids simulados (TiSaudeSimulado); os reais têm 8 dígitos
             linhas.append(f"- CONSULTA (SIMULAÇÃO DE TESTE, id {ida}): {quando} com {prof}. Este agendamento NÃO existe no TI Saúde real; foi só simulado.")
         else:
-            linhas.append(f"- CONSULTA AGENDADA NO TI SAÚDE (id {ida}): {quando} com {prof}, status {ag.get('status') or 'Marcado'}. "
-                          "ESTA É A VERDADE ATUAL, lida do sistema agora. Ela só muda quando você chama reagendar ou cancelar e a ferramenta confirma. "
+            linhas.append(f"- CONSULTA AGENDADA (TI Saúde id {ida}), último registro conhecido: {quando} com {prof}. "
+                          "Se o lead falar da consulta (quando é, confirmar, trocar, desmarcar), chame consultar_agendamento ANTES de responder e use o que o sistema devolver. "
                           "NUNCA deduza que um agendamento falhou ou mudou a partir de buscar_horarios: o horário do lead nunca aparece como livre justamente porque está reservado para ele.")
     if conversa.get("origem") == "espontaneo":
         linhas.append("- Origem: espontâneo (o lead escreveu primeiro; nenhum template foi enviado a ele)")

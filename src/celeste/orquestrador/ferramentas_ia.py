@@ -56,6 +56,8 @@ FERRAMENTAS: list[dict] = [
          "id_paciente": {"type": "integer"}, "profissional": {"type": "string", "enum": ["dra_luciana", "dr_lucas"]},
          "data": {"type": "string", "description": "AAAA-MM-DD"}, "hora": {"type": "string", "description": "HH:MM"}},
          "required": ["id_paciente", "profissional", "data", "hora"], "additionalProperties": False}},
+    {"name": "consultar_agendamento", "description": "Lê no TI Saúde o estado REAL da consulta agendada nesta conversa (data, hora, profissional, status). Chame SEMPRE que o lead falar da consulta marcada (quando é, confirmar, trocar, desmarcar, 'está marcada?') ANTES de responder. Nunca afirme nada sobre o agendamento sem esta consulta.",
+     "strict": True, "input_schema": {"type": "object", "properties": {}, "required": [], "additionalProperties": False}},
     {"name": "reagendar", "description": "Muda data/hora de uma consulta que a Celeste agendou. O novo horário deve vir de buscar_horarios.",
      "strict": True, "input_schema": {"type": "object", "properties": {"id_agendamento": {"type": "integer"}, "data": {"type": "string"}, "hora": {"type": "string"}},
                                       "required": ["id_agendamento", "data", "hora"], "additionalProperties": False}},
@@ -202,6 +204,21 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         ctx.atualizar({"id_agendamento_tisaude": a["id"], "status": "Agendado", "agendado_em": datetime.now(timezone.utc),
                        "agendamento": {"data": e["data"], "hora": e["hora"], "profissional": e["profissional"]}})
         return {"id_agendamento": a["id"], "data": e["data"], "hora": e["hora"], "status": ts.STATUS.get(a.get("status"))}
+
+    if nome == "consultar_agendamento":
+        ida = ctx.conversa.get("id_agendamento_tisaude")
+        if not ida:
+            return {"agendada": False, "aviso": "não há consulta agendada nesta conversa"}
+        d = ctx.ts.detalhe_agendamento(int(ida))
+        cal = {36: "dr_lucas", 1: "dra_luciana"}
+        prof_nome = {"dr_lucas": "Dr. Lucas Vieira", "dra_luciana": "Dra. Luciana Passoni"}
+        ag = dict(ctx.conversa.get("agendamento") or {})
+        prof = cal.get(d.get("idCalendario"), ag.get("profissional"))
+        status = "Desmarcado" if (d.get("deletado") or d.get("status") == -2) else ts.STATUS.get(d.get("status"), str(d.get("status")))
+        ag.update({"data": str(d.get("data") or ag.get("data") or "")[:10], "hora": str(d.get("hora") or ag.get("hora") or "")[:5], "profissional": prof, "status": status})
+        ctx.atualizar({"agendamento": ag})
+        return {"agendada": status not in ("Desmarcado",), "id_agendamento": int(ida), "data": ag["data"], "hora": ag["hora"],
+                "profissional": prof_nome.get(prof, prof), "status": status, "aviso": "responda ao lead com exatamente estes dados"}
 
     if nome == "reagendar":
         chave = f"{e['data']} {e['hora']}"

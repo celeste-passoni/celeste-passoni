@@ -36,6 +36,14 @@ class TiSaudeSimulado(TiSaude):
         log.info("TI Saúde SIMULADO atualizar_paciente %s: %s", id_paciente, sorted(mudancas))
         return fake
 
+    def detalhe_agendamento(self, id_agendamento: int) -> dict:
+        """No teste, o agendamento só existe na conversa; devolve o último simulado com esse id."""
+        for s in reversed(self.simulados):
+            r = s.get("retorno") or {}
+            if r.get("id") == id_agendamento:
+                return {"id": id_agendamento, "data": r.get("data"), "hora": r.get("hora"), "status": r.get("status", 0), "simulado": True}
+        return {"id": id_agendamento, "status": 0, "simulado": True}
+
     def agendar_consulta(self, *, id_paciente: int, profissional_id: str, data: date, hora: str, observacoes: str) -> dict:
         fake = {"id": random.randint(900000, 999999), "status": 0, "data": data.strftime("%d/%m/%Y"), "hora": hora, "simulado": True}
         self.simulados.append({"acao": "agendar_consulta", "dados": {"id_paciente": id_paciente, "profissional": profissional_id,

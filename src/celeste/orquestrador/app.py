@@ -115,7 +115,6 @@ def responder(p: Pedido):
     if frente not in ("leads_perdidos",):
         frente = "leads_perdidos"  # única frente ativa no piloto
     _pre_verificar_paciente(ref, conv, ts)   # consulta o TI Saúde pelo código, poupando uma chamada do modelo
-    _atualizar_estado_consulta(ref, conv, ts)   # a verdade sobre a consulta vem do TI Saúde, não da memória da conversa
     res = mot.responder(frente, conv, historico, ctx)
     _registrar_chamada(p.conversa_id, res, time.time() - inicio)
     if isinstance(ts, TiSaudeSimulado) and ts.simulados:
@@ -363,29 +362,6 @@ def _orientar_recepcao(ref, conv: dict, forcar: bool = False) -> dict:
              "orientacoes_enviadas": firestore.Increment(1),
              "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP, "total_msgs_celeste": firestore.Increment(1)}, merge=True)
     return {"ok": True, "enviado": 1, "orientado_recepcao": True}
-
-
-def _atualizar_estado_consulta(ref, conv: dict, ts) -> None:
-    """Se a conversa tem um agendamento real, relê data/hora/status no TI Saúde e grava em conv['agendamento'] (vai ao contexto do modelo)."""
-    ida = conv.get("id_agendamento_tisaude")
-    if not ida or 900000 <= int(ida) <= 999999 or isinstance(ts, TiSaudeSimulado):
-        return
-    try:
-        d = ts.detalhe_agendamento(int(ida))
-    except Exception as e:
-        log.warning("estado da consulta %s não lido: %s", ida, e)
-        ag = dict(conv.get("agendamento") or {}); ag["status"] = "não encontrado no TI Saúde (confirme com a recepção)"
-        conv["agendamento"] = ag
-        return
-    cal = {36: "dr_lucas", 1: "dra_luciana"}
-    ag = dict(conv.get("agendamento") or {})
-    ag.update({"data": str(d.get("data") or ag.get("data") or "")[:10], "hora": str(d.get("hora") or ag.get("hora") or "")[:5],
-               "profissional": cal.get(d.get("idCalendario"), ag.get("profissional")),
-               "status": tisaude.STATUS.get(d.get("status"), str(d.get("status")))})
-    if d.get("deletado") or d.get("status") == -2:
-        ag["status"] = "Desmarcado"
-    conv["agendamento"] = ag
-    ref.set({"agendamento": ag}, merge=True)
 
 
 def _pre_verificar_paciente(ref, conv: dict, ts) -> None:

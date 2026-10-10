@@ -308,34 +308,6 @@ modelos:
   aquecer_cache: true                  # job a cada 50 min reenvia o prompt fixo com max_tokens=0: mantém o cache de 1 h vivo (custa só uma leitura, ~US$ 0,004)
 
 # ---------------------------------------------------------------------
-# Feriados: a clínica não atende; buscar_horarios nunca oferece estes dias (a grade do TI Saúde não sabe de feriado)
-# ---------------------------------------------------------------------
-feriados:
-  - 2026-10-12   # Nossa Senhora Aparecida
-  - 2026-11-02   # Finados
-  - 2026-11-15   # Proclamação da República
-  - 2026-11-20   # Consciência Negra
-  - 2026-12-24   # véspera de Natal (recesso)
-  - 2026-12-25   # Natal
-  - 2026-12-31   # véspera de Ano Novo (recesso)
-  - 2027-01-01   # Confraternização Universal
-  - 2027-01-25   # aniversário de São Paulo
-  - 2027-02-08   # Carnaval
-  - 2027-02-09   # Carnaval
-  - 2027-02-10   # Quarta-feira de Cinzas (manhã)
-  - 2027-03-26   # Sexta-feira Santa
-  - 2027-04-21   # Tiradentes
-  - 2027-05-01   # Dia do Trabalho
-  - 2027-05-27   # Corpus Christi
-  - 2027-07-09   # Revolução Constitucionalista (SP)
-  - 2027-09-07   # Independência
-  - 2027-10-12   # Nossa Senhora Aparecida
-  - 2027-11-02   # Finados
-  - 2027-11-15   # Proclamação da República
-  - 2027-11-20   # Consciência Negra
-  - 2027-12-25   # Natal
-
-# ---------------------------------------------------------------------
 # Disparos de templates (Leads Perdidos) — controlados pelo painel
 # ---------------------------------------------------------------------
 disparos:

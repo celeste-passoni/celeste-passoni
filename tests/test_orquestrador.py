@@ -531,18 +531,32 @@ def test_video_e_adiado_para_depois_dos_baloes():
 def test_contexto_mostra_consulta_agendada_e_simulada():
     c = prompt.contexto_lead({"nome": "Tati", "contato": "5511", "id_agendamento_tisaude": 47187558,
                               "agendamento": {"data": "2026-10-12", "hora": "11:00", "profissional": "dr_lucas", "status": "Marcado"}})
-    assert "CONSULTA AGENDADA NO TI SAÚDE (id 47187558): segunda-feira, 12/10/2026 às 11:00 com Dr. Lucas Vieira" in c
-    assert "NUNCA deduza" in c
+    assert "CONSULTA AGENDADA (TI Saúde id 47187558), último registro conhecido: segunda-feira, 12/10/2026 às 11:00 com Dr. Lucas Vieira" in c
+    assert "NUNCA deduza" in c and "consultar_agendamento" in c
     s = prompt.contexto_lead({"nome": "Tati", "contato": "5511", "id_agendamento_tisaude": 951836, "agendamento": {"data": "2026-10-13", "hora": "10:00", "profissional": "dr_lucas"}})
     assert "SIMULAÇÃO DE TESTE" in s and "NÃO existe no TI Saúde real" in s
 
 
-def test_buscar_horarios_pula_feriados(monkeypatch):
+def test_consultar_agendamento_le_o_tisaude():
+    ts = MagicMock(); ts.detalhe_agendamento.return_value = {"id": 47187558, "data": "2026-10-12", "hora": "11:00:00", "status": 0, "idCalendario": 36}
+    conv = {"id": "c1", "id_agendamento_tisaude": 47187558, "agendamento": {"data": "2026-10-13", "hora": "10:00", "profissional": "dr_lucas"}}
+    ctx = _ctx(conv, ts); ctx.atualizar = lambda campos: conv.update(campos)
+    saida, erro = ferramentas_ia.executar("consultar_agendamento", {}, ctx)
+    assert not erro and '"data": "2026-10-12"' in saida and '"hora": "11:00"' in saida and '"status": "Marcado"' in saida and "Dr. Lucas Vieira" in saida
+    assert conv["agendamento"]["data"] == "2026-10-12"
+    ts.detalhe_agendamento.return_value = {"id": 47187558, "data": "2026-10-12", "hora": "11:00:00", "status": -2, "idCalendario": 36}
+    saida, erro = ferramentas_ia.executar("consultar_agendamento", {}, ctx)
+    assert '"agendada": false' in saida and "Desmarcado" in saida
+    saida, erro = ferramentas_ia.executar("consultar_agendamento", {}, _ctx({"id": "c2"}, ts))
+    assert '"agendada": false' in saida
+
+
+def test_buscar_horarios_so_depende_da_agenda():
     from celeste.ferramentas import tisaude
     from datetime import date
     ts = tisaude.TiSaude.__new__(tisaude.TiSaude)
     ts._ocupados = lambda prof, de, ate: set()
-    ts._grade_livre = lambda prof, dia: ["11:00:00", "15:00:00"]
-    livres = ts.buscar_horarios("dr_lucas", dias=3, a_partir_de=date(2026, 10, 12))
-    datas = {l["data"] for l in livres}
-    assert "2026-10-12" not in datas and "2026-10-13" in datas      # 12/10 é feriado no YAML
+    ts._grade_livre = lambda prof, dia: ["11:00:00"]       # a grade devolve horário até em sábado e feriado: a agenda manda
+    livres = ts.buscar_horarios("dr_lucas", dias=3, a_partir_de=date(2026, 10, 31))   # sábado, domingo, feriado (2/11) no futuro
+    assert {l["data"] for l in livres} >= {"2026-10-31", "2026-11-01", "2026-11-02"}
+    assert "feriados" not in config.parametros()

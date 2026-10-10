@@ -288,7 +288,7 @@ class TiSaude:
         return {(a["data"], str(a["hora"])) for a in ag if a.get("status") in STATUS_OCUPA and not a.get("deletado")}
 
     def buscar_horarios(self, profissional_id: str, *, dias: Optional[int] = None, a_partir_de: Optional[date] = None) -> list[dict]:
-        """Horários livres [{data, hora, profissional}] — grade real − ocupados − passado/antecedência."""
+        """Horários livres [{data, hora, profissional}] — grade real do TI Saúde − ocupados − passado/antecedência. Só a agenda decide os dias."""
         cfg = config.parametros()["ia"]["horarios"]
         prof = profissionais()[profissional_id]
         agora = datetime.now(TZ)
@@ -296,11 +296,10 @@ class TiSaude:
         fim = inicio + timedelta(days=dias or int(cfg.get("dias_a_frente", 14)))
         limite = agora + timedelta(hours=float(cfg.get("antecedencia_minima_horas", 2)))
         ocupados = self._ocupados(prof, inicio, fim)
-        feriados = {str(f)[:10] for f in (config.parametros().get("feriados") or [])}
         livres = []
         d = inicio
         while d <= fim:
-            if d.weekday() < 5 and d.isoformat() not in feriados:
+            if True:   # a agenda do TI Saúde manda: sem filtro de fim de semana nem lista de feriados no código (decisão da clínica, 10/10/2026)
                 for h in self._grade_livre(prof, d):
                     if (d.isoformat(), h) in ocupados:
                         continue
