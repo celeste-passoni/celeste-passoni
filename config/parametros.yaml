@@ -280,6 +280,7 @@ leads_perdidos:
     "Template enviado (1°)": 3
     "Template enviado (2°)": 10
     "Irá nos retornar": 7
+    "Agora não": 1                                        # tocou "Agora não" no T1 e não escreveu o motivo → T2 no dia seguinte
     "Vamos retornar na data solicitada": "na data"
     "Achou caro": 30
     "Quer pelo convênio": 60
@@ -336,13 +337,13 @@ disparos:
   # Os MESMOS templates que a clínica usa hoje no MarketZap (decisão de 09/10/2026); textos em src/celeste/jobs/templates_texto.py
   templates:                            # nome na Meta (idioma pt_BR); {{1}} = primeiro nome (T1 e T4)
     T1: resgate_solicitacao_pendente    # "sua solicitação de consulta, feita em {{2}}, ficou pendente" (UTILITY, aprovado pela clínica em 13/10)
-    T2: resgate_me_da_um_oi             # "Nosso sistema encerra as conversas após 24h… me dá um oi"
+    T2: resgate_solicitacao_segue_pendente   # "sua solicitação segue pendente" (UTILITY, aprovado pela clínica em 13/10)
     T3: resgate_duas_modalidades        # script das duas modalidades, enviado frio
     T4: resgate_demonstrou_interesse    # "Vimos que você demonstrou interesse… Podemos retomar?"
   status_apos_template: { T1: "Template enviado (1°)", T2: "Template enviado (2°)", T3: "Template enviado (2°)", T4: "Template enviado (1°)" }
   passos:                               # cadência medida na atendente de referência (medianas): 3 d, 3 d, 8 d, 3 d
     - { template: T1, apos_dias: 0,  ciclo: 1 }
-    - { template: T2, apos_dias: 3,  ciclo: 1 }
+    - { template: T2, apos_dias: 1,  ciclo: 1 }         # 1 dia após o T1 (decisão da clínica, 13/10/2026)
     - { template: T3, apos_dias: 3,  ciclo: 1 }
     - { template: T4, apos_dias: 8,  ciclo: 1 }
     - { template: T2, apos_dias: 3,  ciclo: 1 }
@@ -350,6 +351,7 @@ disparos:
   pausa_apos_ultimo_passo_dias: 30
   template_por_status:                  # recontato de quem respondeu e parou (dias em leads_perdidos.recontato_por_status_ia)
     "Irá nos retornar": T2
+    "Agora não": T2
     "Vamos retornar na data solicitada": T2
     "Achou caro": T1
     "Quer pelo convênio": T1

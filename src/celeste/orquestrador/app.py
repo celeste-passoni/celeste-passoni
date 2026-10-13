@@ -398,7 +398,7 @@ def _responder_agora_nao(ref, conv: dict, mt: meta.Meta) -> dict:
     ref.collection("mensagens").document(wamid).set({
         "direcao": "celeste", "tipo": "interactive", "texto": f"{texto}\n[botão: {b['sair_rotulo']}]", "modelo": "fluxo T1",
         "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
-    campos = {"status": "Irá nos retornar", "agora_nao_em": agora, "pendente_resposta": False,
+    campos = {"status": "Agora não", "agora_nao_em": agora, "pendente_resposta": False,
               "ultima": {"texto": texto[:160], "direcao": "celeste", "tipo": "interactive", "em": agora}, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP}
     conv.update(campos); ref.set(campos, merge=True)
     _espelhar_lead(conv)

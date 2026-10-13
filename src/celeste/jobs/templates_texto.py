@@ -7,7 +7,7 @@ e para o painel/relatórios mostrarem a mensagem. {1} = primeiro nome (só nos t
 
 Volumes e resposta em até 3 dias, medidos nos 2 meses (atendente de referência):
   T1 (antigo) revisando agenda          1.488 envios ·  5%   → substituído em 13/10/2026 por resgate_solicitacao_pendente (UTILITY)
-  T2 "me dá um oi"                      4.576 envios ·  7%
+  T2 (antigo) "me dá um oi"             4.576 envios ·  7%   → substituído em 13/10/2026 por resgate_solicitacao_segue_pendente (UTILITY)
   T3 duas modalidades (frio)            3.874 envios · 10%
   T4 demonstrou interesse               2.090 envios ·  5%
 """
@@ -24,12 +24,12 @@ TEMPLATES: dict[str, dict] = {
         "botoes": ["Quero continuar", "Agora não"],   # quick replies (payload = texto); fluxo em ia/t1_botoes do YAML
         "sem_rodape": True,
     },
-    "T2": {
-        "nome": "resgate_me_da_um_oi",
-        "corpo": ("Olá, tudo bem? ☺️\n"
-                  "Nosso sistema encerra as conversas automaticamente após 24h ⏳.\n\n"
-                  "Por gentileza, me dá um oi por aqui 💬 que consigo te atender! 💖"),
-        "botoes": [],
+    "T2": {   # aprovado pela clínica em 13/10/2026 (UTILITY). 1 dia após o T1, para quem não respondeu e para quem tocou "Agora não" e sumiu
+        "nome": "resgate_solicitacao_segue_pendente",
+        "corpo": ("Olá, {1}. Sua solicitação de consulta na Passoni Clinic segue pendente. "
+                  "Caso ainda queira concluir o agendamento, responda esta mensagem."),
+        "botoes": ["Quero continuar", "Agora não"],
+        "sem_rodape": True,
     },
     "T3": {
         "nome": "resgate_duas_modalidades",

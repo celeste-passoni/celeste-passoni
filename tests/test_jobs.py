@@ -42,11 +42,11 @@ def _lead(**k):
 
 
 def test_esteira_segue_cadencia_da_atendente_de_referencia():
-    # T1 (revisando agenda) → +3 d T2 (me dá um oi) → +3 d T3 (duas modalidades) → +8 d T4 (demonstrou interesse) → +3 d T2
+    # T1 (solicitação pendente) → +1 d T2 (segue pendente) → +3 d T3 → +8 d T4 → +3 d T2
     d0 = disparos.decidir(_lead(), AGORA)
     assert d0 and d0.template == "T1" and d0.novo_passo == 1
-    assert disparos.decidir(_lead(status_ia="Template enviado (1°)", passo=1, ultimo_template_em=AGORA - timedelta(days=2)), AGORA) is None
-    d2 = disparos.decidir(_lead(status_ia="Template enviado (1°)", passo=1, ultimo_template_em=AGORA - timedelta(days=3)), AGORA)
+    assert disparos.decidir(_lead(status_ia="Template enviado (1°)", passo=1, ultimo_template_em=AGORA - timedelta(hours=20)), AGORA) is None
+    d2 = disparos.decidir(_lead(status_ia="Template enviado (1°)", passo=1, ultimo_template_em=AGORA - timedelta(days=1)), AGORA)
     assert d2 and d2.template == "T2" and d2.novo_passo == 2
     d3 = disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=2, ultimo_template_em=AGORA - timedelta(days=3)), AGORA)
     assert d3 and d3.template == "T3" and d3.novo_passo == 3
@@ -69,9 +69,10 @@ def test_pausa_e_reinicio_da_esteira():
 def test_templates_sao_os_da_clinica():
     from celeste.jobs import templates_texto as tt
     assert set(tt.TEMPLATES) == {"T1", "T2", "T3", "T4"}
-    assert "solicitação de consulta, feita em {2}" in tt.TEMPLATES["T1"]["corpo"] and "me dá um oi" in tt.TEMPLATES["T2"]["corpo"]
+    assert "solicitação de consulta, feita em {2}" in tt.TEMPLATES["T1"]["corpo"] and "segue pendente" in tt.TEMPLATES["T2"]["corpo"]
+    assert tt.TEMPLATES["T2"]["botoes"] == ["Quero continuar", "Agora não"] and "SAIR" not in tt.renderizar("T2", "Ana")
     assert "duas formas" in tt.TEMPLATES["T3"]["corpo"] and "demonstrou interesse" in tt.TEMPLATES["T4"]["corpo"]
-    assert tt.parametros("T1", "Ana", mes="junho") == ["Ana", "junho"] and tt.parametros("T2", "Ana") == [] and tt.parametros("T3", "Ana") == []
+    assert tt.parametros("T1", "Ana", mes="junho") == ["Ana", "junho"] and tt.parametros("T2", "Ana") == ["Ana"] and tt.parametros("T3", "Ana") == []
     assert "SAIR" not in tt.renderizar("T1", "Ana", mes="junho") and "feita em junho" in tt.renderizar("T1", "Ana", mes="junho")
     from celeste.jobs import disparos
     from datetime import datetime as _dt
@@ -130,3 +131,12 @@ def test_lembretes_elegibilidade():
     assert lembretes.dentro_do_horario(datetime(2026, 10, 6, 14, 0, tzinfo=sp))
     assert not lembretes.dentro_do_horario(datetime(2026, 10, 6, 20, 0, tzinfo=sp))
     assert not lembretes.dentro_do_horario(datetime(2026, 10, 10, 10, 0, tzinfo=sp))   # sábado
+
+
+def test_agora_nao_recebe_t2_no_dia_seguinte():
+    # tocou "Agora não" no T1 (status "Agora não") e não escreveu nada → T2 1 dia depois
+    l = _lead(status_ia="Agora não", passo=1, ultimo_template_em=AGORA - timedelta(days=1, hours=1), ultima_msg_lead_em=AGORA - timedelta(hours=20))
+    assert disparos.decidir(l, AGORA) is None                                  # ainda não passou 1 dia da última msg do lead
+    l["ultima_msg_lead_em"] = AGORA - timedelta(days=1, minutes=5)
+    r = disparos.decidir(l, AGORA)
+    assert r and r.template == "T2"
