@@ -34,8 +34,9 @@ FERRAMENTAS: list[dict] = [
          "dados_genericos": {"type": "boolean", "description": "true SÓ quando o lead, depois de você insistir UMA vez, manteve que não quer passar os dados. O sistema preenche nascimento, e-mail, encaminhado por e endereço com os genéricos da clínica e deixa o CPF vazio; você informa só nome completo e sexo (deduza pelo nome)."}},
          "required": ["nome", "cpf", "nascimento", "sexo", "email", "como_conheceu", "cep", "numero", "complemento", "responsavel", "parentesco_responsavel", "cpf_responsavel", "dados_genericos"],
          "additionalProperties": False}},
-    {"name": "atualizar_cadastro", "description": "Atualiza dados cadastrais do paciente já identificado nesta conversa (e-mail, celular, data de nascimento, sexo, endereço por CEP/número/complemento, como conheceu, responsável). NUNCA altera nome nem CPF: se o lead pedir isso, diga que a correção de nome/CPF é feita pela recepção, registre com sinalizar_revisao e siga com o agendamento. Deixe vazios os campos que não mudam.",
+    {"name": "atualizar_cadastro", "description": "Atualiza dados cadastrais do paciente já identificado nesta conversa, a pedido dele: CPF, e-mail, celular, data de nascimento, sexo, endereço por CEP/número/complemento, como conheceu, responsável. Nome o TI Saúde não deixa alterar pela API: se o lead pedir, registre com sinalizar_revisao para a recepção corrigir e siga normalmente. Deixe vazios os campos que não mudam.",
      "strict": True, "input_schema": {"type": "object", "properties": {
+         "cpf": {"type": "string", "description": "novo CPF (11 dígitos); vazio se não muda"},
          "email": {"type": "string"}, "celular": {"type": "string", "description": "novo celular com DDD; vazio se não muda"},
          "nascimento": {"type": "string", "description": "dd/mm/AAAA; vazio se não muda"},
          "sexo": {"type": "string", "enum": ["Masculino", "Feminino", ""]},
@@ -44,7 +45,7 @@ FERRAMENTAS: list[dict] = [
          "complemento": {"type": "string"},
          "como_conheceu": {"type": "string", "description": "valor do sistema para 'Encaminhado por'; vazio se não muda"},
          "responsavel": {"type": "string"}, "parentesco_responsavel": {"type": "string"}, "cpf_responsavel": {"type": "string"}},
-         "required": ["email", "celular", "nascimento", "sexo", "cep", "numero", "complemento", "como_conheceu", "responsavel", "parentesco_responsavel", "cpf_responsavel"],
+         "required": ["cpf", "email", "celular", "nascimento", "sexo", "cep", "numero", "complemento", "como_conheceu", "responsavel", "parentesco_responsavel", "cpf_responsavel"],
          "additionalProperties": False}},
     {"name": "buscar_horarios", "description": "Lista horários LIVRES de consulta para um profissional nos próximos dias. Só ofereça horários vindos daqui.",
      "strict": True, "input_schema": {"type": "object", "properties": {
@@ -147,7 +148,7 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
             raise ValueError("paciente ainda não identificado: localize pelo CPF (buscar_paciente) antes de alterar o cadastro")
         if ctx.conversa.get("pacientes_mesmo_numero") and not ctx.conversa.get("identidade_confirmada"):
             raise ValueError("este número tem vários cadastros: confirme a identidade pelo CPF (buscar_paciente) antes de alterar")
-        mapa = {"email": "email", "celular": "celular", "nascimento": "nascimento", "sexo": "sexo", "como_conheceu": "indicado",
+        mapa = {"cpf": "cpf", "email": "email", "celular": "celular", "nascimento": "nascimento", "sexo": "sexo", "como_conheceu": "indicado",
                 "complemento": "apt", "numero": "n", "responsavel": "responsavel", "parentesco_responsavel": "parentesco_responsavel",
                 "cpf_responsavel": "cpf_responsavel"}
         mud = {mapa[k]: str(v).strip() for k, v in e.items() if k in mapa and str(v or "").strip()}
@@ -159,9 +160,14 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
                 raise ValueError("CEP novo exige o número da residência")
             mud.update({"cep": e["cep"], **end})
         if not mud:
-            raise ValueError("nenhum campo para atualizar; lembre: nome e CPF não podem ser alterados")
+            raise ValueError("nenhum campo para atualizar")
         r = ctx.ts.atualizar_paciente(int(idp), mud)
-        ctx.atualizar({"cadastro_atualizado_em": datetime.now(timezone.utc), "cadastro_campos_atualizados": sorted(mud)})
+        campos_conv = {"cadastro_atualizado_em": datetime.now(timezone.utc), "cadastro_campos_atualizados": sorted(mud)}
+        if "nome" in mud:
+            campos_conv["nome"] = mud["nome"]
+        if "cpf" in mud and ctx.conversa.get("cadastro_generico"):
+            campos_conv["cadastro_generico"] = False
+        ctx.atualizar(campos_conv)
         return {"ok": True, "atualizado": sorted(mud), "id": r.get("id", idp), "aviso": "cadastro atualizado; confirme ao lead o que foi alterado"}
 
     if nome == "criar_paciente":

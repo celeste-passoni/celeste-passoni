@@ -219,8 +219,8 @@ class TiSaude:
             raise TiSaudeErro(f"criar_paciente sem id: {criado}")
         return criado
 
-    CAMPOS_IMUTAVEIS = ("nome", "cpf")
-    CAMPOS_EDITAVEIS = ("nascimento", "sexo", "celular", "email", "indicado", "cep", "n", "apt", "endereco", "bairro", "cidade", "uf",
+    CAMPOS_IMUTAVEIS = ("nome",)   # testado 13/10/2026: CPF altera com id; nome NÃO altera pela API
+    CAMPOS_EDITAVEIS = ("cpf", "nascimento", "sexo", "celular", "email", "indicado", "cep", "n", "apt", "endereco", "bairro", "cidade", "uf",
                         "responsavel", "parentesco_responsavel", "cpf_responsavel")
     _NAO_REENVIAR = {"id", "cliente", "status", "timestamp", "deletado", "idConvenio", "idConvenioCliente", "complemento", "data",
                      "profilepicture", "alteradoPor_idPacienteEmpresa", "idPacienteEmpresa", "idUsuario", "preenchidoPor", "medico",
@@ -237,20 +237,31 @@ class TiSaude:
         """
         proibidos = [k for k in mudancas if k in self.CAMPOS_IMUTAVEIS]
         if proibidos:
-            raise ValueError(f"nome e CPF não podem ser alterados pela IA ({proibidos}); só a recepção faz isso")
+            raise ValueError(f"o TI Saúde não permite alterar {proibidos} pela API; registre com sinalizar_revisao para a recepção corrigir")
         desconhecidos = [k for k in mudancas if k not in self.CAMPOS_EDITAVEIS]
         if desconhecidos:
             raise ValueError(f"campos não editáveis: {desconhecidos}")
         atual = self.dados_paciente(id_paciente)
-        if not atual.get("id") or not atual.get("cpf"):
+        if not atual.get("id"):
             raise TiSaudeErro(f"paciente {id_paciente} não encontrado para atualizar")
-        ativo = self.buscar_por_cpf(atual["cpf"])     # cadastro excluído não aparece na busca; salvar nele criaria um duplicado
-        if not ativo or int(ativo.get("id") or 0) != int(id_paciente):
-            raise TiSaudeErro(f"cadastro {id_paciente} está inativo ou o CPF pertence a outro cadastro ativo; a recepção precisa resolver")
+        if _so_digitos(atual.get("cpf") or ""):           # cadastro excluído não aparece na busca; salvar nele criaria um duplicado
+            ativo = self.buscar_por_cpf(atual["cpf"])
+            if not ativo or int(ativo.get("id") or 0) != int(id_paciente):
+                raise TiSaudeErro(f"cadastro {id_paciente} está inativo ou o CPF pertence a outro cadastro ativo; a recepção precisa resolver")
+        if "cpf" in mudancas:                               # CPF novo: válido e não pode pertencer a outro paciente
+            novo = _so_digitos(str(mudancas["cpf"]))
+            if len(novo) != 11:
+                raise ValueError("CPF deve ter 11 dígitos; peça ao lead para conferir")
+            outro = self.buscar_por_cpf(novo)
+            if outro and int(outro.get("id") or 0) != int(id_paciente):
+                raise TiSaudeErro(f"este CPF já pertence a outro cadastro ({outro.get('nome')}); não alterar; registre com sinalizar_revisao")
+            mudancas = {**mudancas, "cpf": novo}
         payload = {k: v for k, v in atual.items() if k not in self._NAO_REENVIAR and isinstance(v, (str, int)) and str(v).strip() != ""}
+        if _so_digitos(atual.get("cpf") or ""):
+            payload["cpf"] = _so_digitos(atual["cpf"])
         payload.update({
             "id": int(id_paciente),                   # com o id, o TI Saúde atualiza ESTE registro (sem id ele casa pelo CPF e pode criar outro)
-            "nome": atual["nome"], "cpf": _so_digitos(atual["cpf"]),
+            "nome": atual["nome"],
             "nascimento": _iso_para_br(atual.get("nascimento") or ""),
             "sexo": (atual.get("sexo") or "").strip().capitalize(),
             "apt": str(atual.get("complemento") or atual.get("apt") or "").strip(),
@@ -265,6 +276,11 @@ class TiSaude:
                 v = v.capitalize()
                 if v not in ("Masculino", "Feminino"):
                     raise ValueError("sexo deve ser Masculino ou Feminino")
+            elif k == "nome":
+                ok, motivo = nome_completo_valido(v)
+                if not ok:
+                    raise ValueError(motivo)
+                v = v.strip().upper()
             elif k in ("celular", "cep", "cpf_responsavel"):
                 v = _so_digitos(v)[-11:] if k == "celular" else _so_digitos(v)
             elif k in ("indicado", "endereco", "bairro", "cidade", "uf"):

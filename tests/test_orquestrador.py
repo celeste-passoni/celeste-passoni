@@ -422,7 +422,7 @@ def test_atualizar_paciente_reenvia_registro_inteiro_e_bloqueia_nome_cpf():
     with pytest.raises(ValueError):
         ts.atualizar_paciente(6436, {"nome": "OUTRO"})
     with pytest.raises(ValueError):
-        ts.atualizar_paciente(6436, {"cpf": "1"})
+        ts.atualizar_paciente(6436, {"cpf": "1"})          # CPF inválido
     with pytest.raises(ValueError):
         ts.atualizar_paciente(6436, {"nascimento": "1990-01-01"})
     # TI Saúde devolve outro id (criou duplicado) → erro, nunca silencioso
@@ -437,7 +437,7 @@ def test_atualizar_paciente_reenvia_registro_inteiro_e_bloqueia_nome_cpf():
 
 def test_ferramenta_atualizar_cadastro():
     ts = MagicMock(); ts.atualizar_paciente.return_value = {"id": 2301}
-    vazio = {"email": "", "celular": "", "nascimento": "", "sexo": "", "cep": "", "numero": "", "complemento": "", "como_conheceu": "",
+    vazio = {"cpf": "", "email": "", "celular": "", "nascimento": "", "sexo": "", "cep": "", "numero": "", "complemento": "", "como_conheceu": "",
              "responsavel": "", "parentesco_responsavel": "", "cpf_responsavel": ""}
     # sem paciente identificado
     saida, erro = ferramentas_ia.executar("atualizar_cadastro", {**vazio, "email": "n@x.com"}, _ctx({"id": "c1"}, ts))
@@ -456,7 +456,10 @@ def test_ferramenta_atualizar_cadastro():
     assert conv["cadastro_campos_atualizados"]
     # nada para atualizar
     saida, erro = ferramentas_ia.executar("atualizar_cadastro", vazio, ctx)
-    assert erro and "nome e CPF" in saida
+    assert erro and "nenhum campo" in saida
+    # CPF pode ser atualizado a pedido do lead
+    saida, erro = ferramentas_ia.executar("atualizar_cadastro", {**vazio, "cpf": "390.533.447-05"}, ctx)
+    assert not erro and ts.atualizar_paciente.call_args.args[1]["cpf"] == "390.533.447-05"
 
 
 # ------------------------------------------------------------------ modelo e cache
@@ -511,7 +514,7 @@ def test_prompt_v2_exemplos_e_regras():
     import re
     assert not re.search(r"(?i)maria fernanda|raiane|@[\w.]+\.|\d{3}\.\d{3}\.\d{3}-\d{2}", ex)   # anonimizado
     for trecho in ("Pedido de cancelamento — ordem obrigatória", "Quando encaminhar à recepção", "Nome completo, sem abreviações",
-                   "nome e CPF nunca mudam por você", "só os retornados por `buscar_horarios`", "Qual seria a melhor opção para você?",
+                   "Alteração de cadastro, a pedido do lead", "só os retornados por `buscar_horarios`", "Qual seria a melhor opção para você?",
                    "Os agendamentos são realizados por todos os setores da clínica", "Não inventa informação", "sinalizar_revisao"):
         assert trecho in pr, trecho
     prompt.camadas_estaveis.cache_clear()
@@ -587,3 +590,32 @@ def test_tisaude_criar_paciente_sem_cpf_omite_campo():
     r = ts.criar_paciente({"nome": "Maria Souza", "cpf": "", "nascimento": "01/01/2001", "sexo": "Feminino", "celular": "5511999990000", "email": "a@b",
                            "indicado": "DRA. LUCIANA PASSONI", "cep": "04502001", "n": "886", "endereco": "AV", "bairro": "B", "cidade": "C", "uf": "SP"})
     assert r["id"] == 6519 and "cpf" not in enviados and enviados["nome"] == "MARIA SOUZA"
+
+
+def test_atualizar_paciente_cpf_novo_checa_duplicidade():
+    from celeste.ferramentas import tisaude
+    ts = tisaude.TiSaude.__new__(tisaude.TiSaude)
+    atual = {"id": 6519, "nome": "TESTE", "cpf": "", "nascimento": "2001-01-01", "sexo": "FEMININO", "email": "A@B.C", "celular": "11999990002",
+             "idConvenio": 1, "endereco": "AV", "n": "886", "complemento": "", "bairro": "B", "cidade": "C", "uf": "SP", "cep": "04502001", "indicado": "X", "status": 1}
+    enviados = {}
+    def req(m, c, *, params=None, data=None, **kw):
+        if m == "GET" and c == "/pacientes":
+            return {"data": [{"id": 999, "nome": "OUTRA PESSOA", "cpf": "12345678909"}] if params.get("busca") == "12345678909" else []}
+        if m == "GET":
+            return dict(atual)
+        enviados.update(data); return {"id": 6519}
+    ts._req = req
+    r = ts.atualizar_paciente(6519, {"cpf": "390.533.447-05"})      # preenche CPF vazio
+    assert r["id"] == 6519 and enviados["cpf"] == "39053344705" and enviados["id"] == 6519
+    with pytest.raises(tisaude.TiSaudeErro):
+        ts.atualizar_paciente(6519, {"cpf": "12345678909"})           # pertence a outro cadastro
+
+
+@pytest.mark.parametrize("entrada,esperado", [
+    ("Conferi agora no sistema: não tem nenhuma consulta marcada.", "Conferi agora no sistema, não tem nenhuma consulta marcada."),
+    ("Terei às 15:00 ou às 16:00.", "Terei às 15:00 ou às 16:00."),
+    ("📍 Endereço: Avenida República do Líbano, 886", "📍 Endereço: Avenida República do Líbano, 886"),
+    ("Me passa, por gentileza:\n\n🔹 CEP", "Me passa, por gentileza:\n\n🔹 CEP"),
+])
+def test_limpar_pontuacao_dois_pontos(entrada, esperado):
+    assert motor.limpar_pontuacao(entrada) == esperado

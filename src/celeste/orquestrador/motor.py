@@ -41,6 +41,7 @@ def _somar(tot: dict, uso: Any) -> None:
 
 import re as _re
 _TRAVESSAO = _re.compile(r"\s*[—–]\s+|\s+-\s+(?=[a-záéíóúâêôãõç])")
+_DOIS_PONTOS = _re.compile(r"([a-záéíóúâêôãõç\)])\s*:\s+([a-záéíóúâêôãõç])")   # letra + ':' + minúscula; preserva horários (10:00), listas e "Endereço: Av."
 
 
 def limpar_pontuacao(texto: str) -> str:
@@ -50,6 +51,7 @@ def limpar_pontuacao(texto: str) -> str:
         if linha.lstrip().startswith(("-", "—", "–", "•")):   # marcador de lista no início da linha: mantém
             out.append(linha); continue
         linha = _TRAVESSAO.sub(", ", linha)
+        linha = _DOIS_PONTOS.sub(r"\1, \2", linha)   # "conferi no sistema: não tem" → "conferi no sistema, não tem" (pedido da clínica, 13/10)
         out.append(linha.replace(" ,", ",").replace(",,", ","))
     return "\n".join(out)
 
