@@ -1,109 +1,47 @@
-# Templates de resgate — Leads Perdidos (proposta v0 para aprovação na Meta)
+# Templates de resgate — Leads Perdidos (estado em 13/10/2026)
 
-> Idioma `pt_BR`. `{{1}}` = primeiro nome do lead. Botões = *quick reply* (a resposta do lead abre a janela de 24 h e a IA assume).
-> Categoria: submeter os templates 1 e 3 como **UTILITY** (referem-se a um contato anterior do próprio lead); se a Meta reclassificar como MARKETING, aceitar — o custo é maior (US$ 0,062 × US$ 0,007) mas o texto não muda.
-> Rodapé de opt-out em todos: "Se preferir não receber mais mensagens, responda SAIR."
+> Idioma `pt_BR`. Os textos oficiais usados pelo sistema estão em `src/celeste/jobs/templates_texto.py`; a esteira (ordem, intervalos, pausa) está em `config/parametros.yaml` → `disparos`. A esteira está **pausada** (scheduler `celeste-disparos`) até a clínica liberar.
+> Decisão da clínica (13/10/2026): os templates serão redefinidos pela clínica. Tentar todos como **UTILITY**; critério que funcionou: texto escrito como continuação de um pedido do próprio lead (solicitação pendente, dar continuidade), sem valor, sem benefício, sem emoji, sem "esperamos que estejas bem". Se a Meta reclassificar para MARKETING, aceitar sem mudar o texto.
 
-## Ciclo de abordagem
+## T1 — `resgate_solicitacao_pendente` — APROVADO como UTILITY (Meta id 1443893117837530, 13/10/2026)
 
 ```
-Ciclo 1 (lead nunca contatado pela IA)
-  D0    T1  resgate_lembramos_de_voce      → responde? IA assume
-  D+3   T2  resgate_poucos_horarios        → responde? IA assume
-  D+10  T3  resgate_o_que_dificultou       → responde? IA assume (o botão já traz a objeção)
-  D+10  sem resposta → status "Template enviado (2°)" · pausa
+Olá, {{1}}! Aqui é a Celeste, da Passoni Clinic.
 
-Ciclo 2 (40 dias após o fim do ciclo 1, se ainda elegível)
-  D0    T4  resgate_agenda_do_mes          → responde? IA assume
-  D+7   T5  resgate_hoje_a_tarde (só em dia com horário livre à tarde)
-  sem resposta → pausa de 90 dias; depois volta ao Ciclo 2 com o template de melhor taxa
+Identificamos que a sua solicitação de consulta, feita em {{2}}, ficou pendente e o agendamento não foi concluído.
 
-Regras
-  • máximo 3 templates por ciclo, nunca dois no mesmo dia, só seg–sex 9h–18h
-  • lead que respondeu a qualquer template sai do ciclo e passa à cadência de follow-up da conversa (D+1, D+3, D+7…)
-  • lead com status "Achou caro" / "Quer pelo convênio" volta em 30 / 60 dias direto no T3 (objeção)
-  • "Vamos retornar na data solicitada" → T2 na data
-  • qualquer "SAIR", "pare", "não quero" → opt-out permanente
-  • a IA nunca reenvia um template que o lead já recebeu no mesmo ciclo
+Deseja dar continuidade? Responda esta mensagem que eu verifico os horários disponíveis para você.
 ```
 
-## T1 — `resgate_lembramos_de_voce` (UTILITY tentativa; D0)
+- `{{1}}` = primeiro nome; `{{2}}` = mês do contato anterior do lead (campo `lead_created_at` da base), ex.: "junho".
+- Sem rodapé e sem botões (decisão para maximizar a categoria utilidade). Botões de resposta rápida podem ser acrescentados depois, sem perder a categoria, mas a edição volta para revisão da Meta.
+- Quando o lead responde, a Celeste **não se apresenta de novo** (o template já se apresentou) e vai direto para modalidade e agenda (regra em `prompts/leads-perdidos-v0.md`).
 
-**Corpo**
-> Olá, {{1}}, tudo bem? 😊 Aqui é a Celeste, da Passoni Clinic.
->
-> Estávamos revisando nossa agenda e lembramos de você: há um tempo conversamos sobre sua consulta com a Dra. Luciana Passoni e esse cuidado acabou não acontecendo.
->
-> Sabemos que a rotina faz algumas decisões ficarem para depois. Mas, quando falamos em saúde capilar, o momento da avaliação faz toda a diferença. Porque tempo é cabelo. 🤍
->
-> Se ainda fizer sentido para você, é só me responder por aqui que eu vejo um horário.
+## T2, T3, T4 — provisórios (copiados do MarketZap em 09/10/2026; serão substituídos pela clínica)
 
-**Botões:** `Quero ver horários` · `Tenho uma dúvida` · `Agora não`
-**Rodapé:** Se preferir não receber mais mensagens, responda SAIR.
+| Código | Nome na Meta | Conteúdo | Categoria esperada |
+|---|---|---|---|
+| T2 | `resgate_me_da_um_oi` | "Nosso sistema encerra as conversas automaticamente após 24h… me dá um oi" | marketing (reengajamento) |
+| T3 | `resgate_duas_modalidades` | script das duas modalidades com valores | marketing (oferta) |
+| T4 | `resgate_demonstrou_interesse` | "Vimos que você demonstrou interesse… podemos retomar?" | tentar utilidade; provável marketing |
 
-## T2 — `resgate_poucos_horarios` (MARKETING; D+3)
+Nenhum destes foi cadastrado na Meta ainda.
 
-**Corpo**
-> Oi, {{1}}! 😊 Celeste, da Passoni Clinic.
->
-> Passando para avisar que a agenda desta e da próxima semana está com poucos horários para consulta — com a Dra. Luciana e com o Dr. Lucas Vieira, nosso Diretor Médico.
->
-> Quer que eu reserve um para você? Me diz o melhor dia e período que eu confiro na hora.
+## Cadência atual da esteira (`disparos.passos`)
 
-**Botões:** `Sim, quero reservar` · `Prefiro outra semana` · `Agora não`
-**Rodapé:** Se preferir não receber mais mensagens, responda SAIR.
+```
+D0    T1   → responde? a Celeste assume
+D+3   T2
+D+3   T3
+D+8   T4
+D+3   T2
+pausa de 30 dias → recomeça no T3
+```
 
-## T3 — `resgate_o_que_dificultou` (UTILITY tentativa; D+10 e retorno de objeções)
+Recontato por status de quem respondeu e parou: "Irá nos retornar" e "Vamos retornar na data solicitada" → T2; "Achou caro" e "Quer pelo convênio" → T1; "Mora em outro Estado" e "Está em outra clínica" → T4.
 
-**Corpo**
-> {{1}}, tudo bem? Aqui é a Celeste, da Passoni Clinic. 🤍
->
-> Vi que você chegou a se interessar pela consulta, mas não seguimos com o agendamento. Existe algo que esteja dificultando marcar agora?
->
-> Podemos ver outras opções de data e horário, ou esclarecer qualquer dúvida — sobre a consulta, os valores ou como funciona o tratamento.
+## Sugestões de utilidade para os próximos (a validar pela clínica)
 
-**Botões:** `Dúvida sobre valor` · `Dúvida sobre horário` · `Outra dúvida`
-**Rodapé:** Se preferir não receber mais mensagens, responda SAIR.
-
-## T4 — `resgate_agenda_do_mes` (MARKETING; ciclo 2, D0)
-
-**Corpo**
-> Olá, {{1}}! 😊 Celeste, da Passoni Clinic.
->
-> Abrimos a agenda de consultas de {{2}} com a Dra. Luciana Passoni e com o Dr. Lucas Vieira. Como você já tinha conversado com a gente, quis te avisar antes de os horários preencherem.
->
-> A consulta inclui a avaliação médica completa e o exame de tricoscopia, que analisa em detalhes o couro cabeludo e os fios.
->
-> Quer que eu veja um horário para você?
-
-**Variáveis:** `{{2}}` = mês ("outubro")
-**Botões:** `Quero agendar` · `Me conta mais` · `Agora não`
-**Rodapé:** Se preferir não receber mais mensagens, responda SAIR.
-
-## T5 — `resgate_hoje_a_tarde` (MARKETING; só quando há horário livre hoje à tarde)
-
-**Corpo**
-> {{1}}, boa tarde! Celeste, da Passoni Clinic. 😊
->
-> Surgiu um horário hoje às {{2}} para consulta com o {{3}}, aqui na clínica (Moema, em frente ao Parque Ibirapuera, com valet).
->
-> Se conseguir vir, eu reservo para você agora mesmo. Me responde por aqui?
-
-**Variáveis:** `{{2}}` = horário ("16h"), `{{3}}` = profissional ("Dr. Lucas Vieira" / "Dra. Luciana Passoni")
-**Botões:** `Consigo hoje` · `Outro dia` · `Agora não`
-**Rodapé:** Se preferir não receber mais mensagens, responda SAIR.
-
-## O que a IA faz com cada botão
-
-| Botão | Ação da IA |
-|---|---|
-| Quero ver horários / Sim, quero reservar / Quero agendar / Consigo hoje | apresenta as 2 modalidades (se ainda não conhece) e oferece 2–3 horários de `buscar_horarios` |
-| Tenho uma dúvida / Outra dúvida / Me conta mais | pergunta qual é e responde com a base de conhecimento |
-| Dúvida sobre valor | script de valores (R$ 1.200 / R$ 800 + o que inclui) e, se insistir, política de tratamento |
-| Dúvida sobre horário | pergunta preferência de dia/período e oferece horários |
-| Prefiro outra semana / Outro dia | pergunta a semana e agenda o follow-up para ela |
-| Agora não | "Sem problemas, no seu tempo marcamos 😊" + pergunta se há algo dificultando; status "Irá nos retornar", recontato em 30 dias |
-| SAIR / pare / não quero | opt-out permanente, mensagem cordial de encerramento |
-
-## Métricas por template (painel)
-enviados · entregues · lidos · respondidos (%) · por botão · agendados originados · falhas · qualidade Meta. O ciclo 2 usa, no lugar de T4, o template de maior taxa de resposta do ciclo 1 quando esta for maior.
+- Segundo toque, sem resposta ao T1: "Olá, {{1}}. Sua solicitação de consulta segue pendente. Caso ainda queira concluir o agendamento, responda esta mensagem."
+- Escolheu horário e não mandou os dados: "Olá, {{1}}. A reserva da sua consulta ficou pendente por falta dos dados de cadastro. Responda esta mensagem para concluir."
+- Pediu para remarcar e sumiu: "Olá, {{1}}. A remarcação da sua consulta ficou pendente. Responda esta mensagem para escolhermos um novo horário."
