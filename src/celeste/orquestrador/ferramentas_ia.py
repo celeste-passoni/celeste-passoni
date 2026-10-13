@@ -30,8 +30,9 @@ FERRAMENTAS: list[dict] = [
          "cep": {"type": "string"}, "numero": {"type": "string"}, "complemento": {"type": "string"},
          "responsavel": {"type": "string", "description": "nome do responsável se menor de idade; senão vazio"},
          "parentesco_responsavel": {"type": "string", "description": "Mãe, Pai, Irmão, Irmã, Tio, Tia, Padrinho, Madrinha, Primo, Prima, Outro ou vazio"},
-         "cpf_responsavel": {"type": "string"}},
-         "required": ["nome", "cpf", "nascimento", "sexo", "email", "como_conheceu", "cep", "numero", "complemento", "responsavel", "parentesco_responsavel", "cpf_responsavel"],
+         "cpf_responsavel": {"type": "string"},
+         "dados_genericos": {"type": "boolean", "description": "true SÓ quando o lead, depois de você insistir UMA vez, manteve que não quer passar os dados. O sistema preenche nascimento, e-mail, encaminhado por e endereço com os genéricos da clínica e deixa o CPF vazio; você informa só nome completo e sexo (deduza pelo nome)."}},
+         "required": ["nome", "cpf", "nascimento", "sexo", "email", "como_conheceu", "cep", "numero", "complemento", "responsavel", "parentesco_responsavel", "cpf_responsavel", "dados_genericos"],
          "additionalProperties": False}},
     {"name": "atualizar_cadastro", "description": "Atualiza dados cadastrais do paciente já identificado nesta conversa (e-mail, celular, data de nascimento, sexo, endereço por CEP/número/complemento, como conheceu, responsável). NUNCA altera nome nem CPF: se o lead pedir isso, diga que a correção de nome/CPF é feita pela recepção, registre com sinalizar_revisao e siga com o agendamento. Deixe vazios os campos que não mudam.",
      "strict": True, "input_schema": {"type": "object", "properties": {
@@ -167,6 +168,12 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         ok, motivo = _nome_completo_valido(e["nome"])
         if not ok:
             raise ValueError(motivo)
+        if e.get("dados_genericos"):
+            g = config.parametros().get("cadastro_generico") or {}
+            e = {**e, "cpf": g.get("cpf", "") or "", "nascimento": e.get("nascimento") or g.get("nascimento", ""), "email": g.get("email", ""),
+                 "como_conheceu": g.get("indicado", ""), "cep": g.get("cep", ""), "numero": g.get("numero", ""), "complemento": g.get("complemento", "")}
+        elif not re.sub(r"\D", "", e.get("cpf") or ""):
+            raise ValueError("CPF não informado: peça o CPF; só cadastre sem CPF com dados_genericos=true, depois de o lead recusar os dados após UMA insistência")
         if ctx.conversa.get("id_paciente_tisaude") and (ctx.conversa.get("identidade_confirmada")
                                                         or _mesma_pessoa(ctx.conversa.get("paciente_tisaude_nome") or "", e["nome"])):
             return {"id": ctx.conversa["id_paciente_tisaude"], "aviso": "paciente já existia; use este id"}
@@ -175,7 +182,7 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
             raise ValueError("CEP inválido: peça ao lead para conferir o CEP")
         if _menor(e["nascimento"]) and not (e.get("responsavel") and e.get("cpf_responsavel")):
             raise ValueError("menor de idade: colete nome, parentesco e CPF do responsável antes de cadastrar")
-        existente = ctx.ts.buscar_paciente(cpf=e["cpf"])   # CPF já cadastrado (ex.: no número de um parente): adota o cadastro em vez de duplicar
+        existente = ctx.ts.buscar_paciente(cpf=e["cpf"]) if re.sub(r"\D", "", e.get("cpf") or "") else None   # CPF já cadastrado: adota em vez de duplicar
         if isinstance(existente, dict) and existente.get("id"):
             ctx.atualizar({"id_paciente_tisaude": existente["id"], "paciente_tisaude_nome": existente.get("nome"), "identidade_confirmada": True})
             return {"id": existente["id"], "aviso": f"este CPF já está cadastrado como {existente.get('nome')}; use este id para agendar (não criei cadastro novo)"}
@@ -184,7 +191,9 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
                                    "n": e["numero"], "apt": e.get("complemento", ""), **end,
                                    "responsavel": e.get("responsavel", ""), "parentesco_responsavel": e.get("parentesco_responsavel", ""),
                                    "cpf_responsavel": e.get("cpf_responsavel", "")})
-        ctx.atualizar({"id_paciente_tisaude": p["id"], "nome": e["nome"]})
+        ctx.atualizar({"id_paciente_tisaude": p["id"], "nome": e["nome"], "cadastro_generico": bool(e.get("dados_genericos"))})
+        if e.get("dados_genericos"):
+            return {"id": p["id"], "aviso": "cadastro feito com dados genéricos e sem CPF; depois de agendar, avise o lead: " + str((config.parametros().get("cadastro_generico") or {}).get("aviso_ao_lead", ""))}
         return {"id": p["id"]}
 
     if nome == "buscar_horarios":

@@ -206,6 +206,15 @@ pre_cadastro_campos:
   - "Número da residência com o complemento"
 pre_cadastro_endereco_via_cep: true      # a IA pede só CEP + número/complemento; rua/bairro/cidade/UF vêm do CEP;
                                          # se o CEP não existir, pede para conferir; se o ViaCEP estiver fora, pede o endereço completo
+cadastro_generico:                      # lead que, depois de UMA insistência, não quer passar os dados (decisão da clínica, 12–13/10/2026)
+  nascimento: "01/01/2001"
+  email: "ATUALIZAR111@GMAIL.COM"
+  indicado: "DRA. LUCIANA PASSONI"       # "encaminhado por"
+  cep: "04502001"                        # endereço da própria clínica
+  numero: "886"
+  complemento: ""
+  cpf: ""                                # CPF não é obrigatório no TI Saúde: fica vazio (testado 13/10: cria pacientes distintos)
+  aviso_ao_lead: "No dia da consulta, a recepção vai precisar dos seus dados completos para finalizar o cadastro, tá bom?"
 pre_cadastro_observacao: "dados do paciente (não do responsável). Celular = número do WhatsApp com DDD. Convênio sempre PARTICULAR (campo da API: convenio=1). Campo 'medico' (responsável) NÃO é enviado — igual à recepção."
 procedimentos_permitidos:                # o agente NUNCA agenda outro procedimento além destes dois
   - { id: 264, nome: "PC - CONSULTA EQUIPE MÉDICA", idCalendario: 36, profissional: "Dr. Lucas Vieira", valor: 800 }

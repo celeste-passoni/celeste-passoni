@@ -185,16 +185,16 @@ class TiSaude:
         email, indicado, cep, n, apt, endereco, bairro, cidade, uf; opcionais para menor de idade:
         responsavel, parentesco_responsavel, cpf_responsavel.
         """
-        obrig = ["nome", "cpf", "nascimento", "sexo", "celular", "email", "indicado", "cep", "n", "endereco",
+        obrig = ["nome", "nascimento", "sexo", "celular", "email", "indicado", "cep", "n", "endereco",
                  "bairro", "cidade", "uf"]
         faltando = [k for k in obrig if not str(dados.get(k, "")).strip()]
         if faltando:
             raise ValueError(f"campos obrigatórios ausentes: {faltando}")
-        if self.buscar_paciente(cpf=dados["cpf"]):
+        cpf = _so_digitos(dados.get("cpf") or "")
+        if cpf and self.buscar_paciente(cpf=cpf):
             raise TiSaudeErro("já existe paciente com este CPF; não atualizar via IA")
         payload = {
             "nome": dados["nome"].strip().upper(),
-            "cpf": _so_digitos(dados["cpf"]),
             "nascimento": dados["nascimento"],
             "sexo": dados["sexo"].strip().capitalize(),
             "celular": _so_digitos(dados["celular"])[-11:],
@@ -209,6 +209,8 @@ class TiSaude:
             "uf": dados["uf"].strip().upper(),
             "convenio": 1,  # PARTICULAR (campo correto; idConvenioCliente é ignorado)
         }
+        if cpf:
+            payload["cpf"] = cpf          # sem CPF (cadastro genérico) o campo é omitido: o TI Saúde cria pacientes distintos (testado 13/10/2026)
         for k in ("responsavel", "parentesco_responsavel", "cpf_responsavel"):
             if dados.get(k):
                 payload[k] = dados[k]

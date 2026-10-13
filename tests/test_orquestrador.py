@@ -560,3 +560,30 @@ def test_buscar_horarios_so_depende_da_agenda():
     livres = ts.buscar_horarios("dr_lucas", dias=3, a_partir_de=date(2026, 10, 31))   # sábado, domingo, feriado (2/11) no futuro
     assert {l["data"] for l in livres} >= {"2026-10-31", "2026-11-01", "2026-11-02"}
     assert "feriados" not in config.parametros()
+
+
+def test_criar_paciente_dados_genericos_sem_cpf():
+    ts = MagicMock(); ts.buscar_paciente.return_value = None; ts.criar_paciente.return_value = {"id": 6519}
+    conv = {"id": "c1"}; ctx = _ctx(conv, ts); ctx.atualizar = lambda campos: conv.update(campos)
+    e = {"nome": "Maria Aparecida Souza", "cpf": "", "nascimento": "", "sexo": "Feminino", "email": "", "como_conheceu": "", "cep": "", "numero": "",
+         "complemento": "", "responsavel": "", "parentesco_responsavel": "", "cpf_responsavel": "", "dados_genericos": True}
+    ctx.viacep = lambda cep: {"endereco": "AV REP DO LIBANO", "bairro": "VILA NOVA CONCEICAO", "cidade": "SAO PAULO", "uf": "SP"} if cep == "04502001" else {}
+    saida, erro = ferramentas_ia.executar("criar_paciente", e, ctx)
+    assert not erro and '"id": 6519' in saida and "dados genéricos" in saida and "No dia da consulta" in saida
+    d = ts.criar_paciente.call_args.args[0]
+    assert d["cpf"] == "" and d["nascimento"] == "01/01/2001" and d["email"] == "ATUALIZAR111@GMAIL.COM" and d["indicado"] == "DRA. LUCIANA PASSONI" and d["n"] == "886"
+    assert conv["cadastro_generico"] is True and not ts.buscar_paciente.called
+    # sem a flag, CPF vazio é recusado
+    saida, erro = ferramentas_ia.executar("criar_paciente", {**e, "dados_genericos": False}, _ctx({"id": "c2"}, ts))
+    assert erro and "CPF não informado" in saida
+
+
+def test_tisaude_criar_paciente_sem_cpf_omite_campo():
+    from celeste.ferramentas import tisaude
+    ts = tisaude.TiSaude.__new__(tisaude.TiSaude)
+    enviados = {}
+    ts._req = lambda m, c, *, params=None, data=None, **kw: (enviados.update(data) or {"id": 6519})
+    ts.buscar_paciente = lambda **kw: (_ for _ in ()).throw(AssertionError("não deve buscar CPF vazio"))
+    r = ts.criar_paciente({"nome": "Maria Souza", "cpf": "", "nascimento": "01/01/2001", "sexo": "Feminino", "celular": "5511999990000", "email": "a@b",
+                           "indicado": "DRA. LUCIANA PASSONI", "cep": "04502001", "n": "886", "endereco": "AV", "bairro": "B", "cidade": "C", "uf": "SP"})
+    assert r["id"] == 6519 and "cpf" not in enviados and enviados["nome"] == "MARIA SOUZA"
