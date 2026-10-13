@@ -6,7 +6,7 @@ Usado para gravar no histórico da conversa o que o lead de fato recebeu, para o
 e para o painel/relatórios mostrarem a mensagem. {1} = primeiro nome (só nos templates que o usam).
 
 Volumes e resposta em até 3 dias, medidos nos 2 meses (atendente de referência):
-  T1 revisando agenda (tempo é cabelo)  1.488 envios ·  5%
+  T1 (antigo) revisando agenda          1.488 envios ·  5%   → substituído em 13/10/2026 por resgate_solicitacao_pendente (UTILITY)
   T2 "me dá um oi"                      4.576 envios ·  7%
   T3 duas modalidades (frio)            3.874 envios · 10%
   T4 demonstrou interesse               2.090 envios ·  5%
@@ -16,19 +16,13 @@ from __future__ import annotations
 RODAPE = "Se preferir não receber mais mensagens, responda SAIR."   # rodapé do template na Meta (opt-out); o corpo é o da clínica
 
 TEMPLATES: dict[str, dict] = {
-    "T1": {
-        "nome": "resgate_revisando_agenda",
-        "corpo": ("Olá {1}! 😀 tudo bem?\n\n"
-                  "Estávamos revisando nossa agenda e lembramos de você!\n\n"
-                  "Há algum tempo tivemos um contato sobre sua avaliação na Passoni Clinic, mas percebemos que esse cuidado "
-                  "acabou não acontecendo.\n\n"
-                  "Sabemos que a rotina muitas vezes faz com que algumas decisões fiquem para depois.\n"
-                  "Mas, quando falamos em saúde capilar, o momento da avaliação pode fazer toda a diferença.\n\n"
-                  "Porque tempo é cabelo. 🤍\n\n"
-                  "Se ainda fizer sentido para você, me envie um “OI” por aqui.\n"
-                  "Vou ter prazer em verificar um novo horário para sua avaliação.\n\n"
-                  "Será um prazer receber você na Passoni Clinic!"),
+    "T1": {   # aprovado pela clínica em 13/10/2026; cadastrado na Meta como UTILITY (id 1443893117837530). {1} = primeiro nome, {2} = mês do contato anterior
+        "nome": "resgate_solicitacao_pendente",
+        "corpo": ("Olá, {1}! Aqui é a Celeste, da Passoni Clinic.\n\n"
+                  "Identificamos que a sua solicitação de consulta, feita em {2}, ficou pendente e o agendamento não foi concluído.\n\n"
+                  "Deseja dar continuidade? Responda esta mensagem que eu verifico os horários disponíveis para você."),
         "botoes": [],
+        "sem_rodape": True,
     },
     "T2": {
         "nome": "resgate_me_da_um_oi",
@@ -69,9 +63,12 @@ MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "a
 
 
 def parametros(codigo: str, primeiro_nome: str, **extras) -> list[str]:
-    """Lista de parâmetros do corpo, na ordem {{1}}, {{2}}… — o que vai à API da Meta. Só os templates com {1} levam o nome."""
+    """Lista de parâmetros do corpo, na ordem {{1}}, {{2}}… — o que vai à API da Meta. {1} = nome (se o corpo tiver), {2} = mês (T1)."""
     corpo = TEMPLATES[codigo]["corpo"]
-    return [primeiro_nome or "tudo bem"] if "{1}" in corpo else []
+    p = [primeiro_nome or "tudo bem"] if "{1}" in corpo else []
+    if "{2}" in corpo:
+        p.append(extras.get("mes") or "")
+    return p
 
 
 def renderizar(codigo: str, primeiro_nome: str, **extras) -> str:
@@ -80,7 +77,7 @@ def renderizar(codigo: str, primeiro_nome: str, **extras) -> str:
     corpo = t["corpo"]
     for i, v in enumerate(parametros(codigo, primeiro_nome, **extras), start=1):
         corpo = corpo.replace("{" + str(i) + "}", v)
-    saida = f"{corpo}\n\n_{RODAPE}_"
+    saida = corpo if t.get("sem_rodape") else f"{corpo}\n\n_{RODAPE}_"
     if t["botoes"]:
         saida += f"\n\n[botões: {' · '.join(t['botoes'])}]"
     return saida

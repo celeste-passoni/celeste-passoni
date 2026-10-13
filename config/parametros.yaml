@@ -328,7 +328,7 @@ disparos:
   priorizar: "mais_recentes"            # mais_recentes | mais_antigos
   # Os MESMOS templates que a clínica usa hoje no MarketZap (decisão de 09/10/2026); textos em src/celeste/jobs/templates_texto.py
   templates:                            # nome na Meta (idioma pt_BR); {{1}} = primeiro nome (T1 e T4)
-    T1: resgate_revisando_agenda        # "Estávamos revisando nossa agenda… tempo é cabelo"
+    T1: resgate_solicitacao_pendente    # "sua solicitação de consulta, feita em {{2}}, ficou pendente" (UTILITY, aprovado pela clínica em 13/10)
     T2: resgate_me_da_um_oi             # "Nosso sistema encerra as conversas após 24h… me dá um oi"
     T3: resgate_duas_modalidades        # script das duas modalidades, enviado frio
     T4: resgate_demonstrou_interesse    # "Vimos que você demonstrou interesse… Podemos retomar?"

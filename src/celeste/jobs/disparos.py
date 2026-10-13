@@ -126,7 +126,10 @@ def _tarde_livre_hoje(ts: tisaude.TiSaude) -> bool:
     return False
 
 
-def _extras_template(codigo: str, tarde: bool) -> dict:
+def _extras_template(codigo: str, tarde: bool, lead: Optional[dict] = None) -> dict:
+    if codigo == "T1":   # mês do contato anterior do lead ("feita em junho")
+        dt = (lead or {}).get("lead_created_at")
+        return {"mes": templates_texto.MESES[dt.month - 1] if dt else "um contato anterior"}
     if codigo == "T4":
         return {"mes": templates_texto.MESES[datetime.now(FUSO).month - 1]}
     if codigo == "T5":
@@ -175,7 +178,7 @@ def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[
             resumo["enviados"] += 1
             resumo["detalhe"].append({"lead": doc.id[-4:].rjust(len(doc.id), "*"), "template": dec.template, "motivo": dec.motivo})
             continue
-        extras = _extras_template(dec.template, tarde)
+        extras = _extras_template(dec.template, tarde, lead)
         try:
             wamid = mt.enviar_template(lead["celular"], nome_tpl, templates_texto.parametros(dec.template, lead.get("primeiro_nome") or "", **extras))
         except Exception as e:

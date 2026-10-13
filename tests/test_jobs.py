@@ -69,9 +69,13 @@ def test_pausa_e_reinicio_da_esteira():
 def test_templates_sao_os_da_clinica():
     from celeste.jobs import templates_texto as tt
     assert set(tt.TEMPLATES) == {"T1", "T2", "T3", "T4"}
-    assert "tempo é cabelo" in tt.TEMPLATES["T1"]["corpo"] and "me dá um oi" in tt.TEMPLATES["T2"]["corpo"]
+    assert "solicitação de consulta, feita em {2}" in tt.TEMPLATES["T1"]["corpo"] and "me dá um oi" in tt.TEMPLATES["T2"]["corpo"]
     assert "duas formas" in tt.TEMPLATES["T3"]["corpo"] and "demonstrou interesse" in tt.TEMPLATES["T4"]["corpo"]
-    assert tt.parametros("T1", "Ana") == ["Ana"] and tt.parametros("T2", "Ana") == [] and tt.parametros("T3", "Ana") == []
+    assert tt.parametros("T1", "Ana", mes="junho") == ["Ana", "junho"] and tt.parametros("T2", "Ana") == [] and tt.parametros("T3", "Ana") == []
+    assert "SAIR" not in tt.renderizar("T1", "Ana", mes="junho") and "feita em junho" in tt.renderizar("T1", "Ana", mes="junho")
+    from celeste.jobs import disparos
+    from datetime import datetime as _dt
+    assert disparos._extras_template("T1", False, {"lead_created_at": _dt(2026, 6, 15)}) == {"mes": "junho"}
     assert tt.renderizar("T4", "Ana").startswith("Olá Ana😀")
 
 
