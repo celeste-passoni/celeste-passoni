@@ -71,6 +71,13 @@ class Meta:
                                                                 "action": {"name": "cta_url", "parameters": {"display_text": rotulo[:20], "url": url}}}})
         return d["messages"][0]["id"]
 
+    def enviar_botoes_resposta(self, para: str, texto: str, botoes: list[tuple[str, str]]) -> str:
+        """Mensagem com até 3 botões de resposta rápida (interactive/button). botoes = [(id, título ≤ 20 chars)]. Só na janela de 24 h."""
+        acao = {"buttons": [{"type": "reply", "reply": {"id": i[:256], "title": t[:20]}} for i, t in botoes[:3]]}
+        d = self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "to": para, "type": "interactive",
+                                                "interactive": {"type": "button", "body": {"text": texto}, "action": acao}})
+        return d["messages"][0]["id"]
+
     def enviar_video_link(self, para: str, url: str, legenda: str = "") -> str:
         """Envia vídeo por URL pública (a Meta baixa e entrega)."""
         v = {"link": url}

@@ -206,6 +206,13 @@ pre_cadastro_campos:
   - "Número da residência com o complemento"
 pre_cadastro_endereco_via_cep: true      # a IA pede só CEP + número/complemento; rua/bairro/cidade/UF vêm do CEP;
                                          # se o CEP não existir, pede para conferir; se o ViaCEP estiver fora, pede o endereço completo
+t1_botoes:                               # fluxograma do T1 (aprovado pela clínica em 13/10/2026)
+  quero_continuar: "Quero continuar"      # → a Celeste continua o atendimento (modalidade → agenda)
+  agora_nao: "Agora não"                  # → mensagem fixa abaixo, com botão de saída; status "Irá nos retornar"; sem resposta → segue a esteira
+  agora_nao_texto: "Entendo, {nome}! Só para eu te ajudar da melhor forma, me conta o que está dificultando agora? Pode escrever aqui embaixo.\n\nE se preferir não seguir por enquanto, é só tocar no botão."
+  sair_id: "nao_quero_continuar"
+  sair_rotulo: "Não quero continuar"      # ≤ 20 caracteres (limite da Meta)
+  sair_texto: "Tudo bem, {nome}. Ficamos à disposição se mudar de ideia 💛"
 cadastro_generico:                      # lead que, depois de UMA insistência, não quer passar os dados (decisão da clínica, 12–13/10/2026)
   nascimento: "01/01/2001"
   email: "ATUALIZAR111@GMAIL.COM"

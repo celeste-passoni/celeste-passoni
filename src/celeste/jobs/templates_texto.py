@@ -21,7 +21,7 @@ TEMPLATES: dict[str, dict] = {
         "corpo": ("Olá, {1}! Aqui é a Celeste, da Passoni Clinic.\n\n"
                   "Identificamos que a sua solicitação de consulta, feita em {2}, ficou pendente e o agendamento não foi concluído.\n\n"
                   "Deseja dar continuidade? Responda esta mensagem que eu verifico os horários disponíveis para você."),
-        "botoes": [],
+        "botoes": ["Quero continuar", "Agora não"],   # quick replies (payload = texto); fluxo em ia/t1_botoes do YAML
         "sem_rodape": True,
     },
     "T2": {

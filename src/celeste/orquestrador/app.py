@@ -91,6 +91,12 @@ def responder(p: Pedido):
             mt.marcar_lida(ultimo_wamid)
         except Exception:
             pass
+    conv["id"] = p.conversa_id
+    acao = _acao_botao_t1(ref, ultimo_wamid)
+    if acao == "agora_nao":
+        return _responder_agora_nao(ref, conv, mt)
+    if acao == "sair":
+        return _responder_sair(ref, conv, mt)
 
     if conv.get("teste") or _e_numero_teste(conv.get("contato", "")):
         escrita_real = _escreve_no_tisaude(conv.get("contato", ""))
@@ -362,6 +368,58 @@ def _orientar_recepcao(ref, conv: dict, forcar: bool = False) -> dict:
              "orientacoes_enviadas": firestore.Increment(1),
              "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP, "total_msgs_celeste": firestore.Increment(1)}, merge=True)
     return {"ok": True, "enviado": 1, "orientado_recepcao": True}
+
+
+def _acao_botao_t1(ref, ultimo_wamid: str | None) -> str | None:
+    """Se a última mensagem do lead foi um botão do fluxo do T1, devolve a ação determinística ('agora_nao' | 'sair'); senão None."""
+    if not ultimo_wamid:
+        return None
+    m = ref.collection("mensagens").document(ultimo_wamid).get().to_dict() or {}
+    return classificar_botao_t1(m.get("botao"), m.get("texto"))
+
+
+def classificar_botao_t1(botao: str | None, texto: str | None) -> str | None:
+    b = config.parametros().get("t1_botoes") or {}
+    cand = {str(x or "").strip().casefold() for x in (botao, texto)}
+    if b.get("sair_id", "").casefold() in cand or b.get("sair_rotulo", "").casefold() in cand:
+        return "sair"
+    if b.get("agora_nao", "").casefold() in cand:
+        return "agora_nao"
+    return None
+
+
+def _responder_agora_nao(ref, conv: dict, mt: meta.Meta) -> dict:
+    """Lead tocou 'Agora não': pergunta o motivo com um botão de saída; status 'Irá nos retornar'. Sem modelo."""
+    b = config.parametros()["t1_botoes"]
+    nome = ((conv.get("nome") or "").strip().split() or [""])[0].title()
+    texto = b["agora_nao_texto"].replace("{nome}", nome).replace("Entendo, !", "Entendo!")
+    wamid = mt.enviar_botoes_resposta(conv["contato"], texto, [(b["sair_id"], b["sair_rotulo"])])
+    agora = datetime.now(timezone.utc)
+    ref.collection("mensagens").document(wamid).set({
+        "direcao": "celeste", "tipo": "interactive", "texto": f"{texto}\n[botão: {b['sair_rotulo']}]", "modelo": "fluxo T1",
+        "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
+    campos = {"status": "Irá nos retornar", "agora_nao_em": agora, "pendente_resposta": False,
+              "ultima": {"texto": texto[:160], "direcao": "celeste", "tipo": "interactive", "em": agora}, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP}
+    conv.update(campos); ref.set(campos, merge=True)
+    _espelhar_lead(conv)
+    return {"ok": True, "enviado": 1, "fluxo": "t1_agora_nao"}
+
+
+def _responder_sair(ref, conv: dict, mt: meta.Meta) -> dict:
+    """Lead tocou 'Não quero continuar': despedida, opt-out, sai da esteira. Sem modelo."""
+    b = config.parametros()["t1_botoes"]
+    nome = ((conv.get("nome") or "").strip().split() or [""])[0].title()
+    texto = b["sair_texto"].replace("{nome}", nome).replace("Tudo bem, .", "Tudo bem.")
+    wamid = mt.enviar_texto(conv["contato"], texto)
+    agora = datetime.now(timezone.utc)
+    ref.collection("mensagens").document(wamid).set({
+        "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": "fluxo T1",
+        "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
+    campos = {"status": "Não quer (opt-out)", "opt_out": True, "opt_out_em": agora, "aberta": False, "pendente_resposta": False,
+              "ultima": {"texto": texto[:160], "direcao": "celeste", "tipo": "text", "em": agora}, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP}
+    conv.update(campos); ref.set(campos, merge=True)
+    _espelhar_lead(conv)
+    return {"ok": True, "enviado": 1, "fluxo": "t1_sair"}
 
 
 def _pre_verificar_paciente(ref, conv: dict, ts) -> None:

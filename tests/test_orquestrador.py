@@ -619,3 +619,29 @@ def test_atualizar_paciente_cpf_novo_checa_duplicidade():
 ])
 def test_limpar_pontuacao_dois_pontos(entrada, esperado):
     assert motor.limpar_pontuacao(entrada) == esperado
+
+
+def test_classificar_botao_t1():
+    from celeste.orquestrador import app as oapp
+    assert oapp.classificar_botao_t1("Agora não", "Agora não") == "agora_nao"
+    assert oapp.classificar_botao_t1("agora não", None) == "agora_nao"
+    assert oapp.classificar_botao_t1("nao_quero_continuar", "Não quero continuar") == "sair"
+    assert oapp.classificar_botao_t1(None, "Não quero continuar") == "sair"
+    assert oapp.classificar_botao_t1("Quero continuar", "Quero continuar") is None
+    assert oapp.classificar_botao_t1(None, "oi") is None
+
+
+def test_botoes_resposta_payload():
+    from celeste.ferramentas import meta as m
+    cli = m.Meta.__new__(m.Meta); enviados = {}
+    cli._post = lambda caminho, corpo: (enviados.update(corpo) or {"messages": [{"id": "wamid-b"}]})
+    assert cli.enviar_botoes_resposta("5511", "texto", [("nao_quero_continuar", "Não quero continuar")]) == "wamid-b"
+    btn = enviados["interactive"]["action"]["buttons"][0]["reply"]
+    assert enviados["interactive"]["type"] == "button" and btn["id"] == "nao_quero_continuar" and btn["title"] == "Não quero continuar" and len(btn["title"]) <= 20
+
+
+def test_t1_tem_botoes_e_textos_do_fluxo():
+    from celeste.jobs import templates_texto as tt
+    assert tt.TEMPLATES["T1"]["botoes"] == ["Quero continuar", "Agora não"]
+    b = config.parametros()["t1_botoes"]
+    assert len(b["sair_rotulo"]) <= 20 and "{nome}" in b["agora_nao_texto"] and "{nome}" in b["sair_texto"]
