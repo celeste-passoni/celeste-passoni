@@ -18,12 +18,20 @@ TEXTOS = {
 }
 
 
+import re as _re
+_HORA = _re.compile(r"\b\d{1,2}h(\d{2})?\b|\b\d{1,2}:\d{2}\b")
+
+
 def etapa(conv: dict) -> str:
-    """Em que ponto a conversa parou: horários oferecidos, pré-cadastro pedido, ou outro."""
-    ultima = ((conv.get("ultima") or {}).get("texto") or "").lower()
-    if (conv.get("ultima") or {}).get("direcao") in ("celeste", "template") and ("dados abaixo" in ultima or "pré-cadastro" in ultima or "pre-cadastro" in ultima):
+    """Em que ponto a conversa parou, lendo a ÚLTIMA mensagem da Celeste (não listas antigas): horários oferecidos nela,
+    dados de cadastro pedidos nela, ou outro. Incidente de 13/10: uma lista de horários de uma semana antes gerou lembrete errado."""
+    u = conv.get("ultima") or {}
+    if u.get("direcao") not in ("celeste", "template"):
+        return "geral"
+    texto = (u.get("texto") or "").lower()
+    if any(k in texto for k in ("dados abaixo", "pré-cadastro", "pre-cadastro", "cep", "nome completo", "cadastro")):
         return "cadastro"
-    if conv.get("horarios_oferecidos") and conv.get("status") not in ("Agendado",):
+    if _HORA.search(texto) and any(k in texto for k in ("horário", "horario", "reserv", "atende", "tenho às", "terei")) and conv.get("status") != "Agendado":
         return "horarios"
     return "geral"
 

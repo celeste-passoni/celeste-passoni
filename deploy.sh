@@ -58,9 +58,14 @@ deploy_jobs() {
   URL=$(gcloud run services describe celeste-jobs --project "$PROJETO" --region "$REGIAO" --format 'value(status.url)')
   SA="celeste-jobs@${PROJETO}.iam.gserviceaccount.com"
   gcloud run services add-iam-policy-binding celeste-jobs --project "$PROJETO" --region "$REGIAO" --member "serviceAccount:$SA" --role roles/run.invoker --quiet
-  agendar() {  # nome cron caminho
-    gcloud scheduler jobs describe "$1" --project "$PROJETO" --location "$REGIAO" >/dev/null 2>&1 && ACAO=update || ACAO=create
+  agendar() {  # nome cron caminho — nunca religa um agendador: novo nasce pausado, pausado continua pausado (incidente de 13–14/10/2026)
+    ESTADO=$(gcloud scheduler jobs describe "$1" --project "$PROJETO" --location "$REGIAO" --format 'value(state)' 2>/dev/null || true)
+    if [ -n "$ESTADO" ]; then ACAO=update; else ACAO=create; fi
     gcloud scheduler jobs $ACAO http "$1" --project "$PROJETO" --location "$REGIAO" --schedule "$2" --time-zone "America/Sao_Paulo"       --uri "${URL}$3" --http-method POST --oidc-service-account-email "$SA" --attempt-deadline 900s --quiet
+    if [ "$ESTADO" != "ENABLED" ]; then
+      gcloud scheduler jobs pause "$1" --project "$PROJETO" --location "$REGIAO" --quiet >/dev/null 2>&1 || true
+      echo ">> agendador $1: $( [ -z "$ESTADO" ] && echo 'criado PAUSADO' || echo 'mantido PAUSADO' )"
+    fi
   }
   agendar celeste-carregar-base "0 6 * * *"        /jobs/carregar-base
   agendar celeste-disparos      "*/30 9-18 * * 1-5" /jobs/disparos

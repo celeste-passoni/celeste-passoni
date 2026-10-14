@@ -495,17 +495,35 @@ def test_renderizar_lista_por_id_e_prompt_sem_placeholders():
 
 def test_lembrete_texto_por_etapa():
     from celeste.orquestrador import lembretes_texto as lt
-    base = {"nome": "ana paula", "ultima": {"direcao": "celeste", "texto": "Terei às 15h00 e 16h00. Qual horário melhor lhe atende?"}}
-    assert lt.texto_lembrete(dict(base, horarios_oferecidos=["2026-10-13 15:00"]), 1) == "Ana, algum desses horários lhe atende?"
-    assert lt.texto_lembrete(dict(base, horarios_oferecidos=["2026-10-13 15:00"]), 2).startswith("Os agendamentos são realizados por todos os setores")
-    cad = dict(base, ultima={"direcao": "celeste", "texto": "Por gentileza, poderia me informar os dados abaixo para realizarmos o seu pré-cadastro"})
+    hor = {"nome": "ana paula", "ultima": {"direcao": "celeste", "texto": "Terei às 15h00 e 16h00. Qual horário melhor lhe atende?"}, "horarios_oferecidos": ["2026-10-13 15:00"]}
+    assert lt.texto_lembrete(hor, 1) == "Ana, algum desses horários lhe atende?"
+    assert lt.texto_lembrete(hor, 2).startswith("Os agendamentos são realizados por todos os setores")
+    cad = {"nome": "ana", "ultima": {"direcao": "celeste", "texto": "Para atualizar seu endereço, me manda o CEP, o número e o complemento"}}
     assert lt.texto_lembrete(cad, 1) == "Olá, gostaria de dar continuidade ao agendamento?"
-    assert lt.texto_lembrete(base, 1) == "Aguardo seu retorno, Ana! 💛"
-    assert lt.texto_lembrete(base, 2) == "Oi Ana, conseguiu verificar?"
-    assert lt.texto_lembrete(dict(base, nome=""), 1) == "Aguardo seu retorno! 💛"
-    assert lt.texto_lembrete(dict(base, horarios_oferecidos=["x"], status="Agendado"), 1) == "Aguardo seu retorno, Ana! 💛"
+    # lista antiga de horários na conversa, mas a última mensagem não fala de horário → NÃO é etapa de horários
+    velho = {"nome": "tati", "ultima": {"direcao": "celeste", "texto": "Pode desconsiderar minha última mensagem, foi um engano meu, desculpa"}, "horarios_oferecidos": ["2026-10-07 11:00"]}
+    assert lt.etapa(velho) == "geral" and lt.texto_lembrete(velho, 1) == "Aguardo seu retorno, Tati! 💛"
+    assert lt.texto_lembrete({"nome": "", "ultima": {"direcao": "celeste", "texto": "ok"}}, 1) == "Aguardo seu retorno! 💛"
+    assert lt.etapa({"ultima": {"direcao": "lead", "texto": "tenho às 15h"}}) == "geral"
 
 
+def test_lembrete_nao_vai_para_quem_disse_que_volta():
+    from celeste.jobs import lembretes
+    from datetime import datetime, timedelta, timezone
+    agora = datetime.now(timezone.utc)
+    base = {"frente": "leads_perdidos", "aberta": True, "modo": "ia", "lembretes_enviados": 0, "ultima_msg_lead_em": agora - timedelta(hours=5),
+            "primeira_msg_celeste_em": agora - timedelta(hours=5), "janela_24h_ate": agora + timedelta(hours=19),
+            "ultima": {"direcao": "celeste", "tipo": "text", "em": agora - timedelta(hours=3)}}
+    assert lembretes.elegivel(dict(base, status="Em conversa"), agora)[0]
+    for st in ("Irá nos retornar", "Vamos retornar na data solicitada", "Agora não"):
+        assert not lembretes.elegivel(dict(base, status=st), agora)[0]
+
+
+def test_fechar_assunto_limpa_horarios_oferecidos():
+    conv = {"id": "c1", "horarios_oferecidos": ["2026-10-13 15:00"]}
+    ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos)
+    saida, erro = ferramentas_ia.executar("atualizar_status", {"status": "Irá nos retornar", "data_retorno": ""}, ctx)
+    assert not erro and conv["horarios_oferecidos"] == []
 def test_prompt_v2_exemplos_e_regras():
     pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
     ex = (config.RAIZ / "knowledge" / "03-exemplos-de-conversas.md").read_text(encoding="utf-8")

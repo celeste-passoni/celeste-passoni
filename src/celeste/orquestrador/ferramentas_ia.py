@@ -253,7 +253,8 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         if not e.get("lead_confirmou_apos_solucao"):
             raise ValueError("o lead ainda não confirmou o cancelamento depois da solução oferecida; aguarde a resposta dele")
         ctx.ts.cancelar(int(e["id_agendamento"]), f"{motivo} | oferecido: {solucao}")
-        ctx.atualizar({"status": "Irá nos retornar", "id_agendamento_tisaude": None, "motivo_cancelamento": motivo, "solucao_oferecida": solucao})
+        ctx.atualizar({"status": "Irá nos retornar", "id_agendamento_tisaude": None, "motivo_cancelamento": motivo, "solucao_oferecida": solucao,
+                       "horarios_oferecidos": []})
         return {"ok": True}
 
     if nome == "encaminhar_recepcao":
@@ -263,7 +264,7 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         return {"ok": True, "aviso": "botão 'Falar com Recepção' será enviado automaticamente após suas mensagens; não escreva link nem número"}
 
     if nome == "registrar_opt_out":
-        ctx.atualizar({"status": "Não quer (opt-out)", "aberta": False, "opt_out": True, "opt_out_em": datetime.now(timezone.utc)})
+        ctx.atualizar({"status": "Não quer (opt-out)", "aberta": False, "opt_out": True, "opt_out_em": datetime.now(timezone.utc), "horarios_oferecidos": []})
         ctx.encerrar = True
         return {"ok": True}
 
@@ -287,6 +288,7 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         campos: dict = {"status": status}
         if e.get("data_retorno"):
             campos["proximo_recontato_em"] = e["data_retorno"]
+        campos["horarios_oferecidos"] = []   # assunto fechado sem agendamento: lista antiga não gera lembrete errado (incidente 13/10)
         ctx.atualizar(campos)
         return {"ok": True}
 
