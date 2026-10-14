@@ -61,6 +61,7 @@ flowchart TD
 - **Alteração cadastral a pedido:** qualquer dado, inclusive CPF; nome a API não altera → registra para a recepção.
 - **Recepção só em 4 casos:** já é paciente em tratamento; assunto clínico; reclamação/reembolso; pediu pessoa. Botão "Falar com Recepção".
 - **Horários:** sempre da agenda do TI Saúde; sem lista de feriados; orientação de que a clínica não atende fim de semana nem feriado.
+- **Vídeos:** só oferecidos como pergunta ligada ao que o lead trouxe (como funciona, Dr. Lucas, hesitação); enviados só se ele disser sim; nunca na abertura.
 - **Nunca:** diagnosticar, valor de tratamento, desconto, parcelar consulta, online, convênio, inventar informação (→ `sinalizar_revisao`), dizer que é IA.
 
 ## 3. O que ainda não existe (pendente)
