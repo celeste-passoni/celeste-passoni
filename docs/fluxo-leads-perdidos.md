@@ -16,9 +16,13 @@ flowchart TD
     AN -->|silêncio · 1 dia| T2
     T2 -->|toca Quero continuar<br/>ou escreve| C
     T2 -->|toca Agora não| AN
-    T2 -->|sem resposta · 3 dias| T3[T3 · provisório<br/>a definir pela clínica]
-    T3 -->|sem resposta · 8 dias| T4[T4 · provisório<br/>a definir pela clínica]
-    T4 -->|sem resposta| P[Pausa 30 dias → recomeça no T3]
+    T2 -->|sem resposta · 3 dias| T3[T3 · resgate_solicitacao_ainda_pendente<br/>UTILITY · mesmos botões]
+    T3 -->|toca Quero continuar<br/>ou escreve| C
+    T3 -->|toca Agora não| AN
+    T3 -->|sem resposta · 7 dias| T4[T4 · resgate_solicitacao_encerramento<br/>UTILITY · botões Quero continuar / Pode encerrar]
+    T4 -->|toca Quero continuar<br/>ou escreve| C
+    T4 -->|toca Pode encerrar| OUT
+    T4 -->|sem resposta| P[Pausa 15 dias → recomeça no T1<br/>2º ciclo; depois: Sem resposta, esteira encerrada]
     C --> F[Fluxo de atendimento · seção 2]
 ```
 
@@ -63,7 +67,7 @@ flowchart TD
 
 | Item | Estado |
 |---|---|
-| T3 e T4 definitivos | a definir pela clínica (hoje: textos antigos do MarketZap, não cadastrados na Meta) |
+| T3 e T4 | cadastrados na Meta em 14/10/2026 como UTILITY com botões (ids 2192490248348033 e 1088086500736244); aguardando aprovação |
 | Lembrete de retomada no mesmo dia | implementado (texto fixo por etapa), scheduler pausado |
 | Confirmação de presença (D-1), lembrete do dia, pós-consulta | dependem de templates de utilidade ainda não criados |
 | Ligar a esteira e a base | decisão da clínica para o piloto |
