@@ -1,0 +1,374 @@
+<title>Mapa de Mensagens Celeste</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: um mapa vertical em "trilhos". Cada nó é uma mensagem como o lead a vê no WhatsApp; as ramificações
+   saem do nó em colunas, cada uma com a etiqueta do que o lead fez. Sem bibliotecas; conectores em CSS. */
+:root{
+  --bg:#f6f1e8;            /* bege champanhe da Passoni */
+  --fg:#1b1d2b;
+  --muted:#6b6878;
+  --line:#d9d0c1;
+  --card:#ffffff;
+  --navy:#12152b;          /* balão da Celeste / template */
+  --navy-fg:#f6f1e8;
+  --lead:#dcf8c6;          /* balão do lead (verde WhatsApp) */
+  --lead-fg:#1b1d2b;
+  --btn:#eef2ff;           /* botão dentro do balão */
+  --btn-fg:#12152b;
+  --sys:#fff8e6;           /* mensagem fixa do sistema (sem IA) */
+  --sys-border:#e0c47a;
+  --edge:#8a6d2b;          /* etiqueta da aresta (o que o lead fez) */
+  --ok:#2e7d4f; --warn:#b4541a; --stop:#9b2c2c;
+  --display:"Fraunces",Georgia,serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#141622; --fg:#ece7dc; --muted:#a39d91; --line:#2d3042; --card:#1d2030; --navy:#2a2f4a; --navy-fg:#f3eee4;
+  --lead:#1f4a2e; --lead-fg:#e9f5e9; --btn:#2f3550; --btn-fg:#eef0ff; --sys:#2b2616; --sys-border:#8a6d2b; --edge:#d9b86a;
+  --ok:#6fcf97; --warn:#f0a06a; --stop:#f08a8a; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#141622; --fg:#ece7dc; --muted:#a39d91; --line:#2d3042; --card:#1d2030; --navy:#2a2f4a; --navy-fg:#f3eee4;
+  --lead:#1f4a2e; --lead-fg:#e9f5e9; --btn:#2f3550; --btn-fg:#eef0ff; --sys:#2b2616; --sys-border:#8a6d2b; --edge:#d9b86a;
+  --ok:#6fcf97; --warn:#f0a06a; --stop:#f08a8a; color-scheme:dark }
+
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.5;padding-inline:16px;padding-block:24px 64px}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,4vw,40px);line-height:1.1;margin:0 0 6px;text-wrap:balance}
+h2{font-family:var(--display);font-weight:600;font-size:22px;margin:0;text-wrap:balance}
+.sub{color:var(--muted);max-width:68ch;margin:0 0 12px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 28px}
+.chip{font-size:12px;padding:3px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);background:var(--card)}
+.chip b{color:var(--fg);font-weight:600}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}
+nav.toc a{font-size:13px;color:var(--fg);text-decoration:none;border:1px solid var(--line);background:var(--card);padding:6px 12px;border-radius:8px}
+nav.toc a:focus-visible,.legend:focus-visible{outline:2px solid var(--edge);outline-offset:2px}
+section.lane{border-top:1px solid var(--line);padding-top:22px;margin-top:34px}
+.lane-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-bottom:6px}
+.lane-head .eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--edge);font-weight:600}
+.lane p.lead{color:var(--muted);max-width:72ch;margin:4px 0 18px}
+
+/* nós e ramificações */
+.flow{display:flex;flex-direction:column;align-items:flex-start;gap:0}
+.node{position:relative;max-width:520px;min-width:0}
+.bubble{border-radius:14px;padding:12px 14px;box-shadow:0 1px 0 rgba(0,0,0,.06);white-space:pre-line;font-size:14px}
+.bubble.tpl,.bubble.ia{background:var(--navy);color:var(--navy-fg);border-bottom-left-radius:4px}
+.bubble.sys{background:var(--sys);color:var(--fg);border:1px dashed var(--sys-border);border-bottom-left-radius:4px}
+.bubble.lead{background:var(--lead);color:var(--lead-fg);border-bottom-right-radius:4px;margin-left:auto}
+.tag{display:inline-block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;margin:0 0 6px;color:var(--edge)}
+.tag.ia{color:var(--ok)} .tag.sys{color:var(--warn)}
+.buttons{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.buttons span{background:var(--btn);color:var(--btn-fg);text-align:center;border-radius:8px;padding:7px 10px;font-weight:600;font-size:13px}
+.bubble.tpl .buttons span,.bubble.ia .buttons span{background:rgba(255,255,255,.14);color:var(--navy-fg)}
+.note{font-size:12px;color:var(--muted);margin-top:6px;max-width:52ch}
+.state{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;border:1px solid var(--line);background:var(--card);margin-top:6px}
+.state.ok{color:var(--ok)} .state.warn{color:var(--warn)} .state.stop{color:var(--stop)}
+
+/* ramos: linha vertical desce do nó, depois colunas */
+.branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin:0 0 6px;padding-top:26px;position:relative;width:100%}
+.branches::before{content:"";position:absolute;left:24px;top:0;width:2px;height:26px;background:var(--line)}
+.branch{display:flex;flex-direction:column;gap:8px;min-width:0;padding-left:14px;border-left:2px solid var(--line)}
+.edge{font-size:12px;font-weight:600;color:var(--edge);display:flex;align-items:center;gap:6px}
+.edge::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--edge);flex:none}
+.edge.sem{color:var(--muted)} .edge.sem::before{background:var(--muted)}
+.edge.fim{color:var(--stop)} .edge.fim::before{background:var(--stop)}
+.then{font-size:12px;color:var(--muted)}
+.goto{font-size:12px;font-weight:600;color:var(--ok);text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:5px 10px;background:var(--card);display:inline-block;margin-top:4px}
+.goto:hover{text-decoration:underline}
+.spacer{height:22px;border-left:2px solid var(--line);margin-left:24px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;width:100%;margin-top:6px}
+.row .node{max-width:none}
+.rule{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.rule h3{font-size:14px;margin:0 0 6px;font-family:var(--body);font-weight:600}
+.rule p{margin:0;color:var(--muted);font-size:13px}
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:14px 0 0}
+.legend div{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.sw{width:22px;height:14px;border-radius:4px;flex:none;border:1px solid var(--line)}
+@media (prefers-reduced-motion:no-preference){ .goto{transition:background .15s} }
+@media (max-width:520px){ .bubble{font-size:13px} .branches{grid-template-columns:1fr} }
+</style>
+
+<div class="wrap">
+  <h1>Mapa de Mensagens Celeste</h1>
+  <p class="sub">O caminho de cada mensagem da frente Leads Perdidos, do template ao agendamento: o texto que o lead recebe, os botões, o que acontece em cada resposta e quem responde em cada ponto.</p>
+  <div class="meta">
+    <span class="chip">Estado em <b>14/10/2026</b></span>
+    <span class="chip">Esteira e lembretes <b>pausados</b></span>
+    <span class="chip">T1–T4 <b>aprovados · utilidade</b></span>
+    <span class="chip">Templates de consulta <b>em aprovação</b></span>
+  </div>
+  <nav class="toc" aria-label="Seções">
+    <a href="#esteira">1 · Esteira de resgate</a>
+    <a href="#atendimento">2 · Atendimento pela Celeste</a>
+    <a href="#objecoes">3 · Objeções</a>
+    <a href="#consulta">4 · Consulta marcada</a>
+    <a href="#lembretes">5 · Lembretes do mesmo dia</a>
+    <a href="#regras">6 · Regras que valem sempre</a>
+  </nav>
+  <div class="legend" aria-label="Legenda">
+    <div><span class="sw" style="background:var(--navy)"></span>Template ou balão da Celeste (IA)</div>
+    <div><span class="sw" style="background:var(--sys);border-style:dashed;border-color:var(--sys-border)"></span>Mensagem fixa do sistema, sem IA</div>
+    <div><span class="sw" style="background:var(--lead)"></span>O que o lead escreve ou toca</div>
+    <div><span class="sw" style="background:var(--edge)"></span>Aresta: a resposta do lead que leva ao próximo nó</div>
+  </div>
+
+  <!-- ============================ 1. ESTEIRA ============================ -->
+  <section class="lane" id="esteira">
+    <div class="lane-head"><span class="eyebrow">1 · Esteira de resgate</span><h2>Do primeiro toque ao encerramento</h2></div>
+    <p class="lead">Quatro templates de utilidade, enviados só a quem está na base de Leads Perdidos e nunca respondeu. Qualquer resposta escrita, em qualquer toque, para a esteira e entrega a conversa para a Celeste.</p>
+
+    <div class="flow">
+      <div class="node">
+        <div class="tag">T1 · dia 0 · resgate_solicitacao_pendente</div>
+        <div class="bubble tpl">Olá, Ana! Aqui é a Celeste, da Passoni Clinic.
+
+Identificamos que a sua solicitação de consulta, feita em junho, ficou pendente e o agendamento não foi concluído.
+
+Deseja dar continuidade? Responda esta mensagem que eu verifico os horários disponíveis para você.<div class="buttons"><span>Quero continuar</span><span>Agora não</span></div></div>
+        <div class="note">Variáveis: primeiro nome e mês do contato anterior. Sem rodapé.</div>
+      </div>
+
+      <div class="branches">
+        <div class="branch">
+          <div class="edge">toca "Quero continuar" ou escreve</div>
+          <div class="node"><div class="tag ia">Celeste assume · sem se apresentar de novo</div>
+            <div class="bubble ia">Que bom, Ana! Para eu verificar os horários, prefere a consulta com a Dra. Luciana ou com o Dr. Lucas?</div></div>
+          <a class="goto" href="#atendimento">→ segue no atendimento (seção 2)</a>
+        </div>
+        <div class="branch">
+          <div class="edge">toca "Agora não"</div>
+          <div class="node"><div class="tag sys">mensagem fixa · status "Agora não"</div>
+            <div class="bubble sys">Entendo, Ana! Só para eu te ajudar da melhor forma, me conta o que está dificultando agora? Pode escrever aqui embaixo.
+
+E se preferir não seguir por enquanto, é só tocar no botão.<div class="buttons"><span>Não quero continuar</span></div></div></div>
+          <div class="branches">
+            <div class="branch"><div class="edge">escreve o motivo</div><div class="then">A Celeste trata como objeção: um incentivo, uma solução, e tenta agendar.</div><a class="goto" href="#objecoes">→ objeções (seção 3)</a></div>
+            <div class="branch"><div class="edge fim">toca "Não quero continuar"</div>
+              <div class="node"><div class="tag sys">mensagem fixa · opt-out</div><div class="bubble sys">Tudo bem, Ana. Ficamos à disposição se mudar de ideia 💛</div></div>
+              <span class="state stop">Não quer (opt-out) · sai da esteira</span></div>
+            <div class="branch"><div class="edge sem">silêncio · 1 dia</div><div class="then">Recebe o T2 no dia seguinte.</div></div>
+          </div>
+        </div>
+        <div class="branch">
+          <div class="edge sem">sem resposta · 1 dia</div>
+          <div class="then">Vai para o T2.</div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="node">
+        <div class="tag">T2 · dia 1 · resgate_solicitacao_segue_pendente</div>
+        <div class="bubble tpl">Olá, Ana. Sua solicitação de consulta na Passoni Clinic segue pendente. Caso ainda queira concluir o agendamento, responda esta mensagem.<div class="buttons"><span>Quero continuar</span><span>Agora não</span></div></div>
+        <div class="note">Mesmos caminhos do T1 para cada botão. Sem resposta em 3 dias → T3.</div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="node">
+        <div class="tag">T3 · dia 4 · resgate_solicitacao_ainda_pendente</div>
+        <div class="bubble tpl">Olá, Ana. Sua solicitação de consulta na Passoni Clinic ainda está pendente. Se quiser concluir o agendamento, responda esta mensagem.<div class="buttons"><span>Quero continuar</span><span>Agora não</span></div></div>
+        <div class="note">Mesmos caminhos. Sem resposta em 7 dias → T4.</div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="node">
+        <div class="tag">T4 · dia 11 · resgate_solicitacao_encerramento</div>
+        <div class="bubble tpl">Olá, Ana. Como não tivemos o seu retorno, vamos encerrar a sua solicitação de consulta na Passoni Clinic. Se ainda quiser agendar, responda esta mensagem.<div class="buttons"><span>Quero continuar</span><span>Pode encerrar</span></div></div>
+      </div>
+      <div class="branches">
+        <div class="branch"><div class="edge">toca "Quero continuar" ou escreve</div><div class="then">A Celeste assume.</div><a class="goto" href="#atendimento">→ seção 2</a></div>
+        <div class="branch"><div class="edge fim">toca "Pode encerrar"</div>
+          <div class="node"><div class="tag sys">mensagem fixa · opt-out</div><div class="bubble sys">Tudo bem, Ana. Solicitação encerrada. Se mudar de ideia, é só nos chamar por aqui 💛</div></div>
+          <span class="state stop">sai da esteira</span></div>
+        <div class="branch"><div class="edge sem">sem resposta</div><div class="then">Pausa de 15 dias e a esteira recomeça no T1, uma única vez. Ao fim do segundo ciclo sem resposta:</div><span class="state warn">Sem resposta (esteira encerrada)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 2. ATENDIMENTO ============================ -->
+  <section class="lane" id="atendimento">
+    <div class="lane-head"><span class="eyebrow">2 · Atendimento pela Celeste</span><h2>Da resposta ao agendamento</h2></div>
+    <p class="lead">A Celeste imita as duas atendentes de referência: um balão por vez na maior parte das vezes, pergunta de modalidade e de agenda, e nada de valor antes de o lead perguntar. Os textos abaixo são os da casa; a Celeste os adapta ao que o lead disse.</p>
+
+    <div class="flow">
+      <div class="node"><div class="tag ia">Apresentação · só no primeiro contato espontâneo (quem veio do template já foi apresentado)</div>
+        <div class="bubble ia">Oi Ana, tudo bem?</div>
+        <div class="bubble ia" style="margin-top:6px">É um prazer falar com você, aqui é a Celeste, concierge da Passoni Clinic, e estou aqui para te ajudar! 💛</div>
+        <div class="note">Um "oi" solto recebe só isso e espera. Se o lead já disse o que quer, a resposta vem junto.</div></div>
+
+      <div class="spacer"></div>
+      <div class="node"><div class="tag ia">Modalidade · sem valor</div>
+        <div class="bubble ia">Na Passoni Clinic, você pode agendar a consulta com a Dra. Luciana Passoni ou com o Dr. Lucas Vieira, Diretor Médico da clínica. A Dra. Luciana atende de segunda a sexta-feira, das 12h às 17h. A equipe médica atende de segunda a sexta-feira, das 9h às 17h.</div>
+        <div class="bubble ia" style="margin-top:6px">Qual seria a melhor opção para você?</div>
+        <div class="note">O vídeo institucional vai uma vez por conversa, entregue depois dos balões de texto, sem comentário.</div></div>
+
+      <div class="spacer"></div>
+      <div class="node"><div class="tag ia">Agenda</div>
+        <div class="bubble ia">Como está a sua agenda na próxima semana?</div>
+        <div class="note">Ou "Quando você poderia vir?". Se o lead já deu um dia, ela consulta a agenda direto.</div></div>
+
+      <div class="spacer"></div>
+      <div class="node"><div class="tag ia">Horários · sempre da agenda real do TI Saúde</div>
+        <div class="bubble ia">Terei às 15h00, 16h00 e 17h00 no dia 06/10. Qual horário melhor lhe atende? 😊</div>
+        <div class="note">2 ou 3 opções. "Lhe atende?", "Posso reservar para você?". Fins de semana e feriados só aparecem se a agenda mostrar.</div></div>
+
+      <div class="branches">
+        <div class="branch"><div class="edge">escolhe um horário</div>
+          <div class="node"><div class="tag ia">Pré-cadastro</div>
+            <div class="bubble ia">Perfeito.</div>
+            <div class="bubble ia" style="margin-top:6px">Por gentileza, poderia me informar os dados abaixo para realizarmos o seu pré-cadastro e reservar o horário?
+
+Nome completo
+CPF
+Data de nascimento
+Sexo (masculino/feminino)
+E-mail
+Como nos conheceu?
+CEP
+Número da residência com o complemento</div></div>
+          <div class="branches">
+            <div class="branch"><div class="edge">passa os dados</div><div class="then">Cadastro no TI Saúde com nome completo, sem abreviações. Se o CPF já existir, usa o cadastro existente.</div></div>
+            <div class="branch"><div class="edge">não quer passar os dados</div>
+              <div class="node"><div class="tag ia">Insiste uma única vez</div><div class="bubble ia">Entendo! Só preciso deles para garantir a reserva do seu horário no sistema, tá?</div></div>
+              <div class="then">Se mantiver a recusa: cadastro genérico com nome completo e sexo; nascimento 01/01/2001, e-mail e endereço da clínica, CPF vazio.</div></div>
+          </div>
+        </div>
+        <div class="branch"><div class="edge">objeção ou dúvida</div><div class="then">Texto da casa uma vez, e volta para a agenda.</div><a class="goto" href="#objecoes">→ seção 3</a></div>
+        <div class="branch"><div class="edge sem">demora a escolher</div><div class="then">Escassez, uma vez por conversa:</div>
+          <div class="node"><div class="bubble ia">Os agendamentos são realizados por todos os setores da clínica e as datas são preenchidas conforme a disponibilidade. Por isso, pedimos a gentileza de nos dar um retorno o mais breve possível, para que possamos verificar a disponibilidade e reservar sua data.
+
+Ficamos no aguardo da sua confirmação, ok?</div></div></div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="node"><div class="tag ia">Confirmação · agendado no TI Saúde · o valor aparece aqui, uma vez</div>
+        <div class="bubble ia">Perfeito, Ana! Muito obrigada pelo retorno. 😊</div>
+        <div class="bubble ia" style="margin-top:6px">Seu atendimento ficou agendado para o dia 18/09, às 11h00, com o Dr. Lucas Vieira. O valor da consulta é R$ 800,00 (cartão de crédito, débito, pix ou dinheiro). 📍 Endereço: Av. República do Líbano, 886, Moema, em frente ao Parque Ibirapuera. Pedimos, por gentileza, que chegue com até 15 minutos de antecedência. No dia, venha com os cabelos limpos e secos, sem creme, gel ou finalizador, e traga exames do último ano, se tiver.</div>
+        <div class="bubble ia" style="margin-top:6px">Em breve estaremos juntos e cuidaremos da saúde dos seus cabelos! Agradecemos pela confiança! 💙</div>
+        <div class="note">Cadastro genérico: acrescenta "No dia da consulta, a recepção vai precisar dos seus dados completos para finalizar o cadastro, tá bom?".</div>
+        <span class="state ok">Agendado · missão cumprida</span></div>
+
+      <div class="branches">
+        <div class="branch"><div class="edge sem">lead manda "oi" depois de agendado</div><div class="node"><div class="bubble ia">Oi, Ana! 😊 Tudo bem?</div></div><div class="then">Responde na mesma medida e espera. Não pergunta "ficou alguma dúvida?".</div></div>
+        <div class="branch"><div class="edge">fala da consulta marcada</div><div class="then">Consulta o TI Saúde antes de responder e usa exatamente o que o sistema devolver. Nunca deduz por horários livres.</div></div>
+        <div class="branch"><div class="edge fim">pede para cancelar</div>
+          <div class="node"><div class="bubble ia">Poxa, Ana, o que aconteceu? Me conta que eu vejo como te ajudar</div></div>
+          <div class="then">1 motivo → 2 solução (remarcar com horários reais, valor, dúvida) → 3 só cancela se o lead insistir depois da solução. A ferramenta recusa sem os três.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 3. OBJEÇÕES ============================ -->
+  <section class="lane" id="objecoes">
+    <div class="lane-head"><span class="eyebrow">3 · Objeções</span><h2>Texto da casa, uma vez, e volta para a agenda</h2></div>
+    <p class="lead">Cada objeção recebe o texto da clínica e, no balão seguinte, a pergunta de agenda. Hesitação recebe um incentivo só; se o lead mantém, a Celeste aceita com elegância.</p>
+    <div class="row">
+      <div class="node"><div class="tag">"quanto custa?" · só quando perguntado</div><div class="bubble ia">A consulta com a Dra. Luciana Passoni é R$ 1.200,00. Já com o Dr. Lucas Vieira, o valor é R$ 800,00. Ambos realizam uma avaliação completa e, a partir do diagnóstico, orientam a conduta mais adequada para cada caso.</div></div>
+      <div class="node"><div class="tag">"achei caro" / "tem desconto?"</div><div class="bubble ia">Na consulta eu infelizmente não consigo. Eu consigo condições especiais para viabilizar o seu tratamento.</div><div class="bubble ia" style="margin-top:6px">Estamos trabalhando com um valor mais acessível para a consulta com o Dr. Lucas, justamente para tornar o atendimento mais acessível. Mesmo com essa condição especial, mantemos o mesmo cuidado, atenção e qualidade no atendimento. 💛</div></div>
+      <div class="node"><div class="tag">"parcela?"</div><div class="bubble ia">Aceitamos cartão de crédito, débito, pix e dinheiro. Não parcelamos o valor da consulta, apenas o valor do tratamento, em até 10x sem juros no cartão.</div></div>
+      <div class="node"><div class="tag">"atende convênio?"</div><div class="bubble ia">A Passoni Clinic não atende por convênios. Emitimos nota fiscal em todos os atendimentos, assim você poderá solicitar reembolso do seu convênio, conforme seu contrato.</div></div>
+      <div class="node"><div class="tag">"quanto custa o tratamento?"</div><div class="bubble ia">Nós não trabalhamos com tabela de valores fixos para tratamento. Nosso atendimento é altamente personalizado, e cada caso é único, o que torna difícil fornecer valores sem uma avaliação detalhada. A consulta é essencial para que o médico possa avaliar sua condição capilar e entender suas necessidades específicas.</div></div>
+      <div class="node"><div class="tag">"quem é o Dr. Lucas?" / equipe × Dra.</div><div class="bubble ia">Os médicos da equipe da Passoni Clinic são treinados diretamente pela Dra. Luciana e seguem a mesma metodologia e os protocolos desenvolvidos por ela. Já a consulta com a Dra. Luciana Passoni é um atendimento mais exclusivo, pois ela é a criadora de todos os protocolos de tratamento da clínica.</div></div>
+      <div class="node"><div class="tag">"faz online?"</div><div class="bubble ia">Para garantir um diagnóstico preciso e confiável, é fundamental que a consulta seja realizada de forma presencial. No atendimento presencial, o médico consegue realizar uma avaliação clínica completa e o exame de tricoscopia digital, que analisa com precisão o couro cabeludo e os fios.</div></div>
+      <div class="node"><div class="tag">"moro longe"</div><div class="bubble ia">A Dra. Luciana já atende diversos pacientes que não moram na capital. A frequência das sessões é flexível e adaptada ao quadro: alguns pacientes retornam mensalmente, outros a cada três meses e, em alguns casos, a cada seis meses.</div></div>
+      <div class="node"><div class="tag">"já fiz de tudo e nada resolveu"</div><div class="bubble ia">Tenho certeza de que aqui na Passoni Clinic sua experiência será diferente. Somos especialistas em tricologia e nosso foco é 100% voltado para a saúde capilar. Atendemos desde os casos mais simples até os mais complexos, sempre olhando cada paciente de forma individual.</div></div>
+      <div class="node"><div class="tag">"vou pensar" · incentivo único</div><div class="bubble ia">Só te digo uma coisa: se você já está pensando em cuidar dos seus fios, vale a pena não deixar para depois. Na tricologia, tempo é cabelo, e quanto antes entendermos o que está acontecendo, melhor conseguimos conduzir o caso.</div><div class="bubble ia" style="margin-top:6px">Se a questão for se organizar na agenda ou financeiramente, me conta que eu vejo a melhor forma.</div><div class="note">Se mantiver: "Combinado, Ana! Aguardo o seu retorno." → status Irá nos retornar.</div></div>
+      <div class="node"><div class="tag">"não tenho interesse"</div><div class="bubble ia">Obrigada pelo retorno, Ana.</div><div class="bubble ia" style="margin-top:6px">Existe algo que esteja tornando difícil marcar a consulta agora? Podemos verificar outras opções de data, horário ou até esclarecer dúvidas, se for o caso.</div><div class="note">Se der o motivo: "Sem problemas, Ana. Ficamos à disposição caso, em algum momento, deseje um atendimento mais especializado." Se pedir para parar: opt-out.</div></div>
+      <div class="node"><div class="tag">assunto fora da clínica (ex.: outro medicamento)</div><div class="bubble ia">Aqui na Passoni Clinic somos 100% dedicados à saúde capilar, então não fazemos prescrição desse tipo. Você já está fazendo uso? Pergunto porque é bem comum notar queda ou afinamento durante o uso, e isso tem tratamento.</div></div>
+    </div>
+  </section>
+
+  <!-- ============================ 4. CONSULTA MARCADA ============================ -->
+  <section class="lane" id="consulta">
+    <div class="lane-head"><span class="eyebrow">4 · Consulta marcada</span><h2>Confirmação, lembretes, falta e cancelamento</h2></div>
+    <p class="lead">Templates de utilidade cadastrados em 14/10, em aprovação na Meta. Valem <b>somente para consultas que a Celeste agendou</b>; as demais seguem com a recepção pelo outro número. As rotinas de envio ainda serão desenhadas e aprovadas.</p>
+
+    <div class="flow">
+      <div class="node"><div class="tag">48 h antes · consulta_48_horas</div>
+        <div class="bubble tpl">⏳ Olá, Ana!
+
+Temos uma consulta agendada para sexta-feira, 17/10, às 11h.
+
+Como este horário foi reservado exclusivamente para você, pedimos, por gentileza, que confirme a sua presença ou solicite o reagendamento pelos botões abaixo.
+
+Agradecemos pela compreensão. 💙<div class="buttons"><span>Confirmar presença</span><span>Preciso remarcar</span></div></div></div>
+      <div class="branches">
+        <div class="branch"><div class="edge">toca "Confirmar presença"</div><div class="then">Marca a consulta como confirmada no TI Saúde e a Celeste responde com as orientações do dia.</div><span class="state ok">Confirmado</span></div>
+        <div class="branch"><div class="edge">toca "Preciso remarcar" ou escreve</div><div class="then">A Celeste consulta o agendamento, oferece horários reais e remarca.</div></div>
+        <div class="branch"><div class="edge sem">sem resposta</div><div class="then">Recebe o lembrete da véspera.</div></div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="node"><div class="tag">Véspera · consulta_confirmar_24_horas</div>
+        <div class="bubble tpl">⏰ Olá, Ana!
+
+Já deixamos tudo preparado para te receber dia sexta-feira, 17/10 e reservamos esse horário especialmente para a sua avaliação.
+
+Passando para te lembrar que te esperamos às 11h, combinado?<div class="buttons"><span>Confirmar presença</span><span>Preciso remarcar</span></div></div>
+        <div class="note">Quem já confirmou no toque anterior recebe sem botões.</div></div>
+
+      <div class="spacer"></div>
+      <div class="node"><div class="tag">Manhã do dia · consulta_hoje</div>
+        <div class="bubble tpl">Olá, Ana!
+
+Tudo preparado para te receber HOJE às 11h.
+
+Por gentileza, chegue com 15 minutos de antecedência! Estamos na Av. República do Líbano, 886, Moema, com valet cortesia.</div></div>
+
+      <div class="branches">
+        <div class="branch"><div class="edge sem">compareceu</div><span class="state ok">Atendido · fim do fluxo</span></div>
+        <div class="branch"><div class="edge fim">faltou · status Falta no TI Saúde</div>
+          <div class="node"><div class="tag">Fim do dia · faltou_a_consulta</div>
+            <div class="bubble tpl">Olá, Ana! 😊
+
+📅 Notamos que você não compareceu a sua consulta em sexta-feira, 17/10 e não recebemos um aviso prévio.
+
+🕒 Como esse horário foi reservado exclusivamente para você, ele permaneceu indisponível para outros pacientes.
+
+📲 Caso deseje realizar um novo agendamento, basta responder a esta mensagem.<div class="buttons"><span>Quero remarcar</span><span>Não quero remarcar</span></div></div></div>
+          <div class="branches">
+            <div class="branch"><div class="edge">toca "Quero remarcar" ou escreve</div><div class="then">A Celeste oferece horários e remarca.</div></div>
+            <div class="branch"><div class="edge fim">toca "Não quero remarcar"</div><div class="then">Balão de despedida. Efeito final a decidir pela clínica: encerra só este agendamento ou retira o paciente dos contatos da IA.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="node"><div class="tag">Quando a clínica precisa cancelar · consulta_cancelada_clinica · disparado pela recepção no painel</div>
+        <div class="bubble tpl">Olá, Ana!
+
+Em razão de uma situação excepcional e alheia à nossa vontade, infelizmente precisaremos cancelar a sua consulta agendada para sexta-feira, 17/10.
+
+Sempre que há ausências programadas, como participação em congressos ou procedimentos cirúrgicos, informamos nossos pacientes com antecedência. Desta vez, porém, ocorreu um imprevisto que impossibilitou a realização do atendimento.
+
+Pedimos sinceras desculpas pelo transtorno. Responda a esta mensagem para que a Celeste possa conversar com você, priorizando o seu reagendamento em uma nova data que seja conveniente.<div class="buttons"><span>Remarcar agora</span></div></div></div>
+      <div class="branches">
+        <div class="branch"><div class="edge">toca "Remarcar agora" ou escreve</div><div class="then">A Celeste assume e oferece os primeiros horários livres, com prioridade.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 5. LEMBRETES ============================ -->
+  <section class="lane" id="lembretes">
+    <div class="lane-head"><span class="eyebrow">5 · Lembretes do mesmo dia</span><h2>Quando o lead para de responder no meio da conversa</h2></div>
+    <p class="lead">Texto fixo, sem IA, escolhido pela última mensagem da Celeste. Primeiro lembrete 2 h depois da última mensagem dela sem resposta, segundo 3 h depois do primeiro, no máximo dois por fio, das 9h às 19h em dias úteis, só dentro da janela de 24 h. Quem disse que volta ("Irá nos retornar", "Agora não") não recebe. Hoje pausado.</p>
+    <div class="row">
+      <div class="node"><div class="tag sys">última mensagem ofereceu horários</div><div class="bubble sys">Ana, algum desses horários lhe atende?</div><div class="note">2º lembrete: o texto de escassez da casa.</div></div>
+      <div class="node"><div class="tag sys">última mensagem pediu dados ou CEP</div><div class="bubble sys">Olá, gostaria de dar continuidade ao agendamento?</div><div class="note">2º: "Ana, aguardo o seu retorno para darmos continuidade no seu agendamento."</div></div>
+      <div class="node"><div class="tag sys">qualquer outro ponto</div><div class="bubble sys">Aguardo seu retorno, Ana! 💛</div><div class="note">2º: "Oi Ana, conseguiu verificar?"</div></div>
+    </div>
+  </section>
+
+  <!-- ============================ 6. REGRAS ============================ -->
+  <section class="lane" id="regras">
+    <div class="lane-head"><span class="eyebrow">6 · Regras que valem sempre</span><h2>O que a Celeste faz e não faz em qualquer ponto do mapa</h2></div>
+    <div class="row" style="margin-top:14px">
+      <div class="rule"><h3>Valor só se perguntarem</h3><p>Nunca cita o valor da consulta por conta própria. Se o lead perguntar, responde direto. Senão, o valor aparece uma vez, na confirmação.</p></div>
+      <div class="rule"><h3>Horários só da agenda real</h3><p>Toda opção vem do TI Saúde. Sem lista de feriados nem de fins de semana: se a agenda mostrar, pode marcar. Se perguntarem, a clínica não atende fim de semana nem feriado.</p></div>
+      <div class="rule"><h3>Consulta marcada: nunca deduz</h3><p>Se o lead falar da consulta, consulta o sistema antes de responder. Horário livre não diz nada sobre o agendamento dele.</p></div>
+      <div class="rule"><h3>Cancelar tem ordem</h3><p>Motivo, solução, e só cancela se o lead insistir depois da solução. A ferramenta recusa sem os três.</p></div>
+      <div class="rule"><h3>Cadastro</h3><p>Nome completo, sem abreviações. Altera qualquer dado a pedido, inclusive CPF; nome vai para a recepção. Sem dados após uma insistência: cadastro genérico, CPF vazio.</p></div>
+      <div class="rule"><h3>Recepção só em 4 casos</h3><p>Já é paciente em tratamento, assunto clínico, reclamação ou reembolso, pediu uma pessoa. Botão "Falar com Recepção".</p></div>
+      <div class="rule"><h3>Nunca</h3><p>Diagnosticar, dar valor de tratamento, desconto, parcelar a consulta, atender online, aceitar convênio, inventar informação ou dizer que é IA.</p></div>
+      <div class="rule"><h3>Pontuação e estilo</h3><p>Sem travessão, sem dois-pontos emendando frases, horários em texto normal. Um balão na maior parte das vezes, nunca mais de três. Vídeo por último, sem comentário.</p></div>
+    </div>
+  </section>
+</div>
