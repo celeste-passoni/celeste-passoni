@@ -45,3 +45,18 @@ Recontato por status de quem respondeu e parou: "Irá nos retornar" e "Vamos ret
 - Segundo toque, sem resposta ao T1: "Olá, {{1}}. Sua solicitação de consulta segue pendente. Caso ainda queira concluir o agendamento, responda esta mensagem."
 - Escolheu horário e não mandou os dados: "Olá, {{1}}. A reserva da sua consulta ficou pendente por falta dos dados de cadastro. Responda esta mensagem para concluir."
 - Pediu para remarcar e sumiu: "Olá, {{1}}. A remarcação da sua consulta ficou pendente. Responda esta mensagem para escolhermos um novo horário."
+
+## Templates de consulta (pós-agendamento) — cadastrados em 14/10/2026 na conta da Celeste, todos como UTILITY
+
+Cópias dos templates da conta "Passoni Clinic" (1470345631783377) do outro número, com "Digite 1/2" trocado por botões; os dois que só existiam em texto foram criados a partir das versões da clínica.
+
+| Nome | Meta id | Variáveis | Botões | Rotina de envio (a definir) |
+|---|---|---|---|---|
+| `consulta_48_horas` | 1814879276183701 | {{1}} nome · {{2}} data · {{3}} hora | Confirmar presença · Preciso remarcar | 48 h antes |
+| `consulta_confirmar_24_horas` | 1772542997334489 | {{1}} nome · {{2}} data · {{3}} hora | Confirmar presença · Preciso remarcar | véspera |
+| `consulta_hoje` | 1619438986499382 | {{1}} nome · {{2}} hora | — | manhã do dia |
+| `faltou_a_consulta` | 1015024554724255 | {{1}} nome · {{2}} data | Quero remarcar · Não quero remarcar | fim do dia, status Falta no TI Saúde |
+| `consulta_cancelada_clinica` | 1424836069802950 | {{1}} nome · {{2}} data | Remarcar agora | manual, pela recepção no painel |
+| `atrasos` | 1625466219306925 | {{1}} nome | — | recepção, pacientes em tratamento (fora da Celeste) |
+
+Decisões pendentes da clínica: (1) alcance dos envios automáticos — toda a agenda do TI Saúde ou só consultas agendadas pela Celeste; (2) efeito do botão "Não quero remarcar" — encerra só o agendamento ou retira o paciente dos contatos da IA. As rotinas de envio só serão implementadas depois dessas respostas e da aprovação do desenho.
