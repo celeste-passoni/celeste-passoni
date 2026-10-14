@@ -95,8 +95,8 @@ def responder(p: Pedido):
     acao = _acao_botao_t1(ref, ultimo_wamid)
     if acao == "agora_nao":
         return _responder_agora_nao(ref, conv, mt)
-    if acao == "sair":
-        return _responder_sair(ref, conv, mt)
+    if acao in ("sair", "encerrar"):
+        return _responder_sair(ref, conv, mt, acao)
 
     if conv.get("teste") or _e_numero_teste(conv.get("contato", "")):
         escrita_real = _escreve_no_tisaude(conv.get("contato", ""))
@@ -383,6 +383,8 @@ def classificar_botao_t1(botao: str | None, texto: str | None) -> str | None:
     cand = {str(x or "").strip().casefold() for x in (botao, texto)}
     if b.get("sair_id", "").casefold() in cand or b.get("sair_rotulo", "").casefold() in cand:
         return "sair"
+    if b.get("encerrar_rotulo", "").casefold() in cand:
+        return "encerrar"
     if b.get("agora_nao", "").casefold() in cand:
         return "agora_nao"
     return None
@@ -405,11 +407,11 @@ def _responder_agora_nao(ref, conv: dict, mt: meta.Meta) -> dict:
     return {"ok": True, "enviado": 1, "fluxo": "t1_agora_nao"}
 
 
-def _responder_sair(ref, conv: dict, mt: meta.Meta) -> dict:
-    """Lead tocou 'Não quero continuar': despedida, opt-out, sai da esteira. Sem modelo."""
+def _responder_sair(ref, conv: dict, mt: meta.Meta, acao: str = "sair") -> dict:
+    """Lead tocou 'Não quero continuar' (T1–T3) ou 'Pode encerrar' (T4): despedida, opt-out, sai da esteira. Sem modelo."""
     b = config.parametros()["t1_botoes"]
     nome = ((conv.get("nome") or "").strip().split() or [""])[0].title()
-    texto = b["sair_texto"].replace("{nome}", nome).replace("Tudo bem, .", "Tudo bem.")
+    texto = (b["encerrar_texto"] if acao == "encerrar" else b["sair_texto"]).replace("{nome}", nome).replace("Tudo bem, .", "Tudo bem.")
     wamid = mt.enviar_texto(conv["contato"], texto)
     agora = datetime.now(timezone.utc)
     ref.collection("mensagens").document(wamid).set({

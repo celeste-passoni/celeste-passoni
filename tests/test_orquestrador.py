@@ -627,6 +627,7 @@ def test_classificar_botao_t1():
     assert oapp.classificar_botao_t1("agora não", None) == "agora_nao"
     assert oapp.classificar_botao_t1("nao_quero_continuar", "Não quero continuar") == "sair"
     assert oapp.classificar_botao_t1(None, "Não quero continuar") == "sair"
+    assert oapp.classificar_botao_t1("Pode encerrar", "Pode encerrar") == "encerrar"
     assert oapp.classificar_botao_t1("Quero continuar", "Quero continuar") is None
     assert oapp.classificar_botao_t1(None, "oi") is None
 

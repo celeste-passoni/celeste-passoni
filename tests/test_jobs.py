@@ -42,7 +42,7 @@ def _lead(**k):
 
 
 def test_esteira_segue_cadencia_da_atendente_de_referencia():
-    # T1 (solicitação pendente) → +1 d T2 (segue pendente) → +3 d T3 → +8 d T4 → +3 d T2
+    # T1 (solicitação pendente) → +1 d T2 (segue pendente) → +3 d T3 (ainda pendente) → +7 d T4 (encerramento)
     d0 = disparos.decidir(_lead(), AGORA)
     assert d0 and d0.template == "T1" and d0.novo_passo == 1
     assert disparos.decidir(_lead(status_ia="Template enviado (1°)", passo=1, ultimo_template_em=AGORA - timedelta(hours=20)), AGORA) is None
@@ -50,20 +50,21 @@ def test_esteira_segue_cadencia_da_atendente_de_referencia():
     assert d2 and d2.template == "T2" and d2.novo_passo == 2
     d3 = disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=2, ultimo_template_em=AGORA - timedelta(days=3)), AGORA)
     assert d3 and d3.template == "T3" and d3.novo_passo == 3
-    assert disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=3, ultimo_template_em=AGORA - timedelta(days=7)), AGORA) is None
-    d4 = disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=3, ultimo_template_em=AGORA - timedelta(days=8)), AGORA)
-    assert d4 and d4.template == "T4" and d4.novo_passo == 4
-    d5 = disparos.decidir(_lead(status_ia="Template enviado (1°)", passo=4, ultimo_template_em=AGORA - timedelta(days=3)), AGORA)
-    assert d5 and d5.template == "T2" and d5.novo_passo == 5
+    assert disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=3, ultimo_template_em=AGORA - timedelta(days=6)), AGORA) is None
+    d4 = disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=3, ultimo_template_em=AGORA - timedelta(days=7)), AGORA)
+    assert d4 and d4.template == "T4" and d4.novo_passo == 4 and d4.novo_ciclo == 1
 
 
 def test_pausa_e_reinicio_da_esteira():
-    # fim da esteira: pausa de 30 dias e volta ao índice 2 (T3)
-    fim = _lead(status_ia="Template enviado (2°)", passo=5, ultimo_template_em=AGORA - timedelta(days=29))
+    # fim do 1º ciclo: pausa de 15 dias e recomeça no T1 (2º ciclo); fim do 2º ciclo: encerra
+    fim = _lead(status_ia="Template enviado (1°)", passo=4, ciclos=1, ultimo_template_em=AGORA - timedelta(days=14))
     assert disparos.decidir(fim, AGORA) is None
-    fim["ultimo_template_em"] = AGORA - timedelta(days=31)
+    fim["ultimo_template_em"] = AGORA - timedelta(days=16)
     r = disparos.decidir(fim, AGORA)
-    assert r and r.template == "T3" and r.novo_passo == 3
+    assert r and r.template == "T1" and r.novo_passo == 1 and r.novo_ciclo == 2
+    fim2 = _lead(status_ia="Template enviado (1°)", passo=4, ciclos=2, ultimo_template_em=AGORA - timedelta(days=16))
+    r2 = disparos.decidir(fim2, AGORA)
+    assert r2 and r2.template is None and "encerrada" in r2.motivo
 
 
 def test_templates_sao_os_da_clinica():
@@ -71,13 +72,14 @@ def test_templates_sao_os_da_clinica():
     assert set(tt.TEMPLATES) == {"T1", "T2", "T3", "T4"}
     assert "solicitação de consulta, feita em {2}" in tt.TEMPLATES["T1"]["corpo"] and "segue pendente" in tt.TEMPLATES["T2"]["corpo"]
     assert tt.TEMPLATES["T2"]["botoes"] == ["Quero continuar", "Agora não"] and "SAIR" not in tt.renderizar("T2", "Ana")
-    assert "duas formas" in tt.TEMPLATES["T3"]["corpo"] and "demonstrou interesse" in tt.TEMPLATES["T4"]["corpo"]
-    assert tt.parametros("T1", "Ana", mes="junho") == ["Ana", "junho"] and tt.parametros("T2", "Ana") == ["Ana"] and tt.parametros("T3", "Ana") == []
+    assert "ainda está pendente" in tt.TEMPLATES["T3"]["corpo"] and "vamos encerrar" in tt.TEMPLATES["T4"]["corpo"]
+    assert tt.TEMPLATES["T4"]["botoes"] == ["Quero continuar", "Pode encerrar"] and tt.parametros("T4", "Ana") == ["Ana"]
+    assert tt.parametros("T1", "Ana", mes="junho") == ["Ana", "junho"] and tt.parametros("T2", "Ana") == ["Ana"] and tt.parametros("T3", "Ana") == ["Ana"]
     assert "SAIR" not in tt.renderizar("T1", "Ana", mes="junho") and "feita em junho" in tt.renderizar("T1", "Ana", mes="junho")
     from celeste.jobs import disparos
     from datetime import datetime as _dt
     assert disparos._extras_template("T1", False, {"lead_created_at": _dt(2026, 6, 15)}) == {"mes": "junho"}
-    assert tt.renderizar("T4", "Ana").startswith("Olá Ana😀")
+    assert tt.renderizar("T4", "Ana").startswith("Olá, Ana. Como não tivemos")
 
 
 def test_quem_respondeu_sai_da_esteira():

@@ -8,8 +8,8 @@ e para o painel/relatórios mostrarem a mensagem. {1} = primeiro nome (só nos t
 Volumes e resposta em até 3 dias, medidos nos 2 meses (atendente de referência):
   T1 (antigo) revisando agenda          1.488 envios ·  5%   → substituído em 13/10/2026 por resgate_solicitacao_pendente (UTILITY)
   T2 (antigo) "me dá um oi"             4.576 envios ·  7%   → substituído em 13/10/2026 por resgate_solicitacao_segue_pendente (UTILITY)
-  T3 duas modalidades (frio)            3.874 envios · 10%
-  T4 demonstrou interesse               2.090 envios ·  5%
+  T3 (antigo) duas modalidades (frio)   3.874 envios · 10%   → substituído em 14/10/2026 por resgate_solicitacao_ainda_pendente (UTILITY)
+  T4 (antigo) demonstrou interesse      2.090 envios ·  5%   → substituído em 14/10/2026 por resgate_solicitacao_encerramento (UTILITY)
 """
 from __future__ import annotations
 
@@ -31,31 +31,19 @@ TEMPLATES: dict[str, dict] = {
         "botoes": ["Quero continuar", "Agora não"],
         "sem_rodape": True,
     },
-    "T3": {
-        "nome": "resgate_duas_modalidades",
-        "corpo": ("Olá 😀!\n\n"
-                  "Na Passoni Clinic, você pode agendar sua consulta de duas formas:\n\n"
-                  "🔹 Dra. Luciana Passoni - R$ 1.200,00.\n"
-                  "A consulta é iniciada pelos tricologistas, que realizam a anamnese e a tricoscopia.\n"
-                  "Em seguida, a Dra. Luciana faz a avaliação médica, define o diagnóstico e indica o tratamento personalizado.\n\n"
-                  "🔹 Dr. Lucas Vieira - R$ 800,00.\n"
-                  "Diretor Médico da Passoni Clinic e tricologista, ele realiza toda a consulta, desde a avaliação clínica até o "
-                  "diagnóstico e a definição do tratamento.\n\n"
-                  "Em ambas as modalidades, o objetivo é fechar o seu diagnóstico e indicar o tratamento mais adequado para o seu caso.\n\n"
-                  "Ao finalizar todo o tratamento, você tem direito a um retorno como cortesia, que para a modalidade de cortesia, "
-                  "deverá ser realizado em até 30 dias após a última sessão, sem desmarcações.\n\n"
-                  "Esse retorno, ocorrerá com a equipe de tricologistas, para lhe apresentar o plano de manutenção preventiva. "
-                  "E durante o seu tratamento, essa mesma equipe, realizará discussões clínicas sobre a sua evolução."),
-        "botoes": [],
+    "T3": {   # aprovado pela clínica em 14/10/2026 (UTILITY). 3 dias após o T2
+        "nome": "resgate_solicitacao_ainda_pendente",
+        "corpo": ("Olá, {1}. Sua solicitação de consulta na Passoni Clinic ainda está pendente. "
+                  "Se quiser concluir o agendamento, responda esta mensagem."),
+        "botoes": ["Quero continuar", "Agora não"],
+        "sem_rodape": True,
     },
-    "T4": {
-        "nome": "resgate_demonstrou_interesse",
-        "corpo": ("Olá {1}😀 esperamos que estejas bem?\n\n"
-                  "Vimos que você demonstrou interesse em vir na Passoni Clinic, cuidar da saúde capilar, mas infelizmente "
-                  "acabou não acontecendo.\n\n"
-                  "Podemos retomar o seu atendimento?\n"
-                  "Me responda, que consigo te atender!"),
-        "botoes": [],
+    "T4": {   # aprovado pela clínica em 14/10/2026 (UTILITY). 7 dias após o T3: aviso de encerramento da solicitação
+        "nome": "resgate_solicitacao_encerramento",
+        "corpo": ("Olá, {1}. Como não tivemos o seu retorno, vamos encerrar a sua solicitação de consulta na Passoni Clinic. "
+                  "Se ainda quiser agendar, responda esta mensagem."),
+        "botoes": ["Quero continuar", "Pode encerrar"],
+        "sem_rodape": True,
     },
 }
 

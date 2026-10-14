@@ -27,9 +27,10 @@ FUSO = ZoneInfo(config.FUSO)
 
 @dataclass
 class Decisao:
-    template: str           # T1..T5
-    motivo: str             # 'passo 2 do ciclo 1' | 'recontato após Achou caro'
+    template: Optional[str]  # T1..T4; None = encerrar a esteira para este lead (sem envio)
+    motivo: str              # 'passo 2 do ciclo 1' | 'recontato após Achou caro' | 'esteira encerrada'
     novo_passo: int
+    novo_ciclo: int = 1      # nº do ciclo em que este envio acontece
 
 
 def dentro_do_horario(agora: Optional[datetime] = None) -> bool:
@@ -73,18 +74,21 @@ def decidir(lead: dict, agora: datetime, tarde_livre_hoje: Optional[bool] = None
         return None
     passos = d["passos"]
     passo = int(lead.get("passo") or 0)
+    ciclo = int(lead.get("ciclos") or 1)
     if passo >= len(passos):
-        # fim da esteira: pausa longa e volta ao passo de reinício
+        # fim da esteira: pausa e recomeça; depois de `max_ciclos` ciclos completos sem resposta, encerra para este lead
         if ultimo_tpl and _dt(ultimo_tpl) + timedelta(days=int(d["pausa_apos_ultimo_passo_dias"])) > agora:
             return None
-        passo = int(d["reiniciar_no_passo"])
+        if ciclo >= int(d.get("max_ciclos") or 99):
+            return Decisao(None, "esteira encerrada (sem resposta após os ciclos previstos)", passo, ciclo)
+        passo = int(d["reiniciar_no_passo"]); ciclo += 1
     prox = passos[passo]
     if passo > 0 or ultimo_tpl:
         if not ultimo_tpl or _dt(ultimo_tpl) + timedelta(days=int(prox["apos_dias"])) > agora:
             return None
     if prox.get("so_se_horario_livre_hoje_a_tarde") and not tarde_livre_hoje:
         return None
-    return Decisao(prox["template"], f"passo {passo + 1} (ciclo {prox['ciclo']})", passo + 1)
+    return Decisao(prox["template"], f"passo {passo + 1} (ciclo {ciclo})", passo + 1, ciclo)
 
 
 def _dt(v) -> datetime:
@@ -173,6 +177,11 @@ def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[
             resumo["pulados"] += 1
             continue
         resumo["candidatos"] += 1
+        if dec.template is None:   # esteira encerrada para este lead: só muda o status, nada é enviado
+            if not dry_run:
+                db.collection("leads").document(doc.id).set({"status_ia": "Sem resposta (esteira encerrada)", "esteira_encerrada_em": agora}, merge=True)
+            resumo["encerrados"] = resumo.get("encerrados", 0) + 1
+            continue
         nome_tpl = d["templates"][dec.template]
         if dry_run:
             resumo["enviados"] += 1
@@ -214,7 +223,7 @@ def _registrar_envio(db, lead_id: str, lead: dict, dec: Decisao, nome_tpl: str, 
     conv_ref.set({"status": status, "ultimo_template_em": agora, "template_origem": dec.template,
                   "ultima": {"texto": f"[template {dec.template}] " + templates_texto.TEMPLATES[dec.template]["corpo"][:120], "direcao": "template", "tipo": "template", "em": agora}}, merge=True)
     db.collection("leads").document(lead_id).set({
-        "status_ia": status, "passo": dec.novo_passo, "ultimo_template_em": agora, "conversa_id": conv_id,
+        "status_ia": status, "passo": dec.novo_passo, "ciclos": dec.novo_ciclo, "ultimo_template_em": agora, "conversa_id": conv_id,
         "templates_enviados": firestore.ArrayUnion([{"codigo": dec.template, "template": nome_tpl, "em": agora, "wamid": wamid, "motivo": dec.motivo}]),
         "proximo_recontato_em": None}, merge=True)
     hoje = datetime.now(FUSO).strftime("%Y-%m-%d")
