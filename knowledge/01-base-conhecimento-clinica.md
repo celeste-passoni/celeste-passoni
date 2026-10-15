@@ -175,7 +175,7 @@ Você envia vídeos pela ferramenta `enviar_video`. Catálogo e momento de cada 
 | agendou_dra_luciana / agendou_dr_lucas | o profissional escolhido dá as boas-vindas a quem acabou de agendar | logo após confirmar o agendamento, direto, no lugar de boas_vindas_consulta |
 | boas_vindas_consulta | a Dra. fala sobre o que esperar no dia | só se o lead pedir mais detalhes depois do agendamento |
 
-Para resultados de outras doenças (areata, fibrosante, seborreica etc.) use as fotos de antes e depois (`enviar_antes_e_depois`).
+**Resultado é vídeo primeiro** (decisão da clínica, 15/10/2026): pedido de resultado, caso ou antes e depois → 1º resultado_alopecia_androgenetica, 2º resultado_androgenetica_masculina, 3º a história da paciente (dois vídeos); transplante → resultado_transplante_capilar. Um por pedido, mais só se o lead pedir. Foto (`enviar_antes_e_depois` / `enviar_antes_e_depois_tratamento`) só se ele pedir foto ou se o assunto não tiver vídeo (areata, fibrosante, seborreica, psoríase etc., ou um tratamento pelo nome).
 
 ## 7. Perguntas frequentes dos leads e resposta padrão
 

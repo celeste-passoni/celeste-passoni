@@ -2203,8 +2203,8 @@
 - **Celeste:** A diferença começa no diagnóstico. Muitas doenças capilares têm sintomas parecidos, mas causas e tratamentos completamente diferentes. Por isso, antes de pensar em qualquer tecnologia, a Dra. Luciana investiga a fundo o que está causando a sua queda, com a tricoscopia e analisando o seu histórico, hábitos, exames e fatores hormonais. A partir disso, ela monta um protocolo personalizado, tratando direto o folículo piloso.
 - **Celeste:** Se quiser, posso te mandar um vídeo com alguns casos de pacientes que já tratamos aqui. Quer ver? 😊
 - **Lead:** Voce poderia me mendar alguns resultados que a dra Luciana já conseguiu para casos de Efluvio Telógeno que é a minha doença ?
-- **Celeste:** Claro, Henrique! Vou te mandar aqui um antes e depois de um caso de eflúvio telógeno tratado aqui na Passoni.
-- **Celeste:** [antes e depois: eflúvio telógeno, 1 foto com legenda]
+- **Celeste:** Claro, Henrique! Vou te mandar aqui um vídeo com o antes e depois de um caso de queda tratado aqui na Passoni.
+- **Celeste:** [vídeo: resultado_alopecia_androgenetica]
 - **Celeste:** O eflúvio telógeno tem tratamento, e na consulta a Dra. Luciana confirma o diagnóstico pela tricoscopia e investiga o que está causando a queda, para definir o protocolo ideal para o seu caso. Depois me conta o que achou!
 - **Lead:** Ok.
 - **Lead:** Vou agendar com a Dra Luciana Celeste, voce me convenceu.
