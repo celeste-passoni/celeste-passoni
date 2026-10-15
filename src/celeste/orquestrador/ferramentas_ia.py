@@ -82,14 +82,14 @@ FERRAMENTAS: list[dict] = [
          "video": {"type": "string", "enum": list(config.parametros()["videos"].keys())},   # catálogo = bloco `videos` do YAML
          "reenviar": {"type": "boolean", "description": "true só quando o lead CONFIRMOU que quer receber de novo um vídeo já enviado"}},
          "required": ["video", "reenviar"], "additionalProperties": False}},
-    {"name": "enviar_antes_e_depois", "description": "Envia ao lead até 2 fotos reais de antes e depois de um caso daquela doença tratado na clínica (com legenda e aviso de que resultados variam). Só quando o lead pede resultados/casos dessa doença ou aceita a sua oferta. Uma vez por doença por conversa. As fotos saem DEPOIS dos seus balões; não diga que já enviou.",
+    {"name": "enviar_antes_e_depois", "description": "Envia ao lead até 2 fotos reais de antes e depois de um caso daquela doença tratado na clínica (com legenda e aviso de que resultados variam). SÓ depois de o lead PEDIR para ver resultados/casos dessa doença, ou DIZER SIM à sua oferta ('Quer ver um antes e depois de um caso parecido?'). Nunca por conta própria. Uma vez por doença por conversa. As fotos saem DEPOIS dos seus balões; com fotos, no máximo 2 balões de texto; não diga que já enviou.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "doenca": {"type": "string", "enum": ["dermatite_seborreica", "psoriase_couro_cabeludo", "alopecia_areata", "alopecia_fibrosante_frontal",
                                                 "lupus_couro_cabeludo", "alopecia_por_tracao", "foliculite_decalvante", "foliculite_dissecante",
                                                 "liquen_plano_pilar", "alopecia_androgenetica_masculina", "alopecia_androgenetica_feminina",
                                                 "efluvio_anageno", "tricotilomania", "disturbios_da_haste", "efluvio_telogeno"]}},
          "required": ["doenca"], "additionalProperties": False}},
-    {"name": "enviar_antes_e_depois_tratamento", "description": "Envia até 2 fotos reais de antes e depois de um TRATAMENTO/tecnologia da clínica (com legenda dizendo que o tratamento é definido na consulta). SÓ quando o lead perguntou explicitamente por esse tratamento pelo nome ou perguntou 'quais tratamentos vocês fazem' (use 'geral'). Nunca para sugerir tratamento ao caso dele. Uma vez por tratamento por conversa. As fotos saem DEPOIS dos seus balões.",
+    {"name": "enviar_antes_e_depois_tratamento", "description": "Envia até 2 fotos reais de antes e depois de um TRATAMENTO/tecnologia da clínica (com legenda dizendo que o tratamento é definido na consulta). SÓ depois de o lead PEDIR para ver fotos/resultados desse tratamento, ou DIZER SIM à sua oferta ('Quer ver um antes e depois?'). Perguntar 'que tratamentos vocês fazem' NÃO é pedido de foto: responda em texto e, no máximo, ofereça. Nunca para sugerir tratamento ao caso dele. Uma vez por tratamento por conversa. As fotos saem DEPOIS dos seus balões; com fotos, no máximo 2 balões de texto.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "tratamento": {"type": "string", "enum": list(config.parametros()["antes_e_depois_tratamentos"]["tratamentos"].keys()) + ["geral"]}},
          "required": ["tratamento"], "additionalProperties": False}},

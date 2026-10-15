@@ -546,7 +546,8 @@ def test_video_e_adiado_para_depois_dos_baloes():
     from celeste.orquestrador import app as oapp
     import inspect
     src = inspect.getsource(oapp.responder)
-    assert "videos_pendentes" in src and src.index("for v in videos_pendentes") > src.index("for i, texto in enumerate(res.baloes)")
+    assert "videos_pendentes" in src and src.index("for v in videos_pendentes") > src.index("for i, texto in enumerate(baloes)")
+    assert "len(baloes) > 2" in src   # com mídia, no máximo 2 balões de texto (15/10/2026)
     assert "ArrayRemove(videos_pendentes)" in src
 
 

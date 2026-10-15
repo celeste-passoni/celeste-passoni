@@ -99,10 +99,11 @@ def responder(p: Pedido):
         return _responder_sair(ref, conv, mt, acao)
 
     # abertura sem modelo (15/10/2026): conversa nova, não vinda de template, cuja 1ª mensagem é só um cumprimento
-    if len(historico) == 1 and not conv.get("template_origem") and conv.get("origem") != "disparo":
-        texto_lead = " ".join(b.get("text", "") for b in historico[0]["content"] if isinstance(b, dict) and b.get("type") == "text")
-        if abertura.e_saudacao_solta(texto_lead):
-            return _responder_abertura(ref, conv, mt, texto_lead)
+    texto_lead = " ".join(b.get("text", "") for b in historico[-1]["content"] if isinstance(b, dict) and b.get("type") == "text")
+    if len(historico) == 1 and not conv.get("template_origem") and conv.get("origem") != "disparo" and abertura.e_saudacao_solta(texto_lead):
+        return _responder_abertura(ref, conv, mt, texto_lead)
+    log.info("abertura fixa não aplicada: turnos=%d origem=%r template_origem=%r saudacao=%s texto=%r", len(historico), conv.get("origem"),
+             conv.get("template_origem"), abertura.e_saudacao_solta(texto_lead), texto_lead[:60])
 
     if conv.get("teste") or _e_numero_teste(conv.get("contato", "")):
         escrita_real = _escreve_no_tisaude(conv.get("contato", ""))
@@ -150,8 +151,11 @@ def responder(p: Pedido):
                      "imagens_tratamento_enviadas": firestore.ArrayRemove([d.split(":", 1)[1] for d in imagens_pendentes if d.startswith("tratamento:")])}, merge=True)
         return {"ok": True, "ignorado": "regerar"}
 
+    baloes = list(res.baloes)
+    if (videos_pendentes or imagens_pendentes) and len(baloes) > 2:   # 15/10/2026: com mídia, no máximo 2 balões de texto (a clínica viu 5 envios de uma vez)
+        baloes = [baloes[0], "\n\n".join(baloes[1:])]
     enviados = 0
-    for i, texto in enumerate(res.baloes):
+    for i, texto in enumerate(baloes):
         texto = referencias.resolver(texto)   # [[ref:ID]] → link exato; link digitado à mão → link conhecido (14/10/2026)
         if not texto:
             continue
