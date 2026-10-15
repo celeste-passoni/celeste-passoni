@@ -99,7 +99,8 @@ def responder(p: Pedido):
         return _responder_sair(ref, conv, mt, acao)
 
     # abertura sem modelo (15/10/2026): conversa nova, não vinda de template, cuja 1ª mensagem é só um cumprimento
-    texto_lead = " ".join(b.get("text", "") for b in historico[-1]["content"] if isinstance(b, dict) and b.get("type") == "text")
+    conteudo = historico[-1]["content"]   # string (só texto) ou lista de blocos (com mídia)
+    texto_lead = conteudo if isinstance(conteudo, str) else " ".join(b.get("text", "") for b in conteudo if isinstance(b, dict) and b.get("type") == "text")
     if len(historico) == 1 and not conv.get("template_origem") and conv.get("origem") != "disparo" and abertura.e_saudacao_solta(texto_lead):
         return _responder_abertura(ref, conv, mt, texto_lead)
     log.info("abertura fixa não aplicada: turnos=%d origem=%r template_origem=%r saudacao=%s texto=%r", len(historico), conv.get("origem"),

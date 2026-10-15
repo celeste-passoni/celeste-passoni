@@ -730,6 +730,13 @@ def test_catalogo_de_videos_bate_com_a_ferramenta():
     assert not set(cfg["videos_rotinas"]) & set(cfg["videos"])
 
 
+def test_abertura_extrai_texto_do_turno_em_string_ou_blocos():
+    from celeste.orquestrador import app as oapp
+    import inspect
+    src = inspect.getsource(oapp.responder)
+    assert "isinstance(conteudo, str)" in src   # 15/10: o histórico compacta turnos só-texto em string; a extração precisa aceitar os dois
+
+
 def test_abertura_sem_modelo_reconhece_so_cumprimento():
     from celeste.orquestrador import abertura
     for t in ("Oi", "oi!", "Olá", "olá, tudo bem?", "Bom dia", "Boa tarde!!", "oi celeste", "Oi 😊", "boa noite, Celeste"):
