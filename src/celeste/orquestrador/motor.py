@@ -68,6 +68,26 @@ def separar_baloes(texto: str) -> list[str]:
 
 MAX_BALOES = 3
 
+_EMOJI = _re.compile("[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F1E6-\U0001F1FF⭐⭕‼⁉™ℹ〰〽㊗㊙️]+")
+
+
+def limitar_emojis(baloes: list[str], maximo: int = 1) -> list[str]:
+    """Mantém só os `maximo` primeiros emojis da resposta inteira e apaga os demais (15/10/2026: a clínica viu 😊 em todo balão)."""
+    restantes = maximo
+    saida = []
+    for b in baloes:
+        def _sub(m):
+            nonlocal restantes
+            if restantes > 0:
+                restantes -= 1
+                return m.group(0)
+            return ""
+        t = _EMOJI.sub(_sub, b)
+        t = _re.sub(r"[ \t]+([.!?,])", r"\1", t)         # "dúvida ?" → "dúvida?"
+        t = _re.sub(r"[ \t]{2,}", " ", t)
+        saida.append(t.strip())
+    return [b for b in saida if b]
+
 
 def delay_humano(fora_horario: bool = False) -> float:
     """Log-normal com mediana configurada; nunca abaixo do mínimo."""

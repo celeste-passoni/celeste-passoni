@@ -155,6 +155,7 @@ def responder(p: Pedido):
     baloes = list(res.baloes)
     if (videos_pendentes or imagens_pendentes) and len(baloes) > 2:   # 15/10/2026: com mídia, no máximo 2 balões de texto (a clínica viu 5 envios de uma vez)
         baloes = [baloes[0], "\n\n".join(baloes[1:])]
+    baloes = motor.limitar_emojis(baloes)                              # 15/10/2026: no máximo 1 emoji por resposta
     enviados = 0
     for i, texto in enumerate(baloes):
         texto = referencias.resolver(texto)   # [[ref:ID]] → link exato; link digitado à mão → link conhecido (14/10/2026)

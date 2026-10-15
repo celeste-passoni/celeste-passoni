@@ -730,6 +730,13 @@ def test_catalogo_de_videos_bate_com_a_ferramenta():
     assert not set(cfg["videos_rotinas"]) & set(cfg["videos"])
 
 
+def test_limitar_emojis_deixa_so_um_por_resposta():
+    b = motor.limitar_emojis(["Sem problemas, Tadeu! 😊 Ficou mais alguma dúvida? 😊", "Combinado! 💛 Até lá 😊"])
+    assert b == ["Sem problemas, Tadeu! 😊 Ficou mais alguma dúvida?", "Combinado! Até lá"]
+    assert motor.limitar_emojis(["Oi, tudo bem?"]) == ["Oi, tudo bem?"]
+    assert motor.limitar_emojis(["💛"]) == ["💛"] and motor.limitar_emojis(["Oi 💛", "💛"]) == ["Oi 💛"]
+
+
 def test_abertura_extrai_texto_do_turno_em_string_ou_blocos():
     from celeste.orquestrador import app as oapp
     import inspect
