@@ -24,7 +24,7 @@ from pydantic import BaseModel
 from celeste.comum import config
 from celeste.ferramentas import meta, tisaude, transcricao
 from celeste.ferramentas.tisaude_simulado import TiSaudeSimulado
-from celeste.orquestrador import ferramentas_ia, lembretes_texto, motor, referencias
+from celeste.orquestrador import abertura, ferramentas_ia, lembretes_texto, motor, referencias
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("orquestrador")
@@ -97,6 +97,12 @@ def responder(p: Pedido):
         return _responder_agora_nao(ref, conv, mt)
     if acao in ("sair", "encerrar"):
         return _responder_sair(ref, conv, mt, acao)
+
+    # abertura sem modelo (15/10/2026): conversa nova, não vinda de template, cuja 1ª mensagem é só um cumprimento
+    if len(historico) == 1 and not conv.get("template_origem") and conv.get("origem") != "disparo":
+        texto_lead = " ".join(b.get("text", "") for b in historico[0]["content"] if isinstance(b, dict) and b.get("type") == "text")
+        if abertura.e_saudacao_solta(texto_lead):
+            return _responder_abertura(ref, conv, mt, texto_lead)
 
     if conv.get("teste") or _e_numero_teste(conv.get("contato", "")):
         escrita_real = _escreve_no_tisaude(conv.get("contato", ""))
@@ -580,6 +586,29 @@ def _enviar_antes_e_depois(mt: meta.Meta, ref, conv: dict, doenca: str) -> int:
             "imagem": arquivo, "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
         n += 1
     return n
+
+
+def _responder_abertura(ref, conv: dict, mt: meta.Meta, texto_lead: str) -> dict:
+    """Dois balões fixos de apresentação, sem chamar o modelo (custo zero, resposta em segundos)."""
+    nome_ia = config.parametros()["ia"].get("nome_atendente", "Celeste")
+    baloes = abertura.baloes_abertura(conv.get("nome") or "", texto_lead, nome_ia)
+    enviados = 0
+    for i, texto in enumerate(baloes):
+        if i and SIMULAR_DELAY:
+            time.sleep(1.2)
+        wamid = mt.enviar_texto(conv["contato"], texto)
+        ref.collection("mensagens").document(wamid).set({
+            "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": "fixo-abertura",
+            "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
+        enviados += 1
+    campos = {"pendente_resposta": False, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP, "total_msgs_celeste": firestore.Increment(enviados),
+              "ultima": {"texto": baloes[-1][:160], "direcao": "celeste", "tipo": "text", "em": datetime.now(timezone.utc)}}
+    if not conv.get("primeira_msg_celeste_em"):
+        campos["primeira_msg_celeste_em"] = firestore.SERVER_TIMESTAMP
+    ref.set(campos, merge=True)
+    _espelhar_lead(conv)
+    log.info("abertura fixa enviada sem modelo (conversa %s)", conv.get("id"))
+    return {"ok": True, "enviado": enviados, "modelo": "fixo-abertura", "custo_usd": 0.0}
 
 
 def _enviar_antes_e_depois_tratamento(mt: meta.Meta, ref, conv: dict, tratamento: str) -> int:

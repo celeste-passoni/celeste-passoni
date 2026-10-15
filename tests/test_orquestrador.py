@@ -729,6 +729,18 @@ def test_catalogo_de_videos_bate_com_a_ferramenta():
     assert not set(cfg["videos_rotinas"]) & set(cfg["videos"])
 
 
+def test_abertura_sem_modelo_reconhece_so_cumprimento():
+    from celeste.orquestrador import abertura
+    for t in ("Oi", "oi!", "Olá", "olá, tudo bem?", "Bom dia", "Boa tarde!!", "oi celeste", "Oi 😊", "boa noite, Celeste"):
+        assert abertura.e_saudacao_solta(t), t
+    for t in ("Oi, gostaria de mais informações", "bom dia, quanto custa a consulta?", "", "quero agendar", "oi meu cabelo está caindo"):
+        assert not abertura.e_saudacao_solta(t), t
+    b = abertura.baloes_abertura("tadeu lopes", "Bom dia")
+    assert b[0] == "Bom dia, Tadeu! Tudo bem?" and b[1].startswith("É um prazer falar com você, aqui é a Celeste")
+    assert abertura.baloes_abertura("", "oi")[0] == "Olá, tudo bem?"
+    assert abertura.baloes_abertura("Ana", "olá celeste")[0] == "Olá, Ana, tudo bem?"
+
+
 def test_enviar_antes_e_depois_tratamento_config_e_uma_vez():
     conv = {"id": "c1", "frente": "leads_perdidos"}; pend = []
     ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos); ctx.enviar_imagem = lambda d: (pend.append(d), "adiado")[1]
