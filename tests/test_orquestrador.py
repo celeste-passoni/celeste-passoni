@@ -735,10 +735,11 @@ def test_abertura_sem_modelo_reconhece_so_cumprimento():
         assert abertura.e_saudacao_solta(t), t
     for t in ("Oi, gostaria de mais informações", "bom dia, quanto custa a consulta?", "", "quero agendar", "oi meu cabelo está caindo"):
         assert not abertura.e_saudacao_solta(t), t
-    b = abertura.baloes_abertura("tadeu lopes", "Bom dia")
-    assert b[0] == "Bom dia, Tadeu! Tudo bem?" and b[1].startswith("É um prazer falar com você, aqui é a Celeste")
+    # a apresentação não muda com o cumprimento do lead (decisão da clínica, 15/10/2026)
+    for t in ("Bom dia", "oi", "olá celeste", "boa noite"):
+        b = abertura.baloes_abertura("tadeu lopes", t)
+        assert b == ["Olá, Tadeu, tudo bem?", "É um prazer falar com você, aqui é a Celeste, concierge da Passoni Clinic, e estou aqui para te ajudar! 💛"]
     assert abertura.baloes_abertura("", "oi")[0] == "Olá, tudo bem?"
-    assert abertura.baloes_abertura("Ana", "olá celeste")[0] == "Olá, Ana, tudo bem?"
 
 
 def test_enviar_antes_e_depois_tratamento_config_e_uma_vez():

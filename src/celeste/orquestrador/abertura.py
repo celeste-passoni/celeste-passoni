@@ -32,18 +32,10 @@ def e_saudacao_solta(texto: str) -> bool:
     return t in _SAUDACOES
 
 
-def baloes_abertura(nome_lead: str, texto_lead: str, nome_atendente: str = "Celeste") -> list[str]:
-    """Os dois balões fixos do roteiro, com o cumprimento no mesmo tom do lead (bom dia / boa tarde / boa noite / olá)."""
-    t = _normalizar(texto_lead)
+def baloes_abertura(nome_lead: str, texto_lead: str = "", nome_atendente: str = "Celeste") -> list[str]:
+    """Os dois balões fixos do roteiro, exatamente como a Celeste já respondia (decisão da clínica: a apresentação não muda)."""
     primeiro = ((nome_lead or "").strip().split() or [""])[0].title()
     voc = f", {primeiro}" if primeiro else ""
-    if t.startswith("bom dia"):
-        b1 = f"Bom dia{voc}! Tudo bem?"
-    elif t.startswith("boa tarde"):
-        b1 = f"Boa tarde{voc}! Tudo bem?"
-    elif t.startswith("boa noite"):
-        b1 = f"Boa noite{voc}! Tudo bem?"
-    else:
-        b1 = f"Olá{voc}, tudo bem?"
+    b1 = f"Olá{voc}, tudo bem?"
     b2 = f"É um prazer falar com você, aqui é a {nome_atendente}, concierge da Passoni Clinic, e estou aqui para te ajudar! 💛"
     return [b1, b2]
