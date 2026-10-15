@@ -243,7 +243,7 @@ videos_rotinas:
 # só quando o lead pede resultados/casos ou aceita a oferta. Tínea capitis (09) não tem foto no site.
 antes_e_depois:
   base_url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/antes-e-depois/"
-  max_por_envio: 2
+  max_por_envio: 1          # 15/10/2026: uma foto por pedido; mais só se o lead pedir
   legenda: "Antes e depois de um caso real de {doenca}, tratado na Passoni Clinic. Cada caso é avaliado na consulta, e os resultados variam de pessoa para pessoa."
   doencas:
     dermatite_seborreica:            { nome: "dermatite seborreica",              arquivos: ["01-dermatite-seborreica-a.jpg", "01-dermatite-seborreica-b.jpg"] }
@@ -266,7 +266,7 @@ antes_e_depois:
 # só quando o lead PERGUNTA explicitamente por um tratamento/tecnologia ("vocês fazem Fotona?", "quais tratamentos vocês fazem?").
 antes_e_depois_tratamentos:
   base_url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/antes-e-depois/tratamentos/"
-  max_por_envio: 2
+  max_por_envio: 1          # 15/10/2026: uma foto por pedido; mais só se o lead pedir
   legenda: "Antes e depois de um caso real tratado com {tratamento} na Passoni Clinic. O tratamento indicado para cada pessoa é definido pelo médico na consulta, depois da tricoscopia, e os resultados variam."
   geral: ["microinfusao_de_medicamentos", "terapia_regenerativa"]   # pergunta genérica "quais tratamentos?": uma foto de cada um destes
   tratamentos:

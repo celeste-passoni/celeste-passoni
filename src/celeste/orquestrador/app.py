@@ -148,43 +148,52 @@ def responder(p: Pedido):
         if videos_pendentes:   # o vídeo não foi enviado: desfaz a marcação para a próxima resposta poder mandá-lo
             ref.set({"videos_enviados": firestore.ArrayRemove(videos_pendentes)}, merge=True)
         if imagens_pendentes:
-            ref.set({"imagens_enviadas": firestore.ArrayRemove([d for d in imagens_pendentes if not d.startswith("tratamento:")]),
-                     "imagens_tratamento_enviadas": firestore.ArrayRemove([d.split(":", 1)[1] for d in imagens_pendentes if d.startswith("tratamento:")])}, merge=True)
+            ref.set({"fotos_enviadas": firestore.ArrayRemove([d.split(":", 2)[2] for d in imagens_pendentes])}, merge=True)
         return {"ok": True, "ignorado": "regerar"}
 
-    baloes = list(res.baloes)
-    if (videos_pendentes or imagens_pendentes) and len(baloes) > 2:   # 15/10/2026: com mídia, no máximo 2 balões de texto (a clínica viu 5 envios de uma vez)
-        baloes = [baloes[0], "\n\n".join(baloes[1:])]
+    # Regra da clínica (15/10/2026): no máximo 3 envios seguidos, contando fotos e vídeos. Com mídia, a ordem é
+    # 1º balão (anuncia) → mídia → resto do texto. Sem mídia: até 3 balões.
+    baloes = [b for b in (referencias.resolver(b) for b in res.baloes) if b]
+    n_midia = len(videos_pendentes) + len(imagens_pendentes)
+    max_texto = max(1, 3 - n_midia)
+    if len(baloes) > max_texto:
+        baloes = baloes[:max_texto - 1] + ["\n\n".join(baloes[max_texto - 1:])]
     baloes = motor.limitar_emojis(baloes)                              # 15/10/2026: no máximo 1 emoji por resposta
     enviados = 0
-    for i, texto in enumerate(baloes):
-        texto = referencias.resolver(texto)   # [[ref:ID]] → link exato; link digitado à mão → link conhecido (14/10/2026)
-        if not texto:
-            continue
-        if i and SIMULAR_DELAY:
-            time.sleep(min(2.0, 0.5 + len(texto) / 100))  # "digitando" proporcional ao tamanho (teto 2 s; era 6 s até 14/10)
+
+    def _balao(texto: str, pausa: bool) -> None:
+        nonlocal enviados
+        if pausa and SIMULAR_DELAY:
+            time.sleep(min(2.0, 0.5 + len(texto) / 100))  # "digitando" proporcional ao tamanho (teto 2 s)
         wamid = mt.enviar_texto(conv["contato"], texto)
         ref.collection("mensagens").document(wamid).set({
             "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": res.modelo,
             "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
         enviados += 1
-    for v in videos_pendentes:   # por último, como a atendente de referência faz
-        if SIMULAR_DELAY:
-            time.sleep(2.0)
-        try:
-            _enviar_video(mt, ref, conv, v); enviados += 1
-        except Exception as e:
-            log.warning("vídeo %s não enviado: %s", v, e)
-    for d in imagens_pendentes:   # fotos de antes e depois, também depois dos balões
-        if SIMULAR_DELAY:
-            time.sleep(1.5)
-        try:
-            if d.startswith("tratamento:"):
-                enviados += _enviar_antes_e_depois_tratamento(mt, ref, conv, d.split(":", 1)[1])
-            else:
-                enviados += _enviar_antes_e_depois(mt, ref, conv, d)
-        except Exception as e:
-            log.warning("antes e depois %s não enviado: %s", d, e)
+
+    def _midia() -> None:
+        nonlocal enviados
+        for v in videos_pendentes:
+            if SIMULAR_DELAY:
+                time.sleep(2.0)
+            try:
+                _enviar_video(mt, ref, conv, v); enviados += 1
+            except Exception as e:
+                log.warning("vídeo %s não enviado: %s", v, e)
+        for d in imagens_pendentes:
+            if SIMULAR_DELAY:
+                time.sleep(1.5)
+            try:
+                grupo, slug, arquivo = d.split(":", 2)
+                enviados += _enviar_foto(mt, ref, conv, grupo, slug, arquivo)
+            except Exception as e:
+                log.warning("antes e depois %s não enviado: %s", d, e)
+
+    if baloes:
+        _balao(baloes[0], False)
+    _midia()
+    for texto in baloes[1:]:
+        _balao(texto, True)
     if conv.get("status") == "Encaminhado à recepção" and ctx.encerrar:
         rec = config.parametros()["ia"]["recepcao"]
         try:
@@ -579,19 +588,20 @@ def _enviar_video(mt: meta.Meta, ref, conv: dict, chave: str) -> str:
     return wamid
 
 
-def _enviar_antes_e_depois(mt: meta.Meta, ref, conv: dict, doenca: str) -> int:
-    """Envia até `max_por_envio` fotos da doença (legenda só na primeira). Devolve quantas foram enviadas."""
-    cfg = config.parametros()["antes_e_depois"]
-    d = cfg["doencas"][doenca]
-    n = 0
-    for i, arquivo in enumerate(d["arquivos"][: int(cfg.get("max_por_envio", 2))]):
-        legenda = cfg["legenda"].format(doenca=d["nome"]) if i == 0 else ""
-        wamid = mt.enviar_imagem_link(conv["contato"], cfg["base_url"] + arquivo, legenda)
-        ref.collection("mensagens").document(wamid).set({
-            "direcao": "celeste", "tipo": "image", "texto": f"[antes e depois: {d['nome']} — {arquivo}]" + (f" {legenda}" if legenda else ""),
-            "imagem": arquivo, "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
-        n += 1
-    return n
+def _enviar_foto(mt: meta.Meta, ref, conv: dict, grupo: str, slug: str, arquivo: str) -> int:
+    """Uma foto de antes e depois (por doença ou por tratamento), com legenda. Devolve 1."""
+    p = config.parametros()
+    if grupo == "doenca":
+        cfg, item = p["antes_e_depois"], p["antes_e_depois"]["doencas"][slug]
+        legenda, rotulo, caminho = cfg["legenda"].format(doenca=item["nome"]), f"antes e depois: {item['nome']}", arquivo
+    else:
+        cfg, item = p["antes_e_depois_tratamentos"], p["antes_e_depois_tratamentos"]["tratamentos"][slug]
+        legenda, rotulo, caminho = cfg["legenda"].format(tratamento=item["nome"]), f"antes e depois do tratamento: {item['nome']}", "tratamentos/" + arquivo
+    wamid = mt.enviar_imagem_link(conv["contato"], cfg["base_url"] + arquivo, legenda)
+    ref.collection("mensagens").document(wamid).set({
+        "direcao": "celeste", "tipo": "image", "texto": f"[{rotulo} — {arquivo}] {legenda}", "imagem": caminho,
+        "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
+    return 1
 
 
 def _responder_abertura(ref, conv: dict, mt: meta.Meta, texto_lead: str) -> dict:
@@ -615,25 +625,6 @@ def _responder_abertura(ref, conv: dict, mt: meta.Meta, texto_lead: str) -> dict
     _espelhar_lead(conv)
     log.info("abertura fixa enviada sem modelo (conversa %s)", conv.get("id"))
     return {"ok": True, "enviado": enviados, "modelo": "fixo-abertura", "custo_usd": 0.0}
-
-
-def _enviar_antes_e_depois_tratamento(mt: meta.Meta, ref, conv: dict, tratamento: str) -> int:
-    """Fotos por tratamento (15/10/2026): 'geral' manda uma foto de cada tratamento da lista `geral`; senão até `max_por_envio` do tratamento."""
-    cfg = config.parametros()["antes_e_depois_tratamentos"]
-    if tratamento == "geral":
-        itens = [(t, cfg["tratamentos"][t]["arquivos"][0]) for t in cfg["geral"]]
-    else:
-        itens = [(tratamento, a) for a in cfg["tratamentos"][tratamento]["arquivos"][: int(cfg.get("max_por_envio", 2))]]
-    n = 0
-    for i, (t, arquivo) in enumerate(itens):
-        nome = cfg["tratamentos"][t]["nome"]
-        legenda = cfg["legenda"].format(tratamento=nome) if (i == 0 or tratamento == "geral") else ""
-        wamid = mt.enviar_imagem_link(conv["contato"], cfg["base_url"] + arquivo, legenda)
-        ref.collection("mensagens").document(wamid).set({
-            "direcao": "celeste", "tipo": "image", "texto": f"[antes e depois do tratamento: {nome} — {arquivo}]" + (f" {legenda}" if legenda else ""),
-            "imagem": "tratamentos/" + arquivo, "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
-        n += 1
-    return n
 
 
 def _avisar_recepcao(mt: meta.Meta, conv: dict, motivo: str, resumo: str) -> None:

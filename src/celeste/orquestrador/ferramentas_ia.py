@@ -82,14 +82,14 @@ FERRAMENTAS: list[dict] = [
          "video": {"type": "string", "enum": list(config.parametros()["videos"].keys())},   # catálogo = bloco `videos` do YAML
          "reenviar": {"type": "boolean", "description": "true só quando o lead CONFIRMOU que quer receber de novo um vídeo já enviado"}},
          "required": ["video", "reenviar"], "additionalProperties": False}},
-    {"name": "enviar_antes_e_depois", "description": "Envia ao lead até 2 fotos reais de antes e depois de um caso daquela doença tratado na clínica (com legenda e aviso de que resultados variam). SÓ depois de o lead PEDIR para ver resultados/casos dessa doença, ou DIZER SIM à sua oferta ('Quer ver um antes e depois de um caso parecido?'). Nunca por conta própria. Uma vez por doença por conversa. As fotos saem DEPOIS dos seus balões; com fotos, no máximo 2 balões de texto; não diga que já enviou.",
+    {"name": "enviar_antes_e_depois", "description": "Envia ao lead UMA foto real de antes e depois de um caso daquela doença tratado na clínica (com legenda e aviso de que resultados variam). SÓ depois de o lead PEDIR para ver resultados/casos dessa doença, ou DIZER SIM à sua oferta. Nunca por conta própria. Se ele pedir mais, chame de novo e sai a próxima foto. A foto sai logo depois do seu PRIMEIRO balão e o resto da sua resposta vem depois dela; não diga que já enviou.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "doenca": {"type": "string", "enum": ["dermatite_seborreica", "psoriase_couro_cabeludo", "alopecia_areata", "alopecia_fibrosante_frontal",
                                                 "lupus_couro_cabeludo", "alopecia_por_tracao", "foliculite_decalvante", "foliculite_dissecante",
                                                 "liquen_plano_pilar", "alopecia_androgenetica_masculina", "alopecia_androgenetica_feminina",
                                                 "efluvio_anageno", "tricotilomania", "disturbios_da_haste", "efluvio_telogeno"]}},
          "required": ["doenca"], "additionalProperties": False}},
-    {"name": "enviar_antes_e_depois_tratamento", "description": "Envia até 2 fotos reais de antes e depois de um TRATAMENTO/tecnologia da clínica (com legenda dizendo que o tratamento é definido na consulta). SÓ depois de o lead PEDIR para ver fotos/resultados desse tratamento, ou DIZER SIM à sua oferta ('Quer ver um antes e depois?'). Perguntar 'que tratamentos vocês fazem' NÃO é pedido de foto: responda em texto e, no máximo, ofereça. Nunca para sugerir tratamento ao caso dele. Uma vez por tratamento por conversa. As fotos saem DEPOIS dos seus balões; com fotos, no máximo 2 balões de texto.",
+    {"name": "enviar_antes_e_depois_tratamento", "description": "Envia UMA foto real de antes e depois de um TRATAMENTO/tecnologia da clínica (com legenda dizendo que o tratamento é definido na consulta). Use 'geral' quando o lead pediu um antes e depois sem dizer de quê. SÓ depois de o lead PEDIR para ver fotos/resultados, ou DIZER SIM à sua oferta ('Quer ver um antes e depois?'). Perguntar 'que tratamentos vocês fazem' NÃO é pedido de foto: responda em texto e, no máximo, ofereça. Nunca para sugerir tratamento ao caso dele. Se ele pedir mais, chame de novo e sai a próxima. A foto sai logo depois do seu PRIMEIRO balão e o resto da resposta vem depois dela.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "tratamento": {"type": "string", "enum": list(config.parametros()["antes_e_depois_tratamentos"]["tratamentos"].keys()) + ["geral"]}},
          "required": ["tratamento"], "additionalProperties": False}},
@@ -103,6 +103,16 @@ FERRAMENTAS: list[dict] = [
          "data_retorno": {"type": "string", "description": "AAAA-MM-DD se o lead pediu uma data; senão vazio"}},
          "required": ["status", "data_retorno"], "additionalProperties": False}},
 ]
+
+
+def proxima_foto(bloco: dict, slug: str, enviadas: list, geral: list | None = None):
+    """(slug, arquivo) da próxima foto ainda não enviada; 'geral' percorre os tratamentos da lista `geral`. None se acabou."""
+    ordem = list(geral or []) if slug == "geral" else [slug]
+    for s in ordem:
+        for a in (bloco.get(s) or {}).get("arquivos", []):
+            if a not in enviadas:
+                return s, a
+    return None
 
 
 def selecionar_opcoes(livres: list, n: int = 3) -> list:
@@ -316,21 +326,22 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         ctx.atualizar({"videos_enviados": enviados + [e["video"]]})
         return {"ok": True, "wamid": wamid}
 
-    if nome == "enviar_antes_e_depois":
-        enviadas = ctx.conversa.get("imagens_enviadas") or []
-        if e["doenca"] in enviadas:
-            return {"ok": False, "aviso": "fotos dessa doença já enviadas nesta conversa; não reenvie, indique a seção de resultados do site"}
-        wamid = ctx.enviar_imagem(e["doenca"])
-        ctx.atualizar({"imagens_enviadas": enviadas + [e["doenca"]]})
-        return {"ok": True, "wamid": wamid, "aviso": "as fotos saem depois dos seus balões, com legenda; não diga que já enviou"}
-
-    if nome == "enviar_antes_e_depois_tratamento":
-        enviadas = ctx.conversa.get("imagens_tratamento_enviadas") or []
-        if e["tratamento"] in enviadas:
-            return {"ok": False, "aviso": "fotos desse tratamento já enviadas nesta conversa; não reenvie"}
-        wamid = ctx.enviar_imagem("tratamento:" + e["tratamento"])
-        ctx.atualizar({"imagens_tratamento_enviadas": enviadas + [e["tratamento"]]})
-        return {"ok": True, "wamid": wamid, "aviso": "as fotos saem depois dos seus balões, com legenda; não diga que já enviou"}
+    if nome in ("enviar_antes_e_depois", "enviar_antes_e_depois_tratamento"):
+        # 15/10/2026 (clínica): UMA foto por pedido; se o lead pedir mais, a chamada seguinte manda a próxima ainda não enviada
+        from celeste.comum import config as _cfg
+        p = _cfg.parametros()
+        if nome == "enviar_antes_e_depois":
+            grupo, bloco, slug, geral = "doenca", p["antes_e_depois"]["doencas"], e["doenca"], None
+        else:
+            grupo, bloco, slug, geral = "tratamento", p["antes_e_depois_tratamentos"]["tratamentos"], e["tratamento"], p["antes_e_depois_tratamentos"].get("geral") or []
+        enviadas = list(ctx.conversa.get("fotos_enviadas") or [])
+        prox = proxima_foto(bloco, slug, enviadas, geral)
+        if not prox:
+            return {"ok": False, "aviso": "não há mais fotos disponíveis para isso nesta conversa; indique a seção de resultados do site"}
+        s, arquivo = prox
+        wamid = ctx.enviar_imagem(f"{grupo}:{s}:{arquivo}")
+        ctx.atualizar({"fotos_enviadas": enviadas + [arquivo]})
+        return {"ok": True, "wamid": wamid, "aviso": "UMA foto sai logo depois do seu primeiro balão, com legenda; o resto da sua resposta vem depois dela. Se o lead pedir mais, chame de novo."}
 
     if nome == "sinalizar_revisao":
         pend = list(ctx.conversa.get("duvidas_pendentes") or []) + [e["duvida"][:300]]

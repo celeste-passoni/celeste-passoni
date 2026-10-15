@@ -546,8 +546,9 @@ def test_video_e_adiado_para_depois_dos_baloes():
     from celeste.orquestrador import app as oapp
     import inspect
     src = inspect.getsource(oapp.responder)
-    assert "videos_pendentes" in src and src.index("for v in videos_pendentes") > src.index("for i, texto in enumerate(baloes)")
-    assert "len(baloes) > 2" in src   # com mídia, no máximo 2 balões de texto (15/10/2026)
+    # 15/10/2026: 1º balão → mídia → resto do texto; no máximo 3 envios contando a mídia
+    assert "videos_pendentes" in src and src.index("_balao(baloes[0], False)") < src.index("\n    _midia()\n") < src.index("for texto in baloes[1:]")
+    assert "max_texto = max(1, 3 - n_midia)" in src
     assert "ArrayRemove(videos_pendentes)" in src
 
 
@@ -760,9 +761,17 @@ def test_abertura_sem_modelo_reconhece_so_cumprimento():
 def test_enviar_antes_e_depois_tratamento_config_e_uma_vez():
     conv = {"id": "c1", "frente": "leads_perdidos"}; pend = []
     ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos); ctx.enviar_imagem = lambda d: (pend.append(d), "adiado")[1]
+    # uma foto por pedido; a 2ª chamada manda a próxima; quando acabam, avisa (Fotona tem 2 fotos)
     s1, e1 = ferramentas_ia.executar("enviar_antes_e_depois_tratamento", {"tratamento": "fotona_capilar"}, ctx)
     s2, e2 = ferramentas_ia.executar("enviar_antes_e_depois_tratamento", {"tratamento": "fotona_capilar"}, ctx)
-    assert not e1 and pend == ["tratamento:fotona_capilar"] and conv["imagens_tratamento_enviadas"] == ["fotona_capilar"] and "já enviadas" in s2
+    s3, e3 = ferramentas_ia.executar("enviar_antes_e_depois_tratamento", {"tratamento": "fotona_capilar"}, ctx)
+    assert not e1 and not e2 and pend == ["tratamento:fotona_capilar:04-fotona-capilar.jpg", "tratamento:fotona_capilar:12-fotona-capilar.jpg"]
+    assert conv["fotos_enviadas"] == ["04-fotona-capilar.jpg", "12-fotona-capilar.jpg"] and "não há mais fotos" in s3
+    # 'geral' percorre os tratamentos da lista geral, uma foto por vez
+    conv2 = {"id": "c2", "frente": "leads_perdidos"}; pend2 = []
+    ctx2 = _ctx(conv2); ctx2.atualizar = lambda campos: conv2.update(campos); ctx2.enviar_imagem = lambda d: (pend2.append(d), "adiado")[1]
+    ferramentas_ia.executar("enviar_antes_e_depois_tratamento", {"tratamento": "geral"}, ctx2)
+    assert len(pend2) == 1 and pend2[0].startswith("tratamento:microinfusao_de_medicamentos:")
     cfg = config.parametros()["antes_e_depois_tratamentos"]
     enum = next(t for t in ferramentas_ia.FERRAMENTAS if t["name"] == "enviar_antes_e_depois_tratamento")["input_schema"]["properties"]["tratamento"]["enum"]
     assert set(enum) == set(cfg["tratamentos"]) | {"geral"} and all(t in cfg["tratamentos"] for t in cfg["geral"])
@@ -775,8 +784,9 @@ def test_enviar_antes_e_depois_uma_vez_por_doenca_e_config_consistente():
     ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos); ctx.enviar_imagem = lambda d: (pend.append(d), "adiado")[1]
     s1, e1 = ferramentas_ia.executar("enviar_antes_e_depois", {"doenca": "efluvio_telogeno"}, ctx)
     s2, e2 = ferramentas_ia.executar("enviar_antes_e_depois", {"doenca": "efluvio_telogeno"}, ctx)
-    assert not e1 and pend == ["efluvio_telogeno"] and conv["imagens_enviadas"] == ["efluvio_telogeno"]
-    assert "já enviadas" in s2
+    s3, e3 = ferramentas_ia.executar("enviar_antes_e_depois", {"doenca": "efluvio_telogeno"}, ctx)
+    assert not e1 and not e2 and pend == ["doenca:efluvio_telogeno:16-efluvio-telogeno-a.jpg", "doenca:efluvio_telogeno:16-efluvio-telogeno-b.jpg"]
+    assert conv["fotos_enviadas"] == ["16-efluvio-telogeno-a.jpg", "16-efluvio-telogeno-b.jpg"] and "não há mais fotos" in s3
     cfg = config.parametros()["antes_e_depois"]
     enum = next(t for t in ferramentas_ia.FERRAMENTAS if t["name"] == "enviar_antes_e_depois")["input_schema"]["properties"]["doenca"]["enum"]
     assert set(enum) == set(cfg["doencas"]) and all(d["arquivos"] for d in cfg["doencas"].values())

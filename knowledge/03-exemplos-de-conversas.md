@@ -2185,7 +2185,6 @@
 - **Celeste:** Imagina, Henrique! Fico feliz que tenha gostado 😊
 - **Celeste:** Claro! Olha ela respondendo no Metrópoles quanto de cabelo é normal perder por dia: [[ref:metropoles-queda-por-dia]]
 - **Celeste:** E essa matéria recente da Vogue sobre a abordagem científica da clínica: [[ref:vogue-abordagem-cientifica]]
-- **Celeste:** A lista completa está no site passoniclinic.med.br, e o Instagram dela é [[ref:instagram-dra]] 😊
 - **Lead:** Até la me fale um pouco, quanto custa a consulta da dra Luciana ou do dr Lucas, o que esta incluso por fv
 - **Celeste:** Claro, Henrique! A consulta com a Dra. Luciana Passoni é {{consultas.dra_luciana.valor_texto}}. Ela começa com os nossos tricologistas, que fazem a anamnese e a tricoscopia, e em seguida a Dra. Luciana faz a avaliação médica, define o diagnóstico e indica o tratamento personalizado.
 - **Celeste:** Já com o Dr. Lucas Vieira, o valor é {{consultas.dr_lucas.valor_texto}}. Ele é Coordenador Médico da clínica, foi treinado pela Dra. Luciana e faz toda a consulta pessoalmente, da avaliação clínica até o diagnóstico e a definição do tratamento.
@@ -2205,8 +2204,8 @@
 - **Celeste:** Se quiser, posso te mandar um vídeo com alguns casos de pacientes que já tratamos aqui. Quer ver? 😊
 - **Lead:** Voce poderia me mendar alguns resultados que a dra Luciana já conseguiu para casos de Efluvio Telógeno que é a minha doença ?
 - **Celeste:** Claro, Henrique! Vou te mandar aqui um antes e depois de um caso de eflúvio telógeno tratado aqui na Passoni.
-- **Celeste:** O eflúvio telógeno tem tratamento, e na consulta a Dra. Luciana confirma o diagnóstico pela tricoscopia e investiga o que está causando a queda, para definir o protocolo ideal para o seu caso. Depois me conta o que achou! 😊
-- **Celeste:** [antes e depois: eflúvio telógeno, 2 fotos com legenda]
+- **Celeste:** [antes e depois: eflúvio telógeno, 1 foto com legenda]
+- **Celeste:** O eflúvio telógeno tem tratamento, e na consulta a Dra. Luciana confirma o diagnóstico pela tricoscopia e investiga o que está causando a queda, para definir o protocolo ideal para o seu caso. Depois me conta o que achou!
 - **Lead:** Ok.
 - **Lead:** Vou agendar com a Dra Luciana Celeste, voce me convenceu.
 - **Lead:** Essas semana quais horários disponiveis voce tem ?
