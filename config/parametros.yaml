@@ -43,11 +43,11 @@ consultas:
     ofertar: true
   - id: dr_lucas
     profissional: "Dr. Lucas Vieira"
-    titulo: "Diretor Médico da Passoni Clinic e tricologista, treinado pela Dra. Luciana"
+    titulo: "Coordenador Médico da Passoni Clinic e tricologista, treinado pela Dra. Luciana"
     valor: 800.00
     valor_texto: "R$ 800,00"
     descricao: >-
-      Diretor Médico da Passoni Clinic e tricologista, ele realiza toda a
+      Coordenador Médico da Passoni Clinic e tricologista, ele realiza toda a
       consulta, desde a avaliação clínica até o diagnóstico e a definição do
       tratamento.
     agenda:
@@ -102,13 +102,13 @@ ia:
   iniciar_resgates_apenas_em_horario_comercial: true  # resgates/follow-ups só 09:00–19:00 seg–sex
   emojis_max_por_mensagem: 2
   baloes_por_resposta: { min: 1, max: 4 }
-  delay_resposta_segundos:            # simula tempo humano (log-normal) — reduzido em 05/10 a pedido da clínica ("lead esfria")
-    minimo: 5
-    mediana: 12
-    maximo: 20
-    fora_horario_comercial: { minimo: 5, mediana: 12, maximo: 20 }
+  delay_resposta_segundos:            # simula tempo humano (log-normal) — reduzido em 05/10 e 14/10 a pedido da clínica ("lead esfria"; "diminuir o tempo de resposta")
+    minimo: 2
+    mediana: 5
+    maximo: 9
+    fora_horario_comercial: { minimo: 2, mediana: 5, maximo: 9 }
   agrupamento_mensagens:              # debounce de rajadas
-    espera_padrao_segundos: 10
+    espera_padrao_segundos: 2
     espera_apos_audio_segundos: 30
     espera_maxima_segundos: 90
     cancelar_e_regerar_se_chegar_nova_msg: true
@@ -190,6 +190,95 @@ videos:
     descricao: "sobre a clínica e currículo da Dra."
     quando: "lead pergunta quem é a Dra. / credibilidade"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/sobre_clinica.mp4"
+  # ---- acrescentados em 14/10/2026 a partir da pasta de vídeos da clínica (OneDrive), só os que cabem no WhatsApp (≤ 16 MB)
+  resultado_alopecia_androgenetica:
+    descricao: "antes e depois em vídeo de alopecia androgenética (afinamento dos fios), 38 s"
+    quando: "lead com queda/afinamento ou que citou alopecia androgenética e pediu/aceitou ver resultado"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/resultado_alopecia_androgenetica.mp4"
+  resultado_androgenetica_masculina:
+    descricao: "antes e depois em vídeo de um paciente homem com alopecia androgenética, 15 s"
+    quando: "lead homem com entradas/coroa rareando que pediu/aceitou ver resultado"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/resultado_androgenetica_masculina.mp4"
+  resultado_transplante_capilar:
+    descricao: "antes e depois de transplante capilar, 18 s"
+    quando: "lead perguntou sobre transplante"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/resultado_transplante_capilar.mp4"
+  caso_bruna_1_primeira_consulta:
+    descricao: "história de uma paciente: depoimento emocionado na primeira consulta (4 meses antes do resultado), 34 s"
+    quando: "lead hesitante ou desanimado ('já tentei de tudo'); enviar junto com caso_bruna_2_resultado"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/caso_bruna_1_primeira_consulta.mp4"
+  caso_bruna_2_resultado:
+    descricao: "história da mesma paciente: a Dra. mostra o resultado 4 meses depois, 21 s"
+    quando: "sempre logo depois de caso_bruna_1_primeira_consulta"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/caso_bruna_2_resultado.mp4"
+  antonella_tosti:
+    descricao: "a Dra. Antonella Tosti (autoridade mundial em tricologia) visitando a clínica, 25 s"
+    quando: "lead questiona credibilidade ou 'o que faz a Passoni diferente'"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/antonella_tosti.mp4"
+  artigos_cientificos:
+    descricao: "artigos científicos publicados pela Dra. Luciana, 42 s"
+    quando: "lead pede referências científicas ou diz que 'a dermato já faz isso'"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/artigos_cientificos.mp4"
+  protocolo_terapia_autologa:
+    descricao: "protocolo de terapia autóloga (medicina regenerativa) usado na clínica, 26 s"
+    quando: "lead pergunta como é o tratamento ou o que é feito na clínica"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/protocolo_terapia_autologa.mp4"
+  agendou_dra_luciana:
+    descricao: "a Dra. Luciana dá as boas-vindas a quem acabou de agendar com ela, 13 s"
+    quando: "logo após confirmar o agendamento com a Dra. Luciana (no lugar de boas_vindas_consulta)"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/agendou_dra_luciana.mp4"
+  agendou_dr_lucas:
+    descricao: "o Dr. Lucas dá as boas-vindas a quem acabou de agendar com ele, 17 s"
+    quando: "logo após confirmar o agendamento com o Dr. Lucas (no lugar de boas_vindas_consulta)"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/agendou_dr_lucas.mp4"
+
+# Vídeos reservados para as rotinas de consulta (confirmação D-1, desmarcou) e pós-consulta; NÃO entram na ferramenta enviar_video.
+videos_rotinas:
+  confirmou_dra_luciana: { descricao: "a Dra. Luciana agradece a confirmação da consulta, 20 s", url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/confirmou_dra_luciana.mp4" }
+  confirmou_dr_lucas:    { descricao: "o Dr. Lucas agradece a confirmação da consulta, 31 s",    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/confirmou_dr_lucas.mp4" }
+  desmarcou_dr_lucas:    { descricao: "o Dr. Lucas fala com quem desmarcou a consulta, 25 s",     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/desmarcou_dr_lucas.mp4" }
+  pre_shampoo:           { descricao: "a Dra. ensina a usar o pré-shampoo (orientação a paciente), 3 min 16 s", url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/pre_shampoo.mp4" }
+
+# Fotos de antes e depois por doença (da landing page, 14/10/2026). Enviadas DEPOIS dos balões, como os vídeos,
+# só quando o lead pede resultados/casos ou aceita a oferta. Tínea capitis (09) não tem foto no site.
+antes_e_depois:
+  base_url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/antes-e-depois/"
+  max_por_envio: 2
+  legenda: "Antes e depois de um caso real de {doenca}, tratado na Passoni Clinic. Cada caso é avaliado na consulta, e os resultados variam de pessoa para pessoa."
+  doencas:
+    dermatite_seborreica:            { nome: "dermatite seborreica",              arquivos: ["01-dermatite-seborreica-a.jpg", "01-dermatite-seborreica-b.jpg"] }
+    psoriase_couro_cabeludo:         { nome: "psoríase no couro cabeludo",        arquivos: ["02-psoriase-couro-cabeludo-a.jpg", "02-psoriase-couro-cabeludo-b.jpg"] }
+    alopecia_areata:                 { nome: "alopecia areata",                   arquivos: ["03-alopecia-areata-a.jpg", "03-alopecia-areata-b.jpg", "03-alopecia-areata-c.jpg"] }
+    alopecia_fibrosante_frontal:     { nome: "alopecia fibrosante frontal",       arquivos: ["04-alopecia-fibrosante-frontal-a.jpg", "04-alopecia-fibrosante-frontal-b.jpg"] }
+    lupus_couro_cabeludo:            { nome: "lúpus no couro cabeludo",           arquivos: ["05-lupus-couro-cabeludo-a.jpg", "05-lupus-couro-cabeludo-b.jpg"] }
+    alopecia_por_tracao:             { nome: "alopecia por tração",               arquivos: ["06-alopecia-por-tracao-a.jpg", "06-alopecia-por-tracao-b.jpg"] }
+    foliculite_decalvante:           { nome: "foliculite decalvante",             arquivos: ["07-foliculite-decalvante-a.jpg", "07-foliculite-decalvante-b.jpg"] }
+    foliculite_dissecante:           { nome: "foliculite dissecante",             arquivos: ["08-foliculite-dissecante-a.jpg"] }
+    liquen_plano_pilar:              { nome: "líquen plano pilar",                arquivos: ["10-liquen-plano-pilar-a.jpg", "10-liquen-plano-pilar-b.jpg"] }
+    alopecia_androgenetica_masculina: { nome: "alopecia androgenética masculina",  arquivos: ["11-alopecia-androgenetica-masculina-a.jpg", "11-alopecia-androgenetica-masculina-b.jpg", "11-alopecia-androgenetica-masculina-c.jpg", "11-alopecia-androgenetica-masculina-d.jpg"] }
+    alopecia_androgenetica_feminina: { nome: "alopecia androgenética feminina",   arquivos: ["12-alopecia-androgenetica-feminina-a.jpg", "12-alopecia-androgenetica-feminina-b.jpg", "12-alopecia-androgenetica-feminina-c.jpg"] }
+    efluvio_anageno:                 { nome: "eflúvio anágeno (pós-quimioterapia)", arquivos: ["13-efluvio-anageno-pos-quimioterapia-a.jpg", "13-efluvio-anageno-pos-quimioterapia-b.jpg"] }
+    tricotilomania:                  { nome: "tricotilomania",                    arquivos: ["14-tricotilomania-a.jpg"] }
+    disturbios_da_haste:             { nome: "distúrbios da haste capilar",       arquivos: ["15-disturbios-da-haste-capilar-a.jpg"] }
+    efluvio_telogeno:                { nome: "eflúvio telógeno",                  arquivos: ["16-efluvio-telogeno-a.jpg", "16-efluvio-telogeno-b.jpg"] }
+
+# Fotos de antes e depois por TRATAMENTO (galeria geral do site; o rótulo da imagem é a tecnologia). Decisão da clínica em 15/10/2026:
+# só quando o lead PERGUNTA explicitamente por um tratamento/tecnologia ("vocês fazem Fotona?", "quais tratamentos vocês fazem?").
+antes_e_depois_tratamentos:
+  base_url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/antes-e-depois/tratamentos/"
+  max_por_envio: 2
+  legenda: "Antes e depois de um caso real tratado com {tratamento} na Passoni Clinic. O tratamento indicado para cada pessoa é definido pelo médico na consulta, depois da tricoscopia, e os resultados variam."
+  geral: ["microinfusao_de_medicamentos", "terapia_regenerativa"]   # pergunta genérica "quais tratamentos?": uma foto de cada um destes
+  tratamentos:
+    microinfusao_de_medicamentos:    { nome: "microinfusão de medicamentos",                      arquivos: ["02-microinfusao-de-medicamentos.jpg", "10-microinfusao-de-medicamentos.jpg", "13-microinfusao-de-medicamentos.jpg", "14-microinfusao-de-medicamentos.jpg", "18-microinfusao-de-medicamentos.jpg"] }
+    microinfusao_e_terapia_regenerativa: { nome: "microinfusão de medicamentos e terapia regenerativa", arquivos: ["05-microinfusao-e-terapia-regenerativa.jpg", "07-microinfusao-e-terapia-regenerativa.jpg", "15-microinfusao-e-terapia-regenerativa.jpg"] }
+    terapia_regenerativa:            { nome: "terapia regenerativa",                              arquivos: ["06-terapia-regenerativa.jpg", "16-terapia-regenerativa.jpg"] }
+    radiofrequencia_microagulhada:   { nome: "radiofrequência microagulhada",                     arquivos: ["03-radiofrequencia-microagulhada.jpg", "08-radiofrequencia-microagulhada.jpg"] }
+    fotona_capilar:                  { nome: "Fotona capilar",                                    arquivos: ["04-fotona-capilar.jpg", "12-fotona-capilar.jpg"] }
+    laserterapia_capilar:            { nome: "laserterapia capilar",                              arquivos: ["17-laserterapia-capilar.jpg"] }
+    intradermoterapia_capilar:       { nome: "intradermoterapia capilar",                         arquivos: ["09-intradermoterapia-capilar-extreme.jpg"] }
+    tricopat_exomorphic:             { nome: "Tricopat Exomorphic",                               arquivos: ["11-tricopat-exomorphic.jpg"] }
+    enxerto_autologo:                { nome: "enxerto autólogo",                                  arquivos: ["01-enxerto-autologo.jpg"] }
 
 # ---------------------------------------------------------------------
 # Campos do pré-cadastro (na ordem em que são pedidos)
@@ -308,7 +397,7 @@ frentes:
 # Modelos de IA e preços (US$ por milhão de tokens; API Anthropic, 22/09/2026)
 # ---------------------------------------------------------------------
 modelos:
-  conversa: "claude-opus-5-5"         # principal (trocado de claude-opus-5 em 08/10/2026: mesma categoria, 20% mais barato, cache 2,5× mais barato)
+  conversa: "claude-opus-5-5"         # decisão da clínica em 14/10/2026 após testar Haiku (sem tato) e Sonnet (frio): o Opus conduz melhor; custo ~US$ 0,40/conversa
   conversa_fallback: "claude-sonnet-5-5" # se o principal falhar (5xx, limite, timeout) após 1 retentativa
   auxiliar: "claude-haiku-4-5"         # resumos e classificação
   lembretes: "claude-haiku-4-5"        # lembretes de retomada (frase curta; 1/10 do custo do Opus)
@@ -342,7 +431,16 @@ disparos:
     T2: resgate_solicitacao_segue_pendente   # "sua solicitação segue pendente" (UTILITY, aprovado pela clínica em 13/10)
     T3: resgate_solicitacao_ainda_pendente   # "ainda está pendente" (UTILITY, aprovado pela clínica em 14/10)
     T4: resgate_solicitacao_encerramento     # "vamos encerrar a sua solicitação" (UTILITY, aprovado pela clínica em 14/10)
+  templates_alternativos:               # versões com gancho de vídeo, cadastradas em 15/10/2026 (aprovadas pela clínica); entram na esteira só depois da aprovação da Meta e do fluxo dos botões
+    T3v: { nome: resgate_video_dra_luciana,  quando: "Alternativa ao T3 (3 dias depois do T2): oferece o vídeo da Dra. sobre queda de cabelo. 'Quero ver o vídeo' → vídeo dra_luciana + Celeste.", video: dra_luciana }
+    T4v: { nome: resgate_video_encerramento, quando: "Alternativa ao T4 (7 dias depois do T3): antes de encerrar, oferece um vídeo. 'Quero ver o vídeo' → vídeo casos_sucesso + Celeste; 'Pode encerrar' → opt-out.", video: casos_sucesso }
   status_apos_template: { T1: "Template enviado (1°)", T2: "Template enviado (2°)", T3: "Template enviado (2°)", T4: "Template enviado (1°)" }
+  quando:                               # descrição para o painel (página Templates)
+    T1: "Dia 0. Primeiro toque a quem está na base de Leads Perdidos e nunca respondeu."
+    T2: "1 dia depois do T1, se não houve resposta (ou 1 dia depois de 'Agora não' sem motivo)."
+    T3: "3 dias depois do T2, se não houve resposta."
+    T4: "7 dias depois do T3, se não houve resposta. Depois: pausa de 15 dias e recomeça no T1 uma única vez."
+
   passos:                               # cadência medida na atendente de referência (medianas): 3 d, 3 d, 8 d, 3 d
     - { template: T1, apos_dias: 0,  ciclo: 1 }
     - { template: T2, apos_dias: 1,  ciclo: 1 }         # 1 dia após o T1 (decisão da clínica, 13/10/2026)
@@ -384,3 +482,13 @@ lembretes:
   intervalo_entre_lembretes_min: 180   # 2º lembrete: 3 h depois do 1º
   max_por_conversa: 2                  # por fio: o contador zera quando o lead responde
   so_dentro_janela_24h: true           # texto livre só até 24 h da última msg do lead; depois, só template
+
+# Templates das rotinas de consulta (aprovados na Meta como UTILITY; conferido em 15/10/2026). Só para consultas agendadas pela Celeste.
+# As rotinas de envio ainda não existem; esta lista alimenta a página Templates do painel.
+templates_consulta:
+  C48:  { nome: consulta_48_horas,            quando: "48 h antes da consulta. Botões: Confirmar presença / Preciso remarcar." }
+  C24:  { nome: consulta_confirmar_24_horas,  quando: "Véspera da consulta. Quem já confirmou no toque anterior recebe sem botões." }
+  CHOJ: { nome: consulta_hoje,                quando: "Manhã do dia da consulta." }
+  CFAL: { nome: faltou_a_consulta,            quando: "Fim do dia, quando a consulta ficou com status Falta no TI Saúde." }
+  CCAN: { nome: consulta_cancelada_clinica,   quando: "Manual, pela recepção no painel, quando a clínica precisa cancelar." }
+  CATR: { nome: atrasos,                      quando: "Recepção, pacientes em tratamento (fora da Celeste)." }

@@ -31,6 +31,9 @@ deploy_orq() {
   # o gateway (via Cloud Tasks, token OIDC) pode invocar o orquestrador
   gcloud run services add-iam-policy-binding celeste-orquestrador --project "$PROJETO" --region "$REGIAO" \
     --member "serviceAccount:celeste-gateway@${PROJETO}.iam.gserviceaccount.com" --role roles/run.invoker --quiet
+  # regrava o cache do prompt logo após publicar (14/10/2026): senão a 1ª mensagem de lead paga a gravação (~30 s a mais)
+  gcloud scheduler jobs run celeste-aquecer-cache --project "$PROJETO" --location "$REGIAO" --quiet >/dev/null 2>&1 \
+    && echo ">> cache do prompt: regravação disparada" || echo ">> cache do prompt: não foi possível disparar (agendador celeste-aquecer-cache)"
 }
 
 deploy_gw() {
@@ -72,6 +75,14 @@ deploy_jobs() {
   agendar celeste-espelho       "30 23 * * *"       /jobs/espelho
   agendar celeste-lembretes     "0 9-19 * * 1-5"  /jobs/lembretes      # retomada no mesmo dia; fica PAUSADO até a clínica liberar
   agendar celeste-aquecer-cache "0,50 6-23 * * *"  /jobs/aquecer-cache   # 06:00 até 23:50 (cache vale até 00:50)
+  # mantém o orquestrador acordado (GET /status, sem custo de modelo): sem isso a instância desliga após ~15 min ocioso
+  # e a 1ª resposta da conversa paga a inicialização (14/10/2026: 4 religadas em 3 h de teste)
+  ORQ="$(gcloud run services describe celeste-orquestrador --project "$PROJETO" --region "$REGIAO" --format 'value(status.url)')"
+  ESTADO=$(gcloud scheduler jobs describe celeste-manter-quente --project "$PROJETO" --location "$REGIAO" --format 'value(state)' 2>/dev/null || true)
+  if [ -n "$ESTADO" ]; then ACAO=update; else ACAO=create; fi
+  gcloud scheduler jobs $ACAO http celeste-manter-quente --project "$PROJETO" --location "$REGIAO" --schedule "*/10 6-23 * * *" --time-zone "America/Sao_Paulo" \
+    --uri "${ORQ}/status" --http-method GET --oidc-service-account-email "$SA" --attempt-deadline 60s --quiet
+  if [ -n "$ESTADO" ] && [ "$ESTADO" != "ENABLED" ]; then gcloud scheduler jobs pause celeste-manter-quente --project "$PROJETO" --location "$REGIAO" --quiet >/dev/null 2>&1 || true; fi
 }
 
 case "$ALVO" in

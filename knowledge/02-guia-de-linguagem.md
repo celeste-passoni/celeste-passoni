@@ -93,7 +93,7 @@ Pré-cadastro (formulário) → agenda → confirma por escrito → endereço + 
 > Em seguida, a Dra. Luciana faz a avaliação médica, define o diagnóstico e indica o tratamento personalizado.
 >
 > 🔹 Dr. Lucas Vieira - R$ 800,00.
-> Diretor Médico da Passoni Clinic e tricologista, ele realiza toda a consulta, desde a avaliação clínica até o diagnóstico e a definição do tratamento.
+> Coordenador Médico da Passoni Clinic e tricologista, ele realiza toda a consulta, desde a avaliação clínica até o diagnóstico e a definição do tratamento.
 >
 > Em ambas as modalidades, o objetivo é fechar o seu diagnóstico e indicar o tratamento mais adequado para o seu caso.
 >

@@ -42,8 +42,8 @@ def test_separar_baloes(texto, esperado):
 
 def test_delay_humano_dentro_dos_limites():
     for _ in range(200):
-        assert 5 <= motor.delay_humano() <= 20
-        assert 5 <= motor.delay_humano(fora_horario=True) <= 20
+        assert 2 <= motor.delay_humano() <= 9
+        assert 2 <= motor.delay_humano(fora_horario=True) <= 9
 
 
 # ------------------------------------------------------------------ ferramentas
@@ -132,13 +132,14 @@ def test_motor_ciclo_de_ferramenta_e_custo():
     res = m.responder("leads_perdidos", {"id": "c1", "contato": "55", "nome": "Ana"}, [{"role": "user", "content": "oi"}], _ctx(ts=ts))
     assert res.baloes == ["Tenho terça 10h", "Te serve?"]
     assert res.chamadas == 2 and res.ferramentas[0]["nome"] == "buscar_horarios"
-    # custo (opus 5.5): 2×(1000 in ×4 + 100 out ×20)/1M + 20000 cache ×0.2/1M
-    assert abs(res.custo_usd - (2 * (1000 * 4 + 100 * 20) / 1e6 + 20000 * 0.2 / 1e6)) < 1e-9
+    # custo pelo preço do modelo da resposta (opus 5.5 no mock): 2×(1000 in + 100 out) + 20000 de cache lido
+    pr = config.parametros()["modelos"]["precos_usd_por_milhao"]["claude-opus-5-5"]
+    assert abs(res.custo_usd - (2 * (1000 * pr["entrada"] + 100 * pr["saida"]) / 1e6 + 20000 * pr["cache_leitura"] / 1e6)) < 1e-9
     # contexto do lead foi injetado na 1ª mensagem; system tem cache_control
     kwargs = cliente.beta.messages.create.call_args_list[0].kwargs
     assert kwargs["system"][0]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}
     assert "Nome: Ana" in kwargs["messages"][0]["content"]
-    assert kwargs["model"] == "claude-opus-5-5"
+    assert kwargs["model"] == config.parametros()["modelos"]["conversa"]
 
 
 def test_motor_fallback_para_sonnet():
@@ -149,8 +150,8 @@ def test_motor_fallback_para_sonnet():
         _resp("end_turn", [SimpleNamespace(type="text", text="Oi!")], modelo="claude-sonnet-5-5"),
     ]
     res = motor.Motor(cliente=cliente).responder("leads_perdidos", {"id": "c1"}, [{"role": "user", "content": "oi"}], _ctx())
-    assert res.modelo == "claude-sonnet-5-5" and res.baloes == ["Oi!"]
-    assert cliente.beta.messages.create.call_args_list[1].kwargs["model"] == "claude-sonnet-5-5"
+    assert res.modelo == config.parametros()["modelos"]["conversa_fallback"] and res.baloes == ["Oi!"]
+    assert cliente.beta.messages.create.call_args_list[1].kwargs["model"] == config.parametros()["modelos"]["conversa_fallback"]
 
 
 def test_motor_refusal():
@@ -467,7 +468,7 @@ def test_modelo_principal_tem_preco_cadastrado():
     cfg = config.parametros()["modelos"]
     for m in (cfg["conversa"], cfg["conversa_fallback"], cfg["lembretes"], cfg["auxiliar"]):
         assert m in cfg["precos_usd_por_milhao"], m
-    assert cfg["conversa"] == "claude-opus-5-5"
+    assert cfg["conversa"] in ("claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5")
 
 
 def test_aquecer_cache_envia_max_tokens_zero_com_mesmo_prefixo():
@@ -477,10 +478,10 @@ def test_aquecer_cache_envia_max_tokens_zero_com_mesmo_prefixo():
     m = motor.Motor(cliente=cliente)
     r = m.aquecer("leads_perdidos")
     kw = cliente.beta.messages.create.call_args.kwargs
-    assert kw["max_tokens"] == 0 and kw["model"] == "claude-opus-5-5"
+    assert kw["max_tokens"] == 0 and kw["model"] == config.parametros()["modelos"]["conversa"]
     assert kw["system"][0]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}
     assert kw["system"][0]["text"] == m._system("leads_perdidos")[0]["text"]   # mesmo prefixo da conversa real
-    assert kw["tools"] == ferramentas_ia.FERRAMENTAS and "thinking" in kw
+    assert kw["tools"] == ferramentas_ia.FERRAMENTAS and ("thinking" in kw) == ("haiku" not in kw["model"])
     assert r["cache_lido"] == 21000 and r["custo_usd"] == round(21000 * 0.2 / 1e6 + 1 * 4 / 1e6, 5)
 
 
@@ -664,3 +665,91 @@ def test_t1_tem_botoes_e_textos_do_fluxo():
     assert tt.TEMPLATES["T1"]["botoes"] == ["Quero continuar", "Agora não"]
     b = config.parametros()["t1_botoes"]
     assert len(b["sair_rotulo"]) <= 20 and "{nome}" in b["agora_nao_texto"] and "{nome}" in b["sair_texto"]
+
+
+def test_haiku_sem_thinking_nem_fallback_do_servidor():
+    cliente = MagicMock()
+    cliente.beta.messages.create.return_value = SimpleNamespace(model="x", content=[], stop_reason="max_tokens",
+        usage=SimpleNamespace(input_tokens=1, output_tokens=0, cache_read_input_tokens=0, cache_creation_input_tokens=0))
+    m = motor.Motor(cliente=cliente)
+    m._criar("claude-haiku-5-5", [], [{"role": "user", "content": "."}], max_tokens=0)
+    kw = cliente.beta.messages.create.call_args.kwargs
+    assert "thinking" not in kw and "betas" not in kw and "fallbacks" not in kw
+    m._criar("claude-opus-5-5", [], [{"role": "user", "content": "."}], max_tokens=0)
+    kw = cliente.beta.messages.create.call_args.kwargs
+    assert kw["thinking"] == {"type": "adaptive"} and kw["fallbacks"] == "default"
+
+
+def test_buscar_horarios_oferece_no_maximo_3_e_acumula_oferecidos():
+    livres = [{"data": "2026-10-15", "hora": h} for h in ("13:00", "14:00", "15:00", "16:00")]
+    livres += [{"data": "2026-10-16", "hora": "13:00"}, {"data": "2026-10-19", "hora": "13:00"}]
+    assert ferramentas_ia.selecionar_opcoes(livres, 3) == [livres[0], livres[1], livres[4]]   # 2 do 1º dia + 1 do 2º
+    assert ferramentas_ia.selecionar_opcoes(livres[:2], 3) == livres[:2]
+    ts = MagicMock(); ts.buscar_horarios.return_value = livres
+    conv = {"id": "c1", "frente": "leads_perdidos", "horarios_oferecidos": ["2026-10-14 10:00"]}
+    ctx = _ctx(conv, ts=ts); ctx.atualizar = lambda campos: conv.update(campos)
+    saida, erro = ferramentas_ia.executar("buscar_horarios", {"profissional": "dra_luciana", "a_partir_de": "", "dias": 14}, ctx)
+    d = __import__("json").loads(saida)
+    assert not erro and len(d["livres"]) == 3 and d["ha_mais_no_periodo"]
+    assert conv["horarios_oferecidos"] == ["2026-10-14 10:00", "2026-10-15 13:00", "2026-10-15 14:00", "2026-10-16 13:00"]
+
+
+def test_separar_baloes_limita_a_tres():
+    sep = chr(10) + "---" + chr(10)
+    partes = motor.separar_baloes(sep.join(["Um.", "Dois.", "Três.", "Quatro.", "Cinco."]))
+    assert len(partes) == 3 and partes[:2] == ["Um.", "Dois."]
+    assert partes[2] == "Três." + chr(10) * 2 + "Quatro." + chr(10) * 2 + "Cinco."
+
+
+def test_referencias_codigo_vira_link_e_link_digitado_errado_e_corrigido():
+    from celeste.orquestrador import referencias
+    cat = referencias.catalogo()
+    assert len(cat) >= 40 and cat["artigo-fapd"].endswith("microgra-1102219.html") and cat["instagram-dra"].endswith("/dralupassoni/")
+    assert referencias.resolver("Olha: [[ref:metropoles-queda-por-dia]] 😊") == "Olha: " + cat["metropoles-queda-por-dia"] + " 😊"
+    assert referencias.resolver("Veja [[ref:nao-existe]] aqui") == "Veja aqui"          # código desconhecido nunca vira link inventado
+    errado = cat["artigo-fapd"].replace("single-injection", "single-installation")       # incidente de 14/10: slug redigitado
+    assert referencias.resolver("o certo é este, " + errado + ".") == "o certo é este, " + cat["artigo-fapd"] + "."
+    assert referencias.resolver("https://www.google.com/x") == "https://www.google.com/x"   # domínio desconhecido fica como está
+
+
+def test_enviar_texto_liga_previa_so_quando_ha_link():
+    from celeste.ferramentas import meta
+    m = meta.Meta.__new__(meta.Meta); chamadas = []
+    m._post = lambda caminho, corpo: (chamadas.append(corpo), {"messages": [{"id": "w1"}]})[1]
+    m.enviar_texto("55", "Oi, tudo bem?"); m.enviar_texto("55", "Olha: https://vogue.globo.com/x")
+    assert chamadas[0]["text"]["preview_url"] is False and chamadas[1]["text"]["preview_url"] is True
+
+
+def test_catalogo_de_videos_bate_com_a_ferramenta():
+    cfg = config.parametros()
+    enum = next(t for t in ferramentas_ia.FERRAMENTAS if t["name"] == "enviar_video")["input_schema"]["properties"]["video"]["enum"]
+    assert set(enum) == set(cfg["videos"]) and len(enum) >= 18
+    for chave, v in cfg["videos"].items():
+        assert v["url"].endswith(f"/{chave}.mp4") and v["descricao"] and v["quando"], chave
+    assert not set(cfg["videos_rotinas"]) & set(cfg["videos"])
+
+
+def test_enviar_antes_e_depois_tratamento_config_e_uma_vez():
+    conv = {"id": "c1", "frente": "leads_perdidos"}; pend = []
+    ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos); ctx.enviar_imagem = lambda d: (pend.append(d), "adiado")[1]
+    s1, e1 = ferramentas_ia.executar("enviar_antes_e_depois_tratamento", {"tratamento": "fotona_capilar"}, ctx)
+    s2, e2 = ferramentas_ia.executar("enviar_antes_e_depois_tratamento", {"tratamento": "fotona_capilar"}, ctx)
+    assert not e1 and pend == ["tratamento:fotona_capilar"] and conv["imagens_tratamento_enviadas"] == ["fotona_capilar"] and "já enviadas" in s2
+    cfg = config.parametros()["antes_e_depois_tratamentos"]
+    enum = next(t for t in ferramentas_ia.FERRAMENTAS if t["name"] == "enviar_antes_e_depois_tratamento")["input_schema"]["properties"]["tratamento"]["enum"]
+    assert set(enum) == set(cfg["tratamentos"]) | {"geral"} and all(t in cfg["tratamentos"] for t in cfg["geral"])
+    assert "{tratamento}" in cfg["legenda"] and all(d["arquivos"] for d in cfg["tratamentos"].values())
+
+
+def test_enviar_antes_e_depois_uma_vez_por_doenca_e_config_consistente():
+    conv = {"id": "c1", "frente": "leads_perdidos"}
+    pend = []
+    ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos); ctx.enviar_imagem = lambda d: (pend.append(d), "adiado")[1]
+    s1, e1 = ferramentas_ia.executar("enviar_antes_e_depois", {"doenca": "efluvio_telogeno"}, ctx)
+    s2, e2 = ferramentas_ia.executar("enviar_antes_e_depois", {"doenca": "efluvio_telogeno"}, ctx)
+    assert not e1 and pend == ["efluvio_telogeno"] and conv["imagens_enviadas"] == ["efluvio_telogeno"]
+    assert "já enviadas" in s2
+    cfg = config.parametros()["antes_e_depois"]
+    enum = next(t for t in ferramentas_ia.FERRAMENTAS if t["name"] == "enviar_antes_e_depois")["input_schema"]["properties"]["doenca"]["enum"]
+    assert set(enum) == set(cfg["doencas"]) and all(d["arquivos"] for d in cfg["doencas"].values())
+    assert "{doenca}" in cfg["legenda"]

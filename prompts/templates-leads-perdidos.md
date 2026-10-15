@@ -46,7 +46,7 @@ Recontato por status de quem respondeu e parou: "Irá nos retornar" e "Vamos ret
 - Escolheu horário e não mandou os dados: "Olá, {{1}}. A reserva da sua consulta ficou pendente por falta dos dados de cadastro. Responda esta mensagem para concluir."
 - Pediu para remarcar e sumiu: "Olá, {{1}}. A remarcação da sua consulta ficou pendente. Responda esta mensagem para escolhermos um novo horário."
 
-## Templates de consulta (pós-agendamento) — cadastrados em 14/10/2026 na conta da Celeste, todos como UTILITY
+## Templates de consulta (pós-agendamento) — cadastrados em 14/10/2026 na conta da Celeste, todos como UTILITY; **os 6 APROVADOS** (conferido na Meta em 15/10/2026)
 
 Cópias dos templates da conta "Passoni Clinic" (1470345631783377) do outro número, com "Digite 1/2" trocado por botões; os dois que só existiam em texto foram criados a partir das versões da clínica.
 
@@ -60,3 +60,14 @@ Cópias dos templates da conta "Passoni Clinic" (1470345631783377) do outro núm
 | `atrasos` | 1625466219306925 | {{1}} nome | — | recepção, pacientes em tratamento (fora da Celeste) |
 
 Decisões pendentes da clínica: (1) alcance dos envios automáticos — toda a agenda do TI Saúde ou só consultas agendadas pela Celeste; (2) efeito do botão "Não quero remarcar" — encerra só o agendamento ou retira o paciente dos contatos da IA. As rotinas de envio só serão implementadas depois dessas respostas e da aprovação do desenho.
+
+## Alternativas com gancho de vídeo — cadastradas em 15/10/2026 (textos aprovados pela clínica), aguardando a Meta
+
+Ideia da clínica: em vez do "textão", oferecer um vídeo. Mantidas como alternativas ao T3 e ao T4 (os atuais continuam); a esteira passa a usá-las só depois da aprovação e do fluxo dos botões. Cadastradas como UTILITY com `allow_category_change`; a Meta pode reclassificar como MARKETING (custo ~8× maior por envio e cota de marketing por usuário).
+
+| Código | Nome | Meta id | Texto | Botões | Ao tocar "Quero ver o vídeo" |
+|---|---|---|---|---|---|
+| T3v | `resgate_video_dra_luciana` | 1440529418173583 | Olá, {{1}}! A Dra. Luciana Passoni gravou um vídeo curto sobre queda de cabelo e o que costuma estar por trás dela. Quer receber? | Quero ver o vídeo · Agora não | vídeo `dra_luciana` + "Assista com calma e depois me conta o que achou! 😊" |
+| T4v | `resgate_video_encerramento` | 1783985846158088 | Olá, {{1}}. Antes de encerrar a sua solicitação de consulta na Passoni Clinic, a Dra. Luciana deixou um vídeo com uma mensagem para você. Quer receber? | Quero ver o vídeo · Pode encerrar | vídeo `casos_sucesso` + Celeste pergunta se quer ver um horário; "Pode encerrar" = opt-out |
+
+Plano de teste: metade da base com T3/T4 atuais, metade com T3v/T4v; medir taxa de resposta.

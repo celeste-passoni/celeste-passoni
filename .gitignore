@@ -7,3 +7,6 @@ __pycache__/
 .pytest_cache/
 tests/relatorio-*.md
 apresentacao/project/**/*.bak
+
+# vídeos (cópia local, ~150 MB; a fonte é o OneDrive e o bucket)
+midia/videos/*.mp4

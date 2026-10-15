@@ -532,11 +532,14 @@ def sincronizar_campanhas(_=Depends(autenticar)):
 # ================================================================= 5. TEMPLATES
 @app.get("/templates", response_class=HTMLResponse)
 def templates(request: Request, _=Depends(autenticar)):
-    """Só os templates da Celeste: os da esteira de Leads Perdidos (+ aviso à recepção). Os das ações da clínica não aparecem."""
+    """Só os templates da Celeste, em três grupos: esteira de resgate (T1–T4), rotinas de consulta (6) e aviso à recepção.
+    Status, categoria, texto e botões vêm da Meta; o 'quando' vem dos parâmetros. Os das ações da clínica não aparecem."""
     from celeste.jobs import templates_texto
     p = config.parametros()
-    planejados = [(cod, nome, "Leads Perdidos") for cod, nome in p["disparos"]["templates"].items()]
-    planejados.append(("Aviso", p["ia"]["recepcao"].get("template_aviso"), "Recepção"))
+    grupos = [("Esteira de resgate · Leads Perdidos", [(cod, nome, (p["disparos"].get("quando") or {}).get(cod, "")) for cod, nome in p["disparos"]["templates"].items()]),
+              ("Em teste · alternativas com vídeo (entram na esteira após aprovação)", [(cod, a["nome"], a.get("quando", "")) for cod, a in (p["disparos"].get("templates_alternativos") or {}).items()]),
+              ("Consulta marcada · só consultas agendadas pela Celeste", [(cod, c["nome"], c.get("quando", "")) for cod, c in (p.get("templates_consulta") or {}).items()]),
+              ("Recepção", [("Aviso", p["ia"]["recepcao"].get("template_aviso"), "Aviso à recepção quando a Celeste encaminha um lead.")])]
     na_meta, erro = {}, ""
     try:
         from celeste.ferramentas import meta
@@ -544,17 +547,27 @@ def templates(request: Request, _=Depends(autenticar)):
             na_meta[t.get("name")] = t
     except Exception as e:
         erro = str(e)[:200]
-    itens = []
-    for cod, nome, frente in planejados:
-        t = na_meta.get(nome)
-        if t:
-            comps = {c.get("type"): c for c in t.get("components", [])}
-            itens.append({"codigo": cod, "nome": nome, "frente": frente, "status": t.get("status"), "categoria": t.get("category"), "idioma": t.get("language"),
-                          "corpo": (comps.get("BODY") or {}).get("text"), "rodape": (comps.get("FOOTER") or {}).get("text"),
-                          "botoes": [b.get("text") for b in (comps.get("BUTTONS") or {}).get("buttons", [])]})
-        else:
-            prev = templates_texto.TEMPLATES.get(cod)
-            itens.append({"codigo": cod, "nome": nome, "frente": frente, "status": "A CRIAR NA META", "categoria": "—", "idioma": "pt_BR",
-                          "corpo": prev["corpo"].replace("{1}", "{{1}}").replace("{2}", "{{2}}").replace("{3}", "{{3}}") if prev else "(texto definido no aviso à recepção)",
-                          "rodape": templates_texto.RODAPE if prev else None, "botoes": prev["botoes"] if prev else []})
-    return tpl.TemplateResponse(request, "templates.html", {"itens": itens, "erro": erro})
+    exemplo = {"{{1}}": "Ana", "{{2}}": "junho", "{{3}}": "11h"}
+    saida = []
+    for titulo, lista in grupos:
+        itens = []
+        for cod, nome, quando in lista:
+            t = na_meta.get(nome)
+            if t:
+                comps = {c.get("type"): c for c in t.get("components", [])}
+                corpo = (comps.get("BODY") or {}).get("text") or ""
+                item = {"codigo": cod, "nome": nome, "quando": quando, "status": t.get("status"), "categoria": t.get("category"), "idioma": t.get("language"),
+                        "corpo": corpo, "rodape": (comps.get("FOOTER") or {}).get("text"), "cabecalho": (comps.get("HEADER") or {}).get("text"),
+                        "botoes": [b.get("text") for b in (comps.get("BUTTONS") or {}).get("buttons", [])], "meta_id": t.get("id")}
+            else:
+                prev = templates_texto.TEMPLATES.get(cod)
+                corpo = prev["corpo"].replace("{1}", "{{1}}").replace("{2}", "{{2}}").replace("{3}", "{{3}}") if prev else "(não encontrado na Meta)"
+                item = {"codigo": cod, "nome": nome, "quando": quando, "status": "NÃO ENCONTRADO NA META", "categoria": "—", "idioma": "pt_BR", "corpo": corpo,
+                        "rodape": templates_texto.RODAPE if prev else None, "cabecalho": None, "botoes": prev["botoes"] if prev else [], "meta_id": None}
+            previa = item["corpo"]
+            for k, v in exemplo.items():
+                previa = previa.replace(k, v)
+            item["previa"] = previa
+            itens.append(item)
+        saida.append({"titulo": titulo, "itens": itens})
+    return tpl.TemplateResponse(request, "templates.html", {"grupos": saida, "erro": erro})

@@ -1,0 +1,53 @@
+Imagens de antes e depois da landing page https://passoniclinic.med.br/ (baixadas em 14/10/2026)
+por-doenca/: cartões de 'Tratamento completo', numerados na ordem do site (01 dermatite seborreica ... 16 eflúvio telógeno)
+tratamentos/ (antes "galeria"): seção "Antes e depois" geral; o rótulo na imagem é o TRATAMENTO (não a doença), e o nome do arquivo reproduz esse rótulo (15/10/2026)
+
+por-doenca/01-dermatite-seborreica-a.webp | 21 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-01-A-1024x467.webp
+por-doenca/01-dermatite-seborreica-b.webp | 32 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-01-B-1024x467.webp
+por-doenca/02-psoriase-couro-cabeludo-a.webp | 24 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-02-A-1024x467.webp
+por-doenca/02-psoriase-couro-cabeludo-b.webp | 30 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-02-B-1024x467.webp
+por-doenca/03-alopecia-areata-a.webp | 30 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-03-A-1024x467.webp
+por-doenca/03-alopecia-areata-b.webp | 30 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-03-B-1024x467.webp
+por-doenca/03-alopecia-areata-c.webp | 28 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-03-C-1024x467.webp
+por-doenca/04-alopecia-fibrosante-frontal-a.webp | 20 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-04-A-1024x467.webp
+por-doenca/04-alopecia-fibrosante-frontal-b.webp | 22 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-04-B-1024x467.webp
+por-doenca/05-lupus-couro-cabeludo-a.webp | 38 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-05-A-1024x467.webp
+por-doenca/05-lupus-couro-cabeludo-b.webp | 31 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-05-B-1024x467.webp
+por-doenca/06-alopecia-por-tracao-a.webp | 28 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-06-A-1024x467.webp
+por-doenca/06-alopecia-por-tracao-b.webp | 25 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-06-B-1024x467.webp
+por-doenca/07-foliculite-decalvante-a.webp | 61 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-07-A-1024x467.webp
+por-doenca/07-foliculite-decalvante-b.webp | 32 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-07-B-1024x467.webp
+por-doenca/08-foliculite-dissecante-a.webp | 29 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-08-A-1024x467.webp
+por-doenca/10-liquen-plano-pilar-a.webp | 28 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-10-A-1024x467.webp
+por-doenca/10-liquen-plano-pilar-b.webp | 32 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-10-B-1024x467.webp
+por-doenca/11-alopecia-androgenetica-masculina-a.webp | 38 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-11-A-1024x467.webp
+por-doenca/11-alopecia-androgenetica-masculina-b.webp | 21 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-11-B-1024x467.webp
+por-doenca/11-alopecia-androgenetica-masculina-c.webp | 34 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-11-C-1024x467.webp
+por-doenca/11-alopecia-androgenetica-masculina-d.webp | 56 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-11-D-1024x467.webp
+por-doenca/12-alopecia-androgenetica-feminina-a.webp | 23 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-12-A-1024x467.webp
+por-doenca/12-alopecia-androgenetica-feminina-b.webp | 48 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-12-B-1024x467.webp
+por-doenca/12-alopecia-androgenetica-feminina-c.webp | 33 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-12-C-1024x467.webp
+por-doenca/13-efluvio-anageno-pos-quimioterapia-a.webp | 28 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-13-A-1024x467.webp
+por-doenca/13-efluvio-anageno-pos-quimioterapia-b.webp | 26 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-13-B-1024x467.webp
+por-doenca/14-tricotilomania-a.webp | 29 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-14-A-1024x467.webp
+por-doenca/15-disturbios-da-haste-capilar-a.webp | 22 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-15-A-1024x467.webp
+por-doenca/16-efluvio-telogeno-a.webp | 20 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-16-A-1024x467.webp
+por-doenca/16-efluvio-telogeno-b.webp | 28 KB | https://passoniclinic.med.br/wp-content/uploads/2025/07/Tratamento-16-B-1024x467.webp
+tratamentos/01-(renomeado pelo tratamento, ver pasta).webp | 23 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-01.webp
+tratamentos/02-(renomeado pelo tratamento, ver pasta).webp | 27 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-02.webp
+tratamentos/03-(renomeado pelo tratamento, ver pasta).webp | 50 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-03.webp
+tratamentos/04-(renomeado pelo tratamento, ver pasta).webp | 16 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-04.webp
+tratamentos/05-(renomeado pelo tratamento, ver pasta).webp | 36 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-05.webp
+tratamentos/06-(renomeado pelo tratamento, ver pasta).webp | 31 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-06.webp
+tratamentos/07-(renomeado pelo tratamento, ver pasta).webp | 25 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-07.webp
+tratamentos/08-(renomeado pelo tratamento, ver pasta).webp | 30 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-08.webp
+tratamentos/09-(renomeado pelo tratamento, ver pasta).webp | 25 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-09.webp
+tratamentos/10-(renomeado pelo tratamento, ver pasta).webp | 23 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-10.webp
+tratamentos/11-(renomeado pelo tratamento, ver pasta).webp | 23 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-11.webp
+tratamentos/12-(renomeado pelo tratamento, ver pasta).webp | 30 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-12.webp
+tratamentos/13-(renomeado pelo tratamento, ver pasta).webp | 65 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-13.webp
+tratamentos/14-(renomeado pelo tratamento, ver pasta).webp | 37 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-14.webp
+tratamentos/15-(renomeado pelo tratamento, ver pasta).webp | 30 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-15.webp
+tratamentos/16-(renomeado pelo tratamento, ver pasta).webp | 22 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-16.webp
+tratamentos/17-(renomeado pelo tratamento, ver pasta).webp | 38 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-17.webp
+tratamentos/18-(renomeado pelo tratamento, ver pasta).webp | 30 KB | https://passoniclinic.med.br/wp-content/uploads/2026/03/Passoni-_-antes-e-depois-18.webp

@@ -91,18 +91,20 @@ section.lane{border-top:1px solid var(--line);padding-top:22px;margin-top:34px}
   <h1>Mapa de Mensagens Celeste</h1>
   <p class="sub">O caminho de cada mensagem da frente Leads Perdidos, do template ao agendamento: o texto que o lead recebe, os botões, o que acontece em cada resposta e quem responde em cada ponto.</p>
   <div class="meta">
-    <span class="chip">Estado em <b>14/10/2026</b></span>
+    <span class="chip">Estado em <b>15/10/2026</b></span>
+    <span class="chip">Modelo <b>Opus 5.5</b></span>
     <span class="chip">Esteira e lembretes <b>pausados</b></span>
     <span class="chip">T1–T4 <b>aprovados · utilidade</b></span>
-    <span class="chip">Templates de consulta <b>em aprovação</b></span>
+    <span class="chip">6 templates de consulta <b>aprovados · utilidade</b></span>
   </div>
   <nav class="toc" aria-label="Seções">
     <a href="#esteira">1 · Esteira de resgate</a>
     <a href="#atendimento">2 · Atendimento pela Celeste</a>
     <a href="#objecoes">3 · Objeções</a>
-    <a href="#consulta">4 · Consulta marcada</a>
-    <a href="#lembretes">5 · Lembretes do mesmo dia</a>
-    <a href="#regras">6 · Regras que valem sempre</a>
+    <a href="#material">4 · Referências, resultados e vídeos</a>
+    <a href="#consulta">5 · Consulta marcada</a>
+    <a href="#lembretes">6 · Lembretes do mesmo dia</a>
+    <a href="#regras">7 · Regras que valem sempre</a>
   </nav>
   <div class="legend" aria-label="Legenda">
     <div><span class="sw" style="background:var(--navy)"></span>Template ou balão da Celeste (IA)</div>
@@ -186,29 +188,36 @@ E se preferir não seguir por enquanto, é só tocar no botão.<div class="butto
   <!-- ============================ 2. ATENDIMENTO ============================ -->
   <section class="lane" id="atendimento">
     <div class="lane-head"><span class="eyebrow">2 · Atendimento pela Celeste</span><h2>Da resposta ao agendamento</h2></div>
-    <p class="lead">A Celeste imita as duas atendentes de referência: um balão por vez na maior parte das vezes, pergunta de modalidade e de agenda, e nada de valor antes de o lead perguntar. Os textos abaixo são os da casa; a Celeste os adapta ao que o lead disse.</p>
+    <p class="lead">A Celeste imita as duas atendentes de referência e o exemplo 65 (uma conversa dela aprovada pela clínica): um balão por vez na maior parte das vezes, nunca mais de três, nada de valor antes de o lead perguntar. Enquanto o lead pergunta, ela responde e fecha com "Ficou mais alguma dúvida?". A pergunta de agenda entra quando ele sinaliza. Os textos abaixo são os da casa; a Celeste os adapta ao que o lead disse.</p>
 
     <div class="flow">
       <div class="node"><div class="tag ia">Apresentação · só no primeiro contato espontâneo (quem veio do template já foi apresentado)</div>
-        <div class="bubble ia">Oi Ana, tudo bem?</div>
+        <div class="bubble ia">Olá, Ana, tudo bem?</div>
         <div class="bubble ia" style="margin-top:6px">É um prazer falar com você, aqui é a Celeste, concierge da Passoni Clinic, e estou aqui para te ajudar! 💛</div>
-        <div class="note">Um "oi" solto recebe só isso e espera. Se o lead já disse o que quer, a resposta vem junto.</div></div>
+        <div class="note">Sempre essa apresentação, a mais cordial. Um "oi" solto recebe só isso e espera. Se o lead já disse o que quer, a resposta vem junto.</div></div>
+
+      <div class="spacer"></div>
+      <div class="node"><div class="tag ia">"Gostaria de mais informações" / "o que é a Passoni Clinic?" · informação de verdade, nunca só uma pergunta de volta</div>
+        <div class="bubble ia">A Passoni Clinic é uma clínica especializada em ciência capilar e tricologia, 100% dedicada ao diagnóstico, à prevenção e ao tratamento das doenças do couro cabeludo e dos fios. Atendemos desde os casos mais simples até os mais complexos, de todas as idades, com tratamentos personalizados desenvolvidos a partir dos protocolos criados pela Dra. Luciana Passoni, referência em tricologia.</div>
+        <div class="bubble ia" style="margin-top:6px">Ficamos na Av. República do Líbano, 886, em Moema, em frente ao Parque Ibirapuera. Se quiser, posso te mandar um vídeo curtinho que apresenta a clínica. Você já tem algum diagnóstico?</div>
+        <div class="note">Modalidades, valor e agenda só depois da resposta do lead. Pergunta de informação (o que tratam, como funciona, referências) fecha com "Ficou mais alguma dúvida?".</div></div>
 
       <div class="spacer"></div>
       <div class="node"><div class="tag ia">Modalidade · sem valor</div>
-        <div class="bubble ia">Na Passoni Clinic, você pode agendar a consulta com a Dra. Luciana Passoni ou com o Dr. Lucas Vieira, Diretor Médico da clínica. A Dra. Luciana atende de segunda a sexta-feira, das 12h às 17h. A equipe médica atende de segunda a sexta-feira, das 9h às 17h.</div>
+        <div class="bubble ia">Na Passoni Clinic, você pode agendar a consulta com a Dra. Luciana Passoni ou com o Dr. Lucas Vieira, Coordenador Médico da clínica. A Dra. Luciana atende de segunda a sexta-feira, das 12h às 17h. A equipe médica atende de segunda a sexta-feira, das 9h às 17h.</div>
         <div class="bubble ia" style="margin-top:6px">Qual seria a melhor opção para você?</div>
         <div class="note">Vídeo nunca vai sozinho: a Celeste oferece como pergunta quando faz sentido ("Quer que eu te mande um vídeo rápido da Dra. Luciana explicando como funciona a consulta?") e só envia se o lead disser sim.</div></div>
 
       <div class="spacer"></div>
-      <div class="node"><div class="tag ia">Agenda</div>
-        <div class="bubble ia">Como está a sua agenda na próxima semana?</div>
-        <div class="note">Ou "Quando você poderia vir?". Se o lead já deu um dia, ela consulta a agenda direto.</div></div>
+      <div class="node"><div class="tag ia">Agenda · só quando o lead sinaliza</div>
+        <div class="bubble ia">Quer que eu veja um horário para você?</div>
+        <div class="bubble ia" style="margin-top:6px">Como está a sua agenda na próxima semana?</div>
+        <div class="note">Sinal de compra (quanto custa, tem avaliação gratuita, tem mais barato, parcela, ou ela sugeriu o Dr. Lucas como opção mais acessível) fecha com a oferta suave do primeiro balão. "Como está a sua agenda" só quando ele já disse que quer marcar, pediu horários, ou respondeu a um template de resgate. Se já deu um dia, ela consulta a agenda direto.</div></div>
 
       <div class="spacer"></div>
       <div class="node"><div class="tag ia">Horários · sempre da agenda real do TI Saúde</div>
-        <div class="bubble ia">Terei às 15h00, 16h00 e 17h00 no dia 06/10. Qual horário melhor lhe atende? 😊</div>
-        <div class="note">2 ou 3 opções. "Lhe atende?", "Posso reservar para você?". Fins de semana e feriados só aparecem se a agenda mostrar.</div></div>
+        <div class="bubble ia">Com a Dra. Luciana, amanhã, quinta, 15/10, tenho às 13h ou às 14h. Na sexta, 16/10, tenho às 13h. Qual desses horários fica melhor para você?</div>
+        <div class="note">No máximo 3 opções por vez, no código: duas do primeiro dia e uma do seguinte. Se o lead quiser outro dia, ela consulta de novo. Ao escolher: "Perfeito! Então fica sexta, 16/10, às 13h, com a Dra. Luciana", sem repetir que está livre. Fins de semana e feriados só aparecem se a agenda mostrar.</div></div>
 
       <div class="branches">
         <div class="branch"><div class="edge">escolhe um horário</div>
@@ -231,7 +240,7 @@ Número da residência com o complemento</div></div>
               <div class="then">Se mantiver a recusa: cadastro genérico com nome completo e sexo; nascimento 01/01/2001, e-mail e endereço da clínica, CPF vazio.</div></div>
           </div>
         </div>
-        <div class="branch"><div class="edge">objeção ou dúvida</div><div class="then">Texto da casa uma vez, e volta para a agenda.</div><a class="goto" href="#objecoes">→ seção 3</a></div>
+        <div class="branch"><div class="edge">objeção ou dúvida</div><div class="then">Texto da casa uma vez. Dúvida de informação fecha com "Ficou mais alguma dúvida?"; objeção de valor fecha com "Quer que eu veja um horário para você?".</div><a class="goto" href="#objecoes">→ seção 3</a></div>
         <div class="branch"><div class="edge sem">demora a escolher</div><div class="then">Escassez, uma vez por conversa:</div>
           <div class="node"><div class="bubble ia">Os agendamentos são realizados por todos os setores da clínica e as datas são preenchidas conforme a disponibilidade. Por isso, pedimos a gentileza de nos dar um retorno o mais breve possível, para que possamos verificar a disponibilidade e reservar sua data.
 
@@ -243,7 +252,7 @@ Ficamos no aguardo da sua confirmação, ok?</div></div></div>
         <div class="bubble ia">Perfeito, Ana! Muito obrigada pelo retorno. 😊</div>
         <div class="bubble ia" style="margin-top:6px">Seu atendimento ficou agendado para o dia 18/09, às 11h00, com o Dr. Lucas Vieira. O valor da consulta é R$ 800,00 (cartão de crédito, débito, pix ou dinheiro). 📍 Endereço: Av. República do Líbano, 886, Moema, em frente ao Parque Ibirapuera. Pedimos, por gentileza, que chegue com até 15 minutos de antecedência. No dia, venha com os cabelos limpos e secos, sem creme, gel ou finalizador, e traga exames do último ano, se tiver.</div>
         <div class="bubble ia" style="margin-top:6px">Em breve estaremos juntos e cuidaremos da saúde dos seus cabelos! Agradecemos pela confiança! 💙</div>
-        <div class="note">Cadastro genérico: acrescenta "No dia da consulta, a recepção vai precisar dos seus dados completos para finalizar o cadastro, tá bom?".</div>
+        <div class="note">Junto com a confirmação vai, sem perguntar, o vídeo curto de boas-vindas do profissional escolhido (Dra. Luciana ou Dr. Lucas). Cadastro genérico: acrescenta "No dia da consulta, a recepção vai precisar dos seus dados completos para finalizar o cadastro, tá bom?".</div>
         <span class="state ok">Agendado · missão cumprida</span></div>
 
       <div class="branches">
@@ -258,8 +267,8 @@ Ficamos no aguardo da sua confirmação, ok?</div></div></div>
 
   <!-- ============================ 3. OBJEÇÕES ============================ -->
   <section class="lane" id="objecoes">
-    <div class="lane-head"><span class="eyebrow">3 · Objeções</span><h2>Texto da casa, uma vez, e volta para a agenda</h2></div>
-    <p class="lead">Cada objeção recebe o texto da clínica e, no balão seguinte, a pergunta de agenda. Hesitação recebe um incentivo só; se o lead mantém, a Celeste aceita com elegância.</p>
+    <div class="lane-head"><span class="eyebrow">3 · Objeções</span><h2>Texto da casa, uma vez, e a pergunta certa</h2></div>
+    <p class="lead">Cada objeção recebe o texto da clínica uma vez. Objeção de valor, avaliação gratuita ou desconto é sinal de compra e fecha com "Quer que eu veja um horário para você?"; dúvida de informação fecha com "Ficou mais alguma dúvida?". Hesitação recebe um incentivo só; se o lead mantém, a Celeste aceita com elegância. Se ele disser que ela está apressada, não pede desculpas: "Claro, sem pressa! O que você gostaria de saber?".</p>
     <div class="row">
       <div class="node"><div class="tag">"quanto custa?" · só quando perguntado</div><div class="bubble ia">A consulta com a Dra. Luciana Passoni é R$ 1.200,00. Já com o Dr. Lucas Vieira, o valor é R$ 800,00. Ambos realizam uma avaliação completa e, a partir do diagnóstico, orientam a conduta mais adequada para cada caso.</div></div>
       <div class="node"><div class="tag">"achei caro" / "tem desconto?"</div><div class="bubble ia">Na consulta eu infelizmente não consigo. Eu consigo condições especiais para viabilizar o seu tratamento.</div><div class="bubble ia" style="margin-top:6px">Estamos trabalhando com um valor mais acessível para a consulta com o Dr. Lucas, justamente para tornar o atendimento mais acessível. Mesmo com essa condição especial, mantemos o mesmo cuidado, atenção e qualidade no atendimento. 💛</div></div>
@@ -276,10 +285,30 @@ Ficamos no aguardo da sua confirmação, ok?</div></div></div>
     </div>
   </section>
 
-  <!-- ============================ 4. CONSULTA MARCADA ============================ -->
+  <!-- ============================ 4. MATERIAL ============================ -->
+  <section class="lane" id="material">
+    <div class="lane-head"><span class="eyebrow">4 · Referências, resultados e vídeos</span><h2>O que a Celeste manda quando o lead pede prova</h2></div>
+    <p class="lead">Tudo vem da base de referências (landing page da clínica) e do bucket de mídia. Links nunca são digitados pela Celeste: ela escreve um código e o sistema põe o link exato, com prévia de capa e título no WhatsApp. Fotos e vídeos saem depois dos balões de texto.</p>
+    <div class="row">
+      <div class="node"><div class="tag ia">"pode me passar referências da Dra.?" · 3 balões, um link em cada</div>
+        <div class="bubble ia">Claro, Ana! A Dra. Luciana Passoni é médica formada desde 2008 e uma das maiores referências em tricologia. Olha ela respondendo no Metrópoles quanto de cabelo é normal perder por dia: metropoles.com/…/luciana-passoni-responde</div>
+        <div class="bubble ia" style="margin-top:6px">E essa matéria recente da Vogue sobre a abordagem científica da clínica: vogue.globo.com/…/passoni-clinic-aposta-em-abordagem-cientifica</div>
+        <div class="bubble ia" style="margin-top:6px">A lista completa está no site passoniclinic.med.br, e o Instagram dela é instagram.com/dralupassoni 😊</div>
+        <div class="note">38 matérias organizadas por assunto, 2 artigos científicos, Instagram e Revista Passoni. Ela escolhe matérias em que a Dra. aparece como médica; matérias de negócios e sobre cursos não vão para lead. Cada balão ganha a prévia com capa.</div></div>
+      <div class="node"><div class="tag ia">"tem resultados de eflúvio telógeno?" · fotos de antes e depois</div>
+        <div class="bubble ia">Claro, Ana! Vou te mandar aqui um antes e depois de um caso de eflúvio telógeno tratado aqui na Passoni.</div>
+        <div class="bubble sys" style="margin-top:6px">[2 fotos reais, rosto desfocado] Antes e depois de um caso real de eflúvio telógeno, tratado na Passoni Clinic. Cada caso é avaliado na consulta, e os resultados variam de pessoa para pessoa.</div>
+        <div class="note">15 doenças com foto (tínea capitis não tem). Só quando o lead pede ou aceita a oferta ("Quer ver um antes e depois de um caso parecido?"). Uma vez por doença por conversa. Sem percentuais de sucesso.</div></div>
+      <div class="node"><div class="tag ia">Vídeos · sempre oferecidos como pergunta, um por resposta</div>
+        <div class="bubble ia">Quer que eu te mande um vídeo rápido da Dra. Luciana explicando como funciona a consulta?</div>
+        <div class="note">Catálogo de 18 vídeos: apresentação da clínica, Dra., Dr. Lucas, como funciona a consulta, tecnologias, casos de sucesso, resultados em vídeo (afinamento, paciente homem, transplante), história de uma paciente em dois vídeos (para quem está desanimado), artigos científicos, terapia autóloga, visita da Dra. Antonella Tosti, e boas-vindas da Dra. e do Dr. Lucas a quem agendou (esse vai direto, sem perguntar). Reservados para as rotinas de consulta: confirmação pela Dra. e pelo Dr. Lucas, e "desmarcou".</div></div>
+    </div>
+  </section>
+
+  <!-- ============================ 5. CONSULTA MARCADA ============================ -->
   <section class="lane" id="consulta">
-    <div class="lane-head"><span class="eyebrow">4 · Consulta marcada</span><h2>Confirmação, lembretes, falta e cancelamento</h2></div>
-    <p class="lead">Templates de utilidade cadastrados em 14/10, em aprovação na Meta. Valem <b>somente para consultas que a Celeste agendou</b>; as demais seguem com a recepção pelo outro número. As rotinas de envio ainda serão desenhadas e aprovadas.</p>
+    <div class="lane-head"><span class="eyebrow">5 · Consulta marcada</span><h2>Confirmação, lembretes, falta e cancelamento</h2></div>
+    <p class="lead">Seis templates de utilidade, todos aprovados na Meta (conferido em 15/10/2026). Valem <b>somente para consultas que a Celeste agendou</b>; as demais seguem com a recepção pelo outro número. As rotinas de envio ainda serão desenhadas e aprovadas; os vídeos de confirmação da Dra. e do Dr. Lucas já estão prontos para elas.</p>
 
     <div class="flow">
       <div class="node"><div class="tag">48 h antes · consulta_48_horas</div>
@@ -291,7 +320,7 @@ Como este horário foi reservado exclusivamente para você, pedimos, por gentile
 
 Agradecemos pela compreensão. 💙<div class="buttons"><span>Confirmar presença</span><span>Preciso remarcar</span></div></div></div>
       <div class="branches">
-        <div class="branch"><div class="edge">toca "Confirmar presença"</div><div class="then">Marca a consulta como confirmada no TI Saúde e a Celeste responde com as orientações do dia.</div><span class="state ok">Confirmado</span></div>
+        <div class="branch"><div class="edge">toca "Confirmar presença"</div><div class="then">Marca a consulta como confirmada no TI Saúde e a Celeste responde com as orientações do dia e o vídeo de agradecimento do profissional (Dra. Luciana ou Dr. Lucas).</div><span class="state ok">Confirmado</span></div>
         <div class="branch"><div class="edge">toca "Preciso remarcar" ou escreve</div><div class="then">A Celeste consulta o agendamento, oferece horários reais e remarca.</div></div>
         <div class="branch"><div class="edge sem">sem resposta</div><div class="then">Recebe o lembrete da véspera.</div></div>
       </div>
@@ -346,9 +375,9 @@ Pedimos sinceras desculpas pelo transtorno. Responda a esta mensagem para que a 
     </div>
   </section>
 
-  <!-- ============================ 5. LEMBRETES ============================ -->
+  <!-- ============================ 6. LEMBRETES ============================ -->
   <section class="lane" id="lembretes">
-    <div class="lane-head"><span class="eyebrow">5 · Lembretes do mesmo dia</span><h2>Quando o lead para de responder no meio da conversa</h2></div>
+    <div class="lane-head"><span class="eyebrow">6 · Lembretes do mesmo dia</span><h2>Quando o lead para de responder no meio da conversa</h2></div>
     <p class="lead">Texto fixo, sem IA, escolhido pela última mensagem da Celeste. Primeiro lembrete 2 h depois da última mensagem dela sem resposta, segundo 3 h depois do primeiro, no máximo dois por fio, das 9h às 19h em dias úteis, só dentro da janela de 24 h. Quem disse que volta ("Irá nos retornar", "Agora não") não recebe. Hoje pausado.</p>
     <div class="row">
       <div class="node"><div class="tag sys">última mensagem ofereceu horários</div><div class="bubble sys">Ana, algum desses horários lhe atende?</div><div class="note">2º lembrete: o texto de escassez da casa.</div></div>
@@ -357,10 +386,12 @@ Pedimos sinceras desculpas pelo transtorno. Responda a esta mensagem para que a 
     </div>
   </section>
 
-  <!-- ============================ 6. REGRAS ============================ -->
+  <!-- ============================ 7. REGRAS ============================ -->
   <section class="lane" id="regras">
-    <div class="lane-head"><span class="eyebrow">6 · Regras que valem sempre</span><h2>O que a Celeste faz e não faz em qualquer ponto do mapa</h2></div>
+    <div class="lane-head"><span class="eyebrow">7 · Regras que valem sempre</span><h2>O que a Celeste faz e não faz em qualquer ponto do mapa</h2></div>
     <div class="row" style="margin-top:14px">
+      <div class="rule"><h3>Ritmo</h3><p>Pergunta de informação fecha com "Ficou mais alguma dúvida?". Sinal de compra fecha com "Quer que eu veja um horário para você?". "Como está a sua agenda" só quando o lead já quer marcar. Nunca duas perguntas de agenda seguidas, nunca logo depois de um "não".</p></div>
+      <div class="rule"><h3>Links nunca digitados</h3><p>Referências saem por código que o sistema troca pelo link exato, um link por balão, com prévia de capa. Ela nunca "corrige" um link nem comenta erro próprio.</p></div>
       <div class="rule"><h3>Valor só se perguntarem</h3><p>Nunca cita o valor da consulta por conta própria. Se o lead perguntar, responde direto. Senão, o valor aparece uma vez, na confirmação.</p></div>
       <div class="rule"><h3>Horários só da agenda real</h3><p>Toda opção vem do TI Saúde. Sem lista de feriados nem de fins de semana: se a agenda mostrar, pode marcar. Se perguntarem, a clínica não atende fim de semana nem feriado.</p></div>
       <div class="rule"><h3>Consulta marcada: nunca deduz</h3><p>Se o lead falar da consulta, consulta o sistema antes de responder. Horário livre não diz nada sobre o agendamento dele.</p></div>
@@ -368,7 +399,7 @@ Pedimos sinceras desculpas pelo transtorno. Responda a esta mensagem para que a 
       <div class="rule"><h3>Cadastro</h3><p>Nome completo, sem abreviações. Altera qualquer dado a pedido, inclusive CPF; nome vai para a recepção. Sem dados após uma insistência: cadastro genérico, CPF vazio.</p></div>
       <div class="rule"><h3>Recepção só em 4 casos</h3><p>Já é paciente em tratamento, assunto clínico, reclamação ou reembolso, pediu uma pessoa. Botão "Falar com Recepção".</p></div>
       <div class="rule"><h3>Nunca</h3><p>Diagnosticar, dar valor de tratamento, desconto, parcelar a consulta, atender online, aceitar convênio, inventar informação ou dizer que é IA.</p></div>
-      <div class="rule"><h3>Pontuação e estilo</h3><p>Sem travessão, sem dois-pontos emendando frases, horários em texto normal. Um balão na maior parte das vezes, nunca mais de três. Vídeo só oferecido como pergunta, entregue por último, sem comentário.</p></div>
+      <div class="rule"><h3>Pontuação e estilo</h3><p>Sem travessão, sem dois-pontos emendando frases, horários em texto normal. Um balão na maior parte das vezes, nunca mais de três (limite no código). No máximo três horários por vez. Vídeo e fotos só oferecidos como pergunta, entregues por último, sem comentário.</p></div>
     </div>
   </section>
 </div>

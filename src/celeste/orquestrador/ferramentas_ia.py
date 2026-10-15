@@ -47,7 +47,7 @@ FERRAMENTAS: list[dict] = [
          "responsavel": {"type": "string"}, "parentesco_responsavel": {"type": "string"}, "cpf_responsavel": {"type": "string"}},
          "required": ["cpf", "email", "celular", "nascimento", "sexo", "cep", "numero", "complemento", "como_conheceu", "responsavel", "parentesco_responsavel", "cpf_responsavel"],
          "additionalProperties": False}},
-    {"name": "buscar_horarios", "description": "Lista horários LIVRES de consulta para um profissional nos próximos dias. Só ofereça horários vindos daqui.",
+    {"name": "buscar_horarios", "description": "Devolve ATÉ 3 horários LIVRES de consulta para um profissional (os primeiros do período). Ofereça só esses. Se o lead pedir outro dia ou outro horário, chame de novo com a_partir_de nesse dia.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "profissional": {"type": "string", "enum": ["dra_luciana", "dr_lucas"]},
          "a_partir_de": {"type": "string", "description": "AAAA-MM-DD ou vazio para a partir de hoje"},
@@ -79,9 +79,20 @@ FERRAMENTAS: list[dict] = [
      "strict": True, "input_schema": {"type": "object", "properties": {"motivo": {"type": "string"}}, "required": ["motivo"], "additionalProperties": False}},
     {"name": "enviar_video", "description": "Envia um dos vídeos da clínica ao lead (uma vez por conversa cada).",
      "strict": True, "input_schema": {"type": "object", "properties": {
-         "video": {"type": "string", "enum": ["institucional", "dra_luciana", "dr_lucas", "boas_vindas_consulta", "como_funciona_consulta", "casos_sucesso", "tecnologias", "sobre_clinica"]},
+         "video": {"type": "string", "enum": list(config.parametros()["videos"].keys())},   # catálogo = bloco `videos` do YAML
          "reenviar": {"type": "boolean", "description": "true só quando o lead CONFIRMOU que quer receber de novo um vídeo já enviado"}},
          "required": ["video", "reenviar"], "additionalProperties": False}},
+    {"name": "enviar_antes_e_depois", "description": "Envia ao lead até 2 fotos reais de antes e depois de um caso daquela doença tratado na clínica (com legenda e aviso de que resultados variam). Só quando o lead pede resultados/casos dessa doença ou aceita a sua oferta. Uma vez por doença por conversa. As fotos saem DEPOIS dos seus balões; não diga que já enviou.",
+     "strict": True, "input_schema": {"type": "object", "properties": {
+         "doenca": {"type": "string", "enum": ["dermatite_seborreica", "psoriase_couro_cabeludo", "alopecia_areata", "alopecia_fibrosante_frontal",
+                                                "lupus_couro_cabeludo", "alopecia_por_tracao", "foliculite_decalvante", "foliculite_dissecante",
+                                                "liquen_plano_pilar", "alopecia_androgenetica_masculina", "alopecia_androgenetica_feminina",
+                                                "efluvio_anageno", "tricotilomania", "disturbios_da_haste", "efluvio_telogeno"]}},
+         "required": ["doenca"], "additionalProperties": False}},
+    {"name": "enviar_antes_e_depois_tratamento", "description": "Envia até 2 fotos reais de antes e depois de um TRATAMENTO/tecnologia da clínica (com legenda dizendo que o tratamento é definido na consulta). SÓ quando o lead perguntou explicitamente por esse tratamento pelo nome ou perguntou 'quais tratamentos vocês fazem' (use 'geral'). Nunca para sugerir tratamento ao caso dele. Uma vez por tratamento por conversa. As fotos saem DEPOIS dos seus balões.",
+     "strict": True, "input_schema": {"type": "object", "properties": {
+         "tratamento": {"type": "string", "enum": list(config.parametros()["antes_e_depois_tratamentos"]["tratamentos"].keys()) + ["geral"]}},
+         "required": ["tratamento"], "additionalProperties": False}},
     {"name": "sinalizar_revisao", "description": "Marca a conversa para a equipe revisar quando o lead perguntou algo que NÃO está na base de conhecimento (você não inventa a resposta). Registre a dúvida exata.",
      "strict": True, "input_schema": {"type": "object", "properties": {"duvida": {"type": "string", "description": "a pergunta do lead que ficou sem resposta na base"}},
                                       "required": ["duvida"], "additionalProperties": False}},
@@ -94,12 +105,34 @@ FERRAMENTAS: list[dict] = [
 ]
 
 
+def selecionar_opcoes(livres: list, n: int = 3) -> list:
+    """Até n horários para oferecer, como as atendentes fazem: até 2 do primeiro dia e 1 do dia seguinte, completando em ordem."""
+    livres = list(livres)
+    if len(livres) <= n:
+        return livres
+    por_dia: dict = {}
+    for l in livres:
+        por_dia.setdefault(l["data"], []).append(l)
+    dias = list(por_dia)
+    escolha = por_dia[dias[0]][:2]
+    if len(dias) > 1:
+        escolha += por_dia[dias[1]][:1]
+    for l in livres:
+        if len(escolha) >= n:
+            break
+        if l not in escolha:
+            escolha.append(l)
+    return escolha[:n]
+
+
 class Contexto:
     """Estado da conversa disponível às ferramentas (injetado pelo orquestrador)."""
     def __init__(self, conversa: dict, telefone: str, tisaude: ts.TiSaude, viacep: Callable[[str], dict],
-                 enviar_video: Callable[[str], str], avisar_recepcao: Callable[[str, str], None], atualizar: Callable[[dict], None]):
+                 enviar_video: Callable[[str], str], avisar_recepcao: Callable[[str, str], None], atualizar: Callable[[dict], None],
+                 enviar_imagem: "Callable[[str], str] | None" = None):
         self.conversa, self.telefone, self.ts = conversa, telefone, tisaude
         self.viacep, self.enviar_video, self.avisar_recepcao, self.atualizar = viacep, enviar_video, avisar_recepcao, atualizar
+        self.enviar_imagem = enviar_imagem or (lambda chave: "sem-envio-de-imagem")
         self.encerrar = False
 
 
@@ -206,8 +239,15 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         inicio = date.fromisoformat(e["a_partir_de"]) if e.get("a_partir_de") else None
         dias = max(1, min(int(e.get("dias") or 14), 30))
         livres = ctx.ts.buscar_horarios(e["profissional"], dias=dias, a_partir_de=inicio)
-        ctx.atualizar({"horarios_oferecidos": [f"{l['data']} {l['hora']}" for l in livres[:60]]})
-        return {"profissional": e["profissional"], "livres": livres[:40], "total": len(livres)}
+        from celeste.comum import config as _cfg
+        n = int(((_cfg.parametros().get("ia") or {}).get("horarios") or {}).get("opcoes_por_vez", 3))
+        oferecer = selecionar_opcoes(livres, n)   # 14/10/2026: a clínica pediu no máximo 3 por vez (a Celeste listava 12)
+        ja = list(ctx.conversa.get("horarios_oferecidos") or [])
+        novos = [f"{l['data']} {l['hora']}" for l in oferecer if f"{l['data']} {l['hora']}" not in ja]
+        ctx.conversa["horarios_oferecidos"] = (ja + novos)[-60:]
+        ctx.atualizar({"horarios_oferecidos": ctx.conversa["horarios_oferecidos"]})
+        return {"profissional": e["profissional"], "livres": oferecer, "ha_mais_no_periodo": len(livres) > len(oferecer),
+                "aviso": "ofereça só estes; se o lead quiser outro dia ou horário, chame de novo com a_partir_de"}
 
     if nome == "agendar_consulta":
         chave = f"{e['data']} {e['hora']}"
@@ -275,6 +315,22 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         wamid = ctx.enviar_video(e["video"])
         ctx.atualizar({"videos_enviados": enviados + [e["video"]]})
         return {"ok": True, "wamid": wamid}
+
+    if nome == "enviar_antes_e_depois":
+        enviadas = ctx.conversa.get("imagens_enviadas") or []
+        if e["doenca"] in enviadas:
+            return {"ok": False, "aviso": "fotos dessa doença já enviadas nesta conversa; não reenvie, indique a seção de resultados do site"}
+        wamid = ctx.enviar_imagem(e["doenca"])
+        ctx.atualizar({"imagens_enviadas": enviadas + [e["doenca"]]})
+        return {"ok": True, "wamid": wamid, "aviso": "as fotos saem depois dos seus balões, com legenda; não diga que já enviou"}
+
+    if nome == "enviar_antes_e_depois_tratamento":
+        enviadas = ctx.conversa.get("imagens_tratamento_enviadas") or []
+        if e["tratamento"] in enviadas:
+            return {"ok": False, "aviso": "fotos desse tratamento já enviadas nesta conversa; não reenvie"}
+        wamid = ctx.enviar_imagem("tratamento:" + e["tratamento"])
+        ctx.atualizar({"imagens_tratamento_enviadas": enviadas + [e["tratamento"]]})
+        return {"ok": True, "wamid": wamid, "aviso": "as fotos saem depois dos seus balões, com legenda; não diga que já enviou"}
 
     if nome == "sinalizar_revisao":
         pend = list(ctx.conversa.get("duvidas_pendentes") or []) + [e["duvida"][:300]]

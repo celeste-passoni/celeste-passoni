@@ -1,19 +1,43 @@
 {% extends "base.html" %}{% block titulo %}Templates{% endblock %}
 {% block corpo %}
+<style>
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin:12px 0 28px}
+.tcard{background:var(--card);border:1px solid var(--linha);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.tcard .topo{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tcard .cod{font-weight:700;color:var(--navy)}
+.tcard .nome{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--cinza);word-break:break-all}
+.tcard .quando{font-size:13px;color:var(--cinza)}
+.wa{background:#efe7dc;border-radius:10px;padding:12px}
+.wa .b{background:#fff;border-radius:10px;border-bottom-left-radius:3px;padding:10px 12px;white-space:pre-wrap;font-size:14px;line-height:1.45;max-width:100%;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+.wa .cab{font-weight:700;margin-bottom:4px}
+.wa .rod{color:#777;font-size:12px;margin-top:6px}
+.wa .btns{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.wa .btns span{background:#fff;color:#1b6ec2;text-align:center;border-radius:8px;padding:7px;font-weight:600;font-size:13px;border-top:1px solid #e6e0d4}
+.tcard .meta{font-size:11px;color:var(--cinza)}
+.tcard .original{font-size:11px;color:var(--cinza);white-space:pre-wrap;display:none}
+.tcard details summary{font-size:12px;color:var(--navy);cursor:pointer}
+.tcard details[open] .original{display:block}
+</style>
 <h1>Templates</h1>
-<p class="muted">Templates que a {{ nome_ia }} usa nos disparos. Status lido da Meta; os ainda não criados mostram o texto planejado.</p>
+<p class="muted">Modelos de mensagem da {{ nome_ia }} aprovados na Meta, como o lead os vê no WhatsApp. Status, categoria, texto e botões são lidos da Meta a cada abertura desta página; o "quando" vem da configuração. A prévia mostra os campos preenchidos com um exemplo.</p>
 {% if erro %}<div class="aviso">Não foi possível ler os templates da Meta: {{ erro }}</div>{% endif %}
-<table>
-<tr><th>Código</th><th>Nome</th><th>Frente</th><th>Status</th><th>Categoria</th><th>Conteúdo</th><th>Botões</th></tr>
-{% for t in itens %}
-<tr>
-  <td><b>{{ t.codigo }}</b></td><td>{{ t.nome }}</td><td><span class="tag {{ 'lp' if t.frente == 'Leads Perdidos' else '' }}">{{ t.frente }}</span></td>
-  <td><span class="tag {% if t.status == 'APPROVED' %}ok{% elif t.status == 'REJECTED' %}alerta{% endif %}">{{ t.status }}</span></td>
-  <td>{{ t.categoria }}</td>
-  <td style="white-space:pre-wrap;max-width:520px">{{ t.corpo }}{% if t.rodape %}
-<span class="muted">{{ t.rodape }}</span>{% endif %}</td>
-  <td>{% for b in t.botoes %}<span class="tag">{{ b }}</span> {% endfor %}</td>
-</tr>
-{% else %}<tr><td colspan="7" class="muted">Nenhum template.</td></tr>{% endfor %}
-</table>
+{% for g in grupos %}
+<h2>{{ g.titulo }}</h2>
+<div class="tgrid">
+{% for t in g.itens %}
+  <div class="tcard">
+    <div class="topo">
+      <span class="cod">{{ t.codigo }}</span>
+      <span class="tag {% if t.status == 'APPROVED' %}ok{% elif t.status in ('REJECTED', 'NÃO ENCONTRADO NA META') %}alerta{% endif %}">{{ 'Aprovado' if t.status == 'APPROVED' else t.status }}</span>
+      <span class="tag {% if t.categoria == 'UTILITY' %}lp{% endif %}">{{ 'Utilidade' if t.categoria == 'UTILITY' else ('Marketing' if t.categoria == 'MARKETING' else t.categoria) }}</span>
+    </div>
+    <div class="nome">{{ t.nome }}</div>
+    {% if t.quando %}<div class="quando">{{ t.quando }}</div>{% endif %}
+    <div class="wa"><div class="b">{% if t.cabecalho %}<div class="cab">{{ t.cabecalho }}</div>{% endif %}{{ t.previa }}{% if t.rodape %}<div class="rod">{{ t.rodape }}</div>{% endif %}{% if t.botoes %}<div class="btns">{% for b in t.botoes %}<span>{{ b }}</span>{% endfor %}</div>{% endif %}</div></div>
+    <details><summary>Texto original com as variáveis</summary><div class="original">{{ t.corpo }}</div></details>
+    <div class="meta">Idioma {{ t.idioma }}{% if t.meta_id %} · Meta id {{ t.meta_id }}{% endif %}</div>
+  </div>
+{% else %}<p class="muted">Nenhum template neste grupo.</p>{% endfor %}
+</div>
+{% endfor %}
 {% endblock %}

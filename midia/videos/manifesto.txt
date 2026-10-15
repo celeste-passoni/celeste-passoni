@@ -1,0 +1,21 @@
+Vídeos da Celeste — cópia local dos originais do OneDrive (Passoni Clinic - Tecnologia/VÍDEOS), 15/10/2026
+Todos ≤ 16 MB (limite do WhatsApp), sem compressão. Público no bucket: https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/<nome>.mp4
+Os 5 vídeos antigos sem original nomeado aqui (institucional, boas_vindas_consulta, como_funciona_consulta, casos_sucesso, sobre_clinica) vieram do MarketZap e estão só no bucket.
+
+resultado_alopecia_androgenetica.mp4      13.1 MB  origem: RESULTADOS 2/ALOPECIA ANDROGENETICA.mp4                      uso: conversa: resultado em vídeo, afinamento
+caso_bruna_1_primeira_consulta.mp4        11.9 MB  origem: RESULTADOS 2/PACIENTE BRUNA.mp4                              uso: conversa: história de paciente, parte 1
+caso_bruna_2_resultado.mp4                 7.2 MB  origem: RESULTADOS 2/RESULTADO BRUNA.mp4                             uso: conversa: história de paciente, parte 2
+resultado_androgenetica_masculina.mp4      5.2 MB  origem: RESULTADOS 2/RESULTADO MICHAEL LEE.mp4                       uso: conversa: resultado em vídeo, homem
+resultado_transplante_capilar.mp4          6.3 MB  origem: RESULTADOS 2/RESULTADOS DE TRANSPLANTE CAPILAR.mp4           uso: conversa: transplante
+antonella_tosti.mp4                        8.6 MB  origem: TECNOLOGIA E ESTRUTURA/ANTONELLA TOSTI.mp4                   uso: conversa: credibilidade
+artigos_cientificos.mp4                   14.5 MB  origem: TECNOLOGIA E ESTRUTURA/ARTIGO.mp4                            uso: conversa: base científica
+protocolo_terapia_autologa.mp4             8.9 MB  origem: TECNOLOGIA E ESTRUTURA/PROTOCOLO DE TERAPIA AUTOLOGA.mp4     uso: conversa: como é o tratamento
+agendou_dra_luciana.mp4                    2.2 MB  origem: PACIENTE AGENDOU/AGENDOU MANDA ESSE - DRA LU.mp4             uso: conversa: boas-vindas após agendar com a Dra.
+agendou_dr_lucas.mp4                       2.9 MB  origem: PACIENTE AGENDOU/PACIENTE AGENDOU - DR LUCAS.mp4             uso: conversa: boas-vindas após agendar com o Dr. Lucas
+confirmou_dra_luciana.mp4                  3.9 MB  origem: PACIENTE CONFIRMOU CONSULTA/CONFIRMAÇÃO DRA LU.mp4           uso: rotinas de consulta (reservado)
+confirmou_dr_lucas.mp4                     3.7 MB  origem: PACIENTE CONFIRMOU CONSULTA/CONFIRMAÇÃO DR LUCAS.mp4         uso: rotinas de consulta (reservado)
+desmarcou_dr_lucas.mp4                     3.0 MB  origem: PACIENTE DESMARCOU CONSULTA/DESMARCOU CONSULTA DR LUCAS.mp4  uso: rotinas de consulta (reservado)
+pre_shampoo.mp4                            8.7 MB  origem: PRE - SHAMPOO/PRÉ SHAMPOO_1.mp4                              uso: orientação a paciente (reservado)
+dr_lucas.mp4                              10.8 MB  origem: HISTORIA DRA. LUCIANA/APRESENTANDO A CLINICA.mp4             uso: conversa: já era o vídeo 'dr_lucas' (Dr. Lucas e Dra. juntos)
+dra_luciana.mp4                           13.6 MB  origem: HISTORIA DRA. LUCIANA/NOS AGENDAMENTOS.mp4                   uso: conversa: já era o vídeo 'dra_luciana'
+tecnologias.mp4                            3.1 MB  origem: TRATAMENTOS/TRATAMENTOS.mp4                                  uso: conversa: já era o vídeo 'tecnologias'

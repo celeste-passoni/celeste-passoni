@@ -37,8 +37,8 @@ flowchart TD
     MOD --> AG[Agenda: Quando você poderia vir? /<br/>Como está a sua agenda na próxima semana?]
     AG --> H[buscar_horarios · 2–3 opções reais<br/>Lhe atende? / Posso reservar para você?]
     H --> OBJ{Objeção?}
-    OBJ -->|valor, convênio, parcela, online,<br/>mora longe, Dr. Lucas, já fiz de tudo| SC[Texto fixo da casa · uma vez<br/>e volta para a agenda]
-    SC --> H
+    OBJ -->|valor, convênio, parcela, online,<br/>mora longe, Dr. Lucas, já fiz de tudo| SC[Texto fixo da casa · uma vez<br/>informação: Ficou mais alguma dúvida?<br/>sinal de compra: Quer que eu veja um horário?]
+    SC -->|lead sinaliza| H
     OBJ -->|vou pensar| INC[Incentivo único · tempo é cabelo<br/>+ o que está dificultando?]
     INC -->|mantém| RET[Combinado! Aguardo o seu retorno<br/>status Irá nos retornar · esteira recontata]
     INC -->|segue| H
@@ -61,16 +61,18 @@ flowchart TD
 - **Alteração cadastral a pedido:** qualquer dado, inclusive CPF; nome a API não altera → registra para a recepção.
 - **Recepção só em 4 casos:** já é paciente em tratamento; assunto clínico; reclamação/reembolso; pediu pessoa. Botão "Falar com Recepção".
 - **Horários:** sempre da agenda do TI Saúde; sem lista de feriados; orientação de que a clínica não atende fim de semana nem feriado.
-- **Vídeos:** só oferecidos como pergunta ligada ao que o lead trouxe (como funciona, Dr. Lucas, hesitação); enviados só se ele disser sim; nunca na abertura.
+- **Vídeos:** só oferecidos como pergunta ligada ao que o lead trouxe (como funciona, Dr. Lucas, hesitação); enviados só se ele disser sim; nunca na abertura. Exceção: após agendar, o vídeo de boas-vindas do profissional escolhido vai direto. Catálogo de 18 vídeos em `config/parametros.yaml` (`videos`).
+- **Referências e resultados:** matérias, artigos e Instagram em `knowledge/04-referencias-imprensa-e-resultados.md`; links por código `[[ref:ID]]`, trocados pelo link exato no envio (um por balão, com prévia). Fotos de antes e depois por doença (15 doenças) pela ferramenta `enviar_antes_e_depois`.
+- **Ritmo:** pergunta de informação fecha com "Ficou mais alguma dúvida?"; sinal de compra (valor, avaliação gratuita, mais barato) fecha com "Quer que eu veja um horário para você?"; "como está a sua agenda" só quando o lead já quer marcar. Máximo de 3 horários e 3 balões por vez (no código).
 - **Nunca:** diagnosticar, valor de tratamento, desconto, parcelar consulta, online, convênio, inventar informação (→ `sinalizar_revisao`), dizer que é IA.
 
 ## 3. O que ainda não existe (pendente)
 
 | Item | Estado |
 |---|---|
-| T3 e T4 | cadastrados na Meta em 14/10/2026 como UTILITY com botões (ids 2192490248348033 e 1088086500736244); aguardando aprovação |
+| T3 e T4 | aprovados na Meta como UTILITY com botões (ids 2192490248348033 e 1088086500736244), conferido em 15/10/2026 |
 | Lembrete de retomada no mesmo dia | implementado (texto fixo por etapa), scheduler pausado |
-| Confirmação de presença (D-1), lembrete do dia, pós-consulta | dependem de templates de utilidade ainda não criados |
+| Confirmação de presença (D-1), lembrete do dia, faltou, cancelada pela clínica, atrasos | os 6 templates estão aprovados como UTILITY (consulta_48_horas, consulta_confirmar_24_horas, consulta_hoje, faltou_a_consulta, consulta_cancelada_clinica, atrasos); as rotinas de envio ainda não foram desenhadas (só para consultas agendadas pela Celeste) |
 | Ligar a esteira e a base | decisão da clínica para o piloto |
 
 ## 4. Custos por lead (ordem de grandeza)

@@ -45,8 +45,9 @@ class Meta:
 
     # ----------------------------------------------------------- envio
     def enviar_texto(self, para: str, texto: str) -> str:
+        # prévia (capa, título) só para o PRIMEIRO link da mensagem; por isso o roteiro manda um link por balão (14/10/2026)
         d = self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "to": para, "type": "text",
-                                                "text": {"preview_url": False, "body": texto}})
+                                                "text": {"preview_url": "http" in texto, "body": texto}})
         return d["messages"][0]["id"]
 
     def enviar_template(self, para: str, nome: str, parametros_corpo: list[str], idioma: str = "pt_BR") -> str:
@@ -84,6 +85,14 @@ class Meta:
         if legenda:
             v["caption"] = legenda
         d = self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "to": para, "type": "video", "video": v})
+        return d["messages"][0]["id"]
+
+    def enviar_imagem_link(self, para: str, url: str, legenda: str = "") -> str:
+        """Envia imagem (JPEG/PNG) por URL pública, com legenda opcional."""
+        img: dict[str, Any] = {"link": url}
+        if legenda:
+            img["caption"] = legenda
+        d = self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "to": para, "type": "image", "image": img})
         return d["messages"][0]["id"]
 
     def marcar_lida(self, wamid: str) -> None:

@@ -61,7 +61,12 @@ def separar_baloes(texto: str) -> list[str]:
     partes = [p[3:].strip() if p.startswith("---") else p for p in partes]
     partes = [limpar_pontuacao(p) for p in partes]
     partes = [p for p in partes if p and p.strip("-—– ")]       # descarta balão que seja só traço
+    if len(partes) > MAX_BALOES:                                 # 14/10/2026: a clínica pediu no máximo 3 balões por resposta; o excedente vira parágrafos do 3º
+        partes = partes[:MAX_BALOES - 1] + ["\n\n".join(partes[MAX_BALOES - 1:])]
     return partes or ([limpar_pontuacao(texto.strip())] if texto.strip() else [])
+
+
+MAX_BALOES = 3
 
 
 def delay_humano(fora_horario: bool = False) -> float:
@@ -96,12 +101,12 @@ class Motor:
 
     def _criar(self, modelo: str, system: list, messages: list, max_tokens: Optional[int] = None) -> Any:
         extras = {}
-        if "haiku" not in modelo:   # raciocínio adaptativo só nos modelos grandes
-            extras = {"thinking": {"type": "adaptive"}, "output_config": {"effort": self.cfg.get("esforco", "medium")}}
+        if "haiku" not in modelo:   # raciocínio adaptativo e fallback automático do servidor só nos modelos grandes
+            extras = {"thinking": {"type": "adaptive"}, "output_config": {"effort": self.cfg.get("esforco", "medium")},
+                      "betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"}
         return self.cliente.beta.messages.create(
             model=modelo, max_tokens=int(self.cfg["max_tokens_resposta"]) if max_tokens is None else max_tokens,
-            system=system, messages=messages, tools=ferramentas_ia.FERRAMENTAS,
-            betas=["server-side-fallback-2026-07-01"], fallbacks="default", **extras,
+            system=system, messages=messages, tools=ferramentas_ia.FERRAMENTAS, **extras,
         )
 
     def _chamar(self, system: list, messages: list, modelo: Optional[str] = None) -> tuple[Any, str]:
