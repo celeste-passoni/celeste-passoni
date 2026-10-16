@@ -333,6 +333,55 @@ def lembrete(p: PedidoLembrete):
     return {"ok": True, "enviado": 1, "lembrete": n, "etapa": lembretes_texto.etapa(conv), "custo_usd": 0.0}
 
 
+@app.post("/retomar")
+def retomar(p: PedidoLembrete):
+    """Retorno combinado ("me chama em 2 horas"), chamado pelo job de retornos. Dentro da janela de 24 h: texto fixo por etapa,
+    sem modelo. Fora da janela: template de utilidade `retorno.template`. Sem restrição de horário (decisão da clínica, 16/10/2026)."""
+    ref = db.collection("conversas").document(p.conversa_id)
+    conv = ref.get().to_dict()
+    if not conv:
+        raise HTTPException(404, "conversa não existe")
+    if not conv.get("retorno_em"):
+        return {"ok": True, "ignorado": "sem retorno pendente (o lead já voltou ou foi cancelado)"}
+    if not conv.get("aberta") or conv.get("modo", "ia") != "ia" or conv.get("opt_out"):
+        ref.set({"retorno_em": None}, merge=True)
+        raise HTTPException(400, "conversa fechada, em modo humano ou opt-out")
+    if not _pode_responder(conv.get("contato", "")):
+        ref.set({"retorno_em": None}, merge=True)
+        raise HTTPException(400, "fora do modo de atendimento atual")
+    cfg = config.parametros().get("retorno") or {}
+    nome = ((conv.get("nome") or "").strip().split() or [""])[0].title()
+    _, mt, _ = _svc()
+    agora = datetime.now(timezone.utc)
+    ultima_lead = conv.get("ultima_msg_lead_em")
+    dentro_da_janela = bool(ultima_lead) and (agora - ultima_lead.replace(tzinfo=timezone.utc) if ultima_lead.tzinfo is None else agora - ultima_lead) < timedelta(hours=24)
+    if dentro_da_janela:
+        etapa = lembretes_texto.etapa(conv)
+        texto = (cfg.get("textos") or {}).get(etapa) or (cfg.get("textos") or {}).get("geral") or "Oi {nome}, passando como combinado! Podemos continuar?"
+        texto = texto.replace("{nome}", nome).replace("Oi , ", "Oi, ").replace(", !", "!")
+        wamid = mt.enviar_texto(conv["contato"], texto)
+        ref.collection("mensagens").document(wamid).set({
+            "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": "script", "retorno_combinado": True,
+            "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
+        como = "texto"
+    else:
+        tpl_nome = cfg.get("template")
+        if not tpl_nome:
+            ref.set({"retorno_em": None, "retorno_falha": "fora da janela de 24 h e sem template configurado"}, merge=True)
+            raise HTTPException(400, "fora da janela de 24 h e sem template configurado")
+        wamid = mt.enviar_template(conv["contato"], tpl_nome, [nome or "tudo bem"])
+        texto = f"[template {tpl_nome}: retorno combinado]"
+        ref.collection("mensagens").document(wamid).set({
+            "direcao": "template", "tipo": "template", "template": tpl_nome, "texto": texto, "retorno_combinado": True,
+            "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
+        como = "template"
+    ref.set({"retorno_em": None, "retorno_enviado_em": agora, "pendente_resposta": False,
+             "ultima": {"texto": texto[:160], "direcao": "celeste" if como == "texto" else "template", "tipo": "text", "em": agora},
+             "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP, "total_msgs_celeste": firestore.Increment(1)}, merge=True)
+    log.info("retorno combinado enviado por %s à conversa %s", como, p.conversa_id)
+    return {"ok": True, "enviado": 1, "como": como, "custo_usd": 0.0}
+
+
 class PedidoAviso(BaseModel):
     conversa_id: str
 

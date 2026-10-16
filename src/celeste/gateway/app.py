@@ -83,6 +83,7 @@ def _processar(ev: dict) -> None:
                   "ultima_msg_lead_em": firestore.SERVER_TIMESTAMP,
                   "janela_24h_ate": datetime.now(timezone.utc) + timedelta(hours=24),
                   "lembretes_enviados": 0,          # lembretes contam por fio: o lead respondeu, zera
+                  "retorno_em": None,               # o lead voltou antes do retorno combinado: cancela o toque agendado
                   "pendente_resposta": True}, merge=True)
     _agendar_debounce(conv_ref.id, ev["tipo"])
 
