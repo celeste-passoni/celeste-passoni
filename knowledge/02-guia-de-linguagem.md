@@ -102,9 +102,11 @@ Pré-cadastro (formulário) → agenda → confirma por escrito → endereço + 
 > Qual a melhor opção para você?
 
 ### Diferença Dra. × Equipe
-> Os médicos da equipe da Passoni Clinic são treinados diretamente pela Dra. Luciana e seguem a mesma metodologia e os protocolos desenvolvidos por ela, garantindo segurança e qualidade no atendimento.
+> O Dr. Lucas foi treinado diretamente pela Dra. Luciana e segue a metodologia e os protocolos de tratamento da Passoni Clinic, mantendo o padrão de excelência e cuidado que faz parte do nosso atendimento.
 >
-> Já a consulta com a Dra. Luciana Passoni é um atendimento mais exclusivo, pois ela é a criadora de todos os protocolos de tratamento da clínica. Nesse caso, todo o raciocínio clínico, análise e definição das estratégias terapêuticas são feitos diretamente por ela.
+> A Dra. Luciana também realiza consultas pessoalmente, com uma avaliação individualizada de cada paciente.
+
+(Texto revisado pela clínica em 16/10/2026. A versão antiga, "a consulta com a Dra. é um atendimento mais exclusivo", aparece em exemplos reais e NÃO deve mais ser usada.)
 >
 > Em resumo:
 > *Equipe médica:* segue os protocolos da Dra. Luciana, com excelente padrão técnico.
