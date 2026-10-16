@@ -16,8 +16,8 @@
   <div class="card"><div class="n">{{ abertas }}</div><div class="l">conversas abertas da {{ nome_ia }}</div></div>
   <div class="card"><div class="n">{{ sem_frente }}</div><div class="l">conversas sem frente</div></div>
   <div class="card"><div class="n">{{ encaminhados }}</div><div class="l">encaminhados à recepção</div></div>
-  <div class="card"><div class="n">US$ {{ '%.2f'|format(custo_hoje or 0) }}</div><div class="l">custo IA hoje (teto US$ {{ cap }})</div></div>
-  <div class="card"><div class="n">US$ {{ '%.2f'|format(custo_mes) }}</div><div class="l">custo IA no mês</div></div>
+  <div class="card"><div class="n">US$ {{ '%.2f'|format(custo_hoje or 0) }}</div><div class="l">custo IA hoje (teto US$ {{ cap }})<br>conversas US$ {{ '%.2f'|format(conv_hoje or 0) }} · cache US$ {{ '%.2f'|format(cache_hoje or 0) }}</div></div>
+  <div class="card"><div class="n">US$ {{ '%.2f'|format(custo_mes) }}</div><div class="l">custo IA no mês<br>conversas US$ {{ '%.2f'|format(conv_mes or 0) }} · cache US$ {{ '%.2f'|format(cache_mes or 0) }}</div></div>
 </div>
 
 <h2>Funil por frente · {{ de[8:] }}/{{ de[5:7] }} a {{ ate[8:] }}/{{ ate[5:7] }}</h2>

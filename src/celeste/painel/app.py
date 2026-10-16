@@ -184,8 +184,13 @@ def gestao(request: Request, de: str = "", ate: str = "", aviso: str = "", _=Dep
             if c.get("orientado_recepcao_em"):
                 campanhas[k]["orientados"] += 1
 
-    custo_hoje = (db.collection("custos_diarios").document(hoje).get().to_dict() or {}).get("custo_usd", 0)
-    custo_mes = sum((c.to_dict() or {}).get("custo_usd", 0) for c in db.collection("custos_diarios").stream() if c.id.startswith(hoje[:7]))
+    # 16/10/2026: o custo mostrado inclui a manutenção do cache (pings a cada 50 min e regravação após publicar), que antes ficava fora
+    # e fazia o painel não bater com o painel da Anthropic. `custo_usd` = conversas; `aquecer_cache_usd` = cache.
+    dh = db.collection("custos_diarios").document(hoje).get().to_dict() or {}
+    conv_hoje, cache_hoje = dh.get("custo_usd", 0), dh.get("aquecer_cache_usd", 0)
+    docs_mes = [(c.to_dict() or {}) for c in db.collection("custos_diarios").stream() if c.id.startswith(hoje[:7])]
+    conv_mes, cache_mes = sum(x.get("custo_usd", 0) for x in docs_mes), sum(x.get("aquecer_cache_usd", 0) for x in docs_mes)
+    custo_hoje, custo_mes = conv_hoje + cache_hoje, conv_mes + cache_mes
     sem_frente = sum(1 for c in conversas if c.get("frente") not in FRENTES_IA)          # tudo que não é frente da IA
     encaminhados = sum(1 for c in conversas if c.get("orientado_recepcao_em"))           # receberam a mensagem da recepção
     abertas_ia = sum(1 for c in conversas if c.get("frente") in FRENTES_IA and c.get("aberta")
@@ -193,6 +198,7 @@ def gestao(request: Request, de: str = "", ate: str = "", aviso: str = "", _=Dep
     return tpl.TemplateResponse(request, "gestao.html", {
         "de": d.isoformat(), "ate": a.isoformat(), "funil": funil, "total": total, "dias": dias, "serie": serie,
         "campanhas": dict(sorted(campanhas.items())), "custo_hoje": custo_hoje, "custo_mes": custo_mes,
+        "conv_hoje": conv_hoje, "cache_hoje": cache_hoje, "conv_mes": conv_mes, "cache_mes": cache_mes,
         "cap": config.parametros()["modelos"]["cap_diario_usd"], "elegiveis": sum(1 for l in leads if l.get("elegivel")),
         "abertas": abertas_ia, "sem_frente": sem_frente, "encaminhados": encaminhados,
         "aviso": aviso, "atalhos": _atalhos(),
