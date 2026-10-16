@@ -49,13 +49,6 @@ def job_lembretes(dry_run: bool = False):
     return lembretes.rodar(os.environ.get("URL_ORQUESTRADOR", ""), dry_run=dry_run)
 
 
-@app.post("/jobs/retornos")
-def job_retornos(dry_run: bool = False):
-    """Retornos combinados ("me chama em 2 horas"): a cada 5 min, manda retomar as conversas cujo horário chegou."""
-    from celeste.jobs import retornos
-    return retornos.rodar(os.environ.get("URL_ORQUESTRADOR", ""), dry_run=dry_run)
-
-
 @app.post("/jobs/aquecer-cache")
 def job_aquecer_cache():
     """Keep-alive do cache do prompt da Celeste: repassa ao orquestrador (privado) com token de identidade."""

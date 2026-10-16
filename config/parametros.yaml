@@ -483,15 +483,6 @@ lembretes:
   max_por_conversa: 2                  # por fio: o contador zera quando o lead responde
   so_dentro_janela_24h: true           # texto livre só até 24 h da última msg do lead; depois, só template
 
-# Retorno combinado ("me chama em 2 horas"), 16/10/2026. Horário pedido pelo lead é respeitado, qualquer dia e hora.
-# Dentro da janela de 24 h vai o texto da etapa (sem modelo); fora dela, o template de utilidade abaixo (aguardando a Meta).
-retorno:
-  template: retorno_combinado          # "Olá, {{1}}! Como combinamos, estou retomando a nossa conversa sobre a sua consulta na Passoni Clinic. Podemos continuar?"
-  textos:
-    horarios: "Oi {nome}, passando como combinado! Algum dos horários que te passei ficou bom?"
-    cadastro: "Oi {nome}, passando como combinado! Podemos seguir com o seu cadastro?"
-    geral:    "Oi {nome}, passando como combinado! Podemos continuar?"
-
 # Templates das rotinas de consulta (aprovados na Meta como UTILITY; conferido em 15/10/2026). Só para consultas agendadas pela Celeste.
 # As rotinas de envio ainda não existem; esta lista alimenta a página Templates do painel.
 templates_consulta:

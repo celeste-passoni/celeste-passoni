@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import re
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Callable
 
 from celeste.comum import config
@@ -93,10 +93,6 @@ FERRAMENTAS: list[dict] = [
      "strict": True, "input_schema": {"type": "object", "properties": {
          "tratamento": {"type": "string", "enum": list(config.parametros()["antes_e_depois_tratamentos"]["tratamentos"].keys()) + ["geral"]}},
          "required": ["tratamento"], "additionalProperties": False}},
-    {"name": "agendar_retorno", "description": "O lead pediu para você chamá-lo em outro momento ('me chama em 2 horas', 'me chama amanhã às 10h', 'fala comigo à noite'). Agenda o retorno: no horário combinado o sistema manda uma mensagem retomando a conversa. Respeite EXATAMENTE o horário pedido, qualquer dia e hora (madrugada, fim de semana, feriado). Calcule a data e hora a partir do AGORA do contexto. Depois responda confirmando o horário ('Combinado, Ana! Te chamo às 16h').",
-     "strict": True, "input_schema": {"type": "object", "properties": {
-         "quando": {"type": "string", "description": "data e hora do retorno, horário de São Paulo, no formato AAAA-MM-DD HH:MM"}},
-         "required": ["quando"], "additionalProperties": False}},
     {"name": "sinalizar_revisao", "description": "Marca a conversa para a equipe revisar quando o lead perguntou algo que NÃO está na base de conhecimento (você não inventa a resposta). Registre a dúvida exata.",
      "strict": True, "input_schema": {"type": "object", "properties": {"duvida": {"type": "string", "description": "a pergunta do lead que ficou sem resposta na base"}},
                                       "required": ["duvida"], "additionalProperties": False}},
@@ -346,23 +342,6 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         wamid = ctx.enviar_imagem(f"{grupo}:{s}:{arquivo}")
         ctx.atualizar({"fotos_enviadas": enviadas + [arquivo]})
         return {"ok": True, "wamid": wamid, "aviso": "UMA foto sai logo depois do seu primeiro balão, com legenda; o resto da sua resposta vem depois dela. Se o lead pedir mais, chame de novo."}
-
-    if nome == "agendar_retorno":
-        from zoneinfo import ZoneInfo
-        from celeste.comum import config as _cfg
-        fuso = ZoneInfo(_cfg.FUSO)
-        try:
-            quando = datetime.strptime(e["quando"].strip(), "%Y-%m-%d %H:%M").replace(tzinfo=fuso)
-        except ValueError:
-            raise ValueError("quando precisa estar no formato AAAA-MM-DD HH:MM")
-        agora = datetime.now(fuso)
-        if quando < agora + timedelta(minutes=2):
-            raise ValueError("o horário do retorno já passou; calcule a partir do AGORA do contexto")
-        if quando > agora + timedelta(days=30):
-            raise ValueError("retorno só até 30 dias à frente; para mais, registre com atualizar_status 'Vamos retornar na data solicitada'")
-        ctx.atualizar({"retorno_em": quando.astimezone(timezone.utc), "retorno_pedido_em": datetime.now(timezone.utc), "retorno_enviado_em": None})
-        return {"ok": True, "retorno_em": quando.strftime("%d/%m/%Y %H:%M"),
-                "aviso": f"retorno agendado para {quando.strftime('%d/%m às %H:%M')}; confirme o horário ao lead em um balão curto e não pergunte mais nada"}
 
     if nome == "sinalizar_revisao":
         pend = list(ctx.conversa.get("duvidas_pendentes") or []) + [e["duvida"][:300]]

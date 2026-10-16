@@ -731,24 +731,6 @@ def test_catalogo_de_videos_bate_com_a_ferramenta():
     assert not set(cfg["videos_rotinas"]) & set(cfg["videos"])
 
 
-def test_agendar_retorno_respeita_horario_pedido_e_valida():
-    from datetime import datetime, timedelta
-    from zoneinfo import ZoneInfo
-    conv = {"id": "c1", "frente": "leads_perdidos"}
-    ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos)
-    fuso = ZoneInfo(config.FUSO)
-    madrugada = (datetime.now(fuso) + timedelta(hours=2)).replace(second=0, microsecond=0)
-    saida, erro = ferramentas_ia.executar("agendar_retorno", {"quando": madrugada.strftime("%Y-%m-%d %H:%M")}, ctx)
-    assert not erro and conv["retorno_em"] == madrugada.astimezone(__import__("datetime").timezone.utc) and "confirme o horário" in saida
-    passado = (datetime.now(fuso) - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M")
-    _, erro2 = ferramentas_ia.executar("agendar_retorno", {"quando": passado}, ctx)
-    assert erro2 and "já passou" in _
-    _, erro3 = ferramentas_ia.executar("agendar_retorno", {"quando": "amanhã às 10"}, ctx)
-    assert erro3 and "formato" in _
-    cfg = config.parametros()["retorno"]
-    assert cfg["template"] == "retorno_combinado" and {"horarios", "cadastro", "geral"} <= set(cfg["textos"]) and all("{nome}" in t for t in cfg["textos"].values())
-
-
 def test_limitar_emojis_deixa_so_um_por_resposta():
     b = motor.limitar_emojis(["Sem problemas, Tadeu! 😊 Ficou mais alguma dúvida? 😊", "Combinado! 💛 Até lá 😊"])
     assert b == ["Sem problemas, Tadeu! 😊 Ficou mais alguma dúvida?", "Combinado! Até lá"]
