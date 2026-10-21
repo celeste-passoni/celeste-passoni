@@ -47,7 +47,7 @@ FERRAMENTAS: list[dict] = [
          "responsavel": {"type": "string"}, "parentesco_responsavel": {"type": "string"}, "cpf_responsavel": {"type": "string"}},
          "required": ["cpf", "email", "celular", "nascimento", "sexo", "cep", "numero", "complemento", "como_conheceu", "responsavel", "parentesco_responsavel", "cpf_responsavel"],
          "additionalProperties": False}},
-    {"name": "buscar_horarios", "description": "Devolve ATÉ 3 horários LIVRES de consulta para um profissional (os primeiros do período). Ofereça só esses. Se o lead pedir outro dia ou outro horário, chame de novo com a_partir_de nesse dia.",
+    {"name": "buscar_horarios", "description": "Devolve ATÉ 3 horários LIVRES de consulta para UM profissional (os primeiros a partir da data). Só chame depois de saber com quem o lead quer (Dra. Luciana ou Dr. Lucas) e que dia ou período fica melhor para ele; se não souber, pergunte antes. Uma chamada por resposta, nunca para os dois profissionais de uma vez. Use a_partir_de para o dia que ele pediu. Ofereça só os horários devolvidos.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "profissional": {"type": "string", "enum": ["dra_luciana", "dr_lucas"]},
          "a_partir_de": {"type": "string", "description": "AAAA-MM-DD ou vazio para a partir de hoje"},

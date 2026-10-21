@@ -2210,7 +2210,9 @@
 - **Lead:** Vou agendar com a Dra Luciana Celeste, voce me convenceu.
 - **Lead:** Essas semana quais horários disponiveis voce tem ?
 - **Celeste:** Que alegria, Henrique! Será um prazer receber você na Passoni Clinic 💛
-- **Celeste:** Com a Dra. Luciana, amanhã, quinta, 15/10, tenho às 13h ou às 14h. Na sexta, 16/10, tenho às 13h. Qual desses horários fica melhor para você?
+- **Celeste:** Tem algum dia ou período desta semana que fica melhor para você? Assim já vejo os horários da Dra. Luciana.
+- **Lead:** Quinta ou sexta, à tarde
+- **Celeste:** Com a Dra. Luciana, quinta, 15/10, tenho às 13h ou às 14h, e na sexta, 16/10, às 13h. Qual desses horários fica melhor para você?
 - **Lead:** Na sexta as 13 horas.
 - **Celeste:** Perfeito, Henrique! Então fica sexta, 16/10, às 13h, com a Dra. Luciana.
 - **Celeste:** [script do pré-cadastro: lista de dados]
