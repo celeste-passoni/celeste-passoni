@@ -63,8 +63,9 @@ def rodar(tabelas: list[str] | None = None) -> dict:
                 l.pop("texto", None)
         job = bq.load_table_from_json(
             linhas, f"{config.PROJETO_GCP}.{DATASET}.{tabela}",
-            job_config=bigquery.LoadJobConfig(write_disposition="WRITE_TRUNCATE", autodetect=True,
-                                              schema_update_options=["ALLOW_FIELD_ADDITION"]))
+            # WRITE_TRUNCATE + autodetect já recria o esquema inteiro; schema_update_options é inválido com TRUNCATE
+            # em tabela sem partição (erro 400 na 1ª rodada, 22/10/2026)
+            job_config=bigquery.LoadJobConfig(write_disposition="WRITE_TRUNCATE", autodetect=True))
         job.result()
         resumo[tabela] = len(linhas)
     log.info("espelho BigQuery: %s", resumo)
