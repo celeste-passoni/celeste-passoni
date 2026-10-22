@@ -284,6 +284,9 @@ com_frente AS (
     closed_by_user_id,
     celular,
     CASE
+      -- NOVO (22/10/2026): a frente 'Perdidos IA' é só da Celeste; humana que falou com um lead da IA conta na frente dela
+      WHEN colaborador = 'Celeste' THEN 'Perdidos IA'
+      WHEN frente_original = 'Perdidos IA' THEN 'Perdidos'
       -- NOVO (18/09/2026): a Gisela só trabalha Orcamento; tudo dela vira Orcamento
       WHEN colaborador = 'Gisela Madeira Pinto' THEN 'Orcamento'
       WHEN frente_original = 'Inativos' THEN 'Inativo'
@@ -499,9 +502,9 @@ SET
         (T.frente NOT IN ('Perdidos', 'Perdidos IA') AND CAST(a.cpf AS STRING) = T.chave)
       )
       AND (
-        UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
-        OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'
-        OR UPPER(a.marcadopor) = UPPER(NOME_CELESTE)   -- NOVO (22/10/2026)
+        (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+        OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
+            OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
       )
       AND DATE_TRUNC(DATE(a.marcacao), MONTH) = T.mes_ref
       AND DATE(a.marcacao) >= DATE('2026-08-18')
@@ -517,9 +520,9 @@ SET
       (T.frente NOT IN ('Perdidos', 'Perdidos IA') AND CAST(a.cpf AS STRING) = T.chave)
     )
     AND (
-      UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
-      OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'
-        OR UPPER(a.marcadopor) = UPPER(NOME_CELESTE)   -- NOVO (22/10/2026)
+      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
+          OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
     )
     AND DATE_TRUNC(DATE(a.marcacao), MONTH) = T.mes_ref
     AND DATE(a.marcacao) >= DATE('2026-08-18')
@@ -533,9 +536,9 @@ SET
       (T.frente NOT IN ('Perdidos', 'Perdidos IA') AND CAST(a.cpf AS STRING) = T.chave)
     )
     AND (
-      UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
-      OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'
-        OR UPPER(a.marcadopor) = UPPER(NOME_CELESTE)   -- NOVO (22/10/2026)
+      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
+          OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
     )
     AND DATE_TRUNC(DATE(a.data), MONTH) = T.mes_ref
     AND DATE(a.data) >= DATE('2026-08-18')
@@ -549,9 +552,9 @@ SET
       (T.frente NOT IN ('Perdidos', 'Perdidos IA') AND CAST(a.cpf AS STRING) = T.chave)
     )
     AND (
-      UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
-      OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'
-        OR UPPER(a.marcadopor) = UPPER(NOME_CELESTE)   -- NOVO (22/10/2026)
+      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
+          OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
     )
     AND DATE_TRUNC(DATE(a.data), MONTH) = T.mes_ref
     AND DATE(a.data) >= DATE('2026-08-18')
@@ -576,9 +579,9 @@ SET
     AND DATE_TRUNC(DATE(v.data_venda), MONTH) = T.mes_ref
     AND DATE(v.data_venda) >= DATE('2026-08-18')
     AND (
-      UPPER(v.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
-      OR UPPER(v.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'
-      OR UPPER(v.marcadopor) = UPPER(NOME_CELESTE)   -- NOVO (22/10/2026)
+      (T.frente = 'Perdidos IA' AND UPPER(v.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      OR (T.frente != 'Perdidos IA' AND (UPPER(v.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
+          OR UPPER(v.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
       -- NOVO (18/09/2026): da Gisela só entra venda classificada como RESGATE
       -- ALTERADO (10/10/2026): vendas da Gisela só até 09/10
       OR (UPPER(v.marcadopor) LIKE '%GISELA MADEIRA PINTO%' AND v.tipo_consulta = 'RESGATE' AND DATE(v.data_venda) < DATE '2026-10-10')
@@ -595,9 +598,9 @@ SET
     AND DATE_TRUNC(DATE(v.data_venda), MONTH) = T.mes_ref
     AND DATE(v.data_venda) >= DATE('2026-08-18')
     AND (
-      UPPER(v.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
-      OR UPPER(v.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'
-      OR UPPER(v.marcadopor) = UPPER(NOME_CELESTE)   -- NOVO (22/10/2026)
+      (T.frente = 'Perdidos IA' AND UPPER(v.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      OR (T.frente != 'Perdidos IA' AND (UPPER(v.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
+          OR UPPER(v.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
       -- NOVO (18/09/2026): da Gisela só entra venda classificada como RESGATE
       -- ALTERADO (10/10/2026): vendas da Gisela só até 09/10
       OR (UPPER(v.marcadopor) LIKE '%GISELA MADEIRA PINTO%' AND v.tipo_consulta = 'RESGATE' AND DATE(v.data_venda) < DATE '2026-10-10')
@@ -614,9 +617,9 @@ SET
     AND DATE_TRUNC(DATE(v.data_venda), MONTH) = T.mes_ref
     AND DATE(v.data_venda) >= DATE('2026-08-18')
     AND (
-      UPPER(v.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
-      OR UPPER(v.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'
-      OR UPPER(v.marcadopor) = UPPER(NOME_CELESTE)   -- NOVO (22/10/2026)
+      (T.frente = 'Perdidos IA' AND UPPER(v.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      OR (T.frente != 'Perdidos IA' AND (UPPER(v.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
+          OR UPPER(v.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
       -- NOVO (18/09/2026): da Gisela só entra venda classificada como RESGATE
       -- ALTERADO (10/10/2026): vendas da Gisela só até 09/10
       OR (UPPER(v.marcadopor) LIKE '%GISELA MADEIRA PINTO%' AND v.tipo_consulta = 'RESGATE' AND DATE(v.data_venda) < DATE '2026-10-10')
@@ -633,9 +636,9 @@ SET
     AND DATE_TRUNC(DATE(v.data_venda), MONTH) = T.mes_ref
     AND DATE(v.data_venda) >= DATE('2026-08-18')
     AND (
-      UPPER(v.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
-      OR UPPER(v.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'
-      OR UPPER(v.marcadopor) = UPPER(NOME_CELESTE)   -- NOVO (22/10/2026)
+      (T.frente = 'Perdidos IA' AND UPPER(v.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      OR (T.frente != 'Perdidos IA' AND (UPPER(v.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
+          OR UPPER(v.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
       -- NOVO (18/09/2026): da Gisela só entra venda classificada como RESGATE
       -- ALTERADO (10/10/2026): vendas da Gisela só até 09/10
       OR (UPPER(v.marcadopor) LIKE '%GISELA MADEIRA PINTO%' AND v.tipo_consulta = 'RESGATE' AND DATE(v.data_venda) < DATE '2026-10-10')
@@ -660,9 +663,9 @@ SET
     )
     AND a.status IN (2, 5)
     AND (
-      UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
-      OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'
-        OR UPPER(a.marcadopor) = UPPER(NOME_CELESTE)   -- NOVO (22/10/2026)
+      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
+          OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
     )
     AND DATE_TRUNC(DATE(a.data), MONTH) = T.mes_ref
     AND DATE(a.data) >= DATE('2026-08-18')
@@ -677,9 +680,9 @@ SET
     )
     AND a.status IN (2, 5)
     AND (
-      UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
-      OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'
-        OR UPPER(a.marcadopor) = UPPER(NOME_CELESTE)   -- NOVO (22/10/2026)
+      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
+          OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
     )
     AND DATE_TRUNC(DATE(a.data), MONTH) = T.mes_ref
     AND DATE(a.data) >= DATE('2026-08-18')
@@ -697,9 +700,9 @@ SET
         )
         AND a.status IN (2, 5)
         AND (
-          UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
-          OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'
-        OR UPPER(a.marcadopor) = UPPER(NOME_CELESTE)   -- NOVO (22/10/2026)
+          (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+          OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
+              OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
         )
         AND DATE_TRUNC(DATE(a.data), MONTH) = T.mes_ref
         AND DATE(a.data) >= DATE('2026-08-18')
@@ -720,9 +723,9 @@ SET
         )
         AND a.status IN (2, 5)
         AND (
-          UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
-          OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'
-        OR UPPER(a.marcadopor) = UPPER(NOME_CELESTE)   -- NOVO (22/10/2026)
+          (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+          OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
+              OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
         )
         AND DATE_TRUNC(DATE(a.data), MONTH) = T.mes_ref
         AND DATE(a.data) >= DATE('2026-08-18')
@@ -772,9 +775,9 @@ USING (
       ON (base.frente IN ('Perdidos', 'Perdidos IA') AND a.celular_sem_ddd = SUBSTR(base.contato, 3))
       OR (base.frente NOT IN ('Perdidos', 'Perdidos IA') AND CAST(a.cpf AS STRING) = base.chave)
     WHERE (
-        UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
-        OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'
-        OR UPPER(a.marcadopor) = UPPER(NOME_CELESTE)   -- NOVO (22/10/2026)
+        (base.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+        OR (base.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
+            OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
       )
     QUALIFY ROW_NUMBER() OVER (PARTITION BY base.chave, base.frente ORDER BY a.marcacao DESC) = 1
   ),
@@ -897,6 +900,7 @@ base_dia AS (
   SELECT * EXCEPT(frente),
     CASE
       WHEN colaborador = 'Celeste' THEN 'Perdidos IA'   -- NOVO (22/10/2026)
+      WHEN frente = 'Perdidos IA' THEN 'Perdidos'          -- NOVO (22/10/2026): humana nunca fica em 'Perdidos IA'
       WHEN colaborador = 'Gisela Madeira Pinto' THEN 'Orcamento'
       WHEN colaborador = 'Maria Fernanda Oliveira Martins'
        AND data <= DATE '2026-08-31'
@@ -941,6 +945,7 @@ atend AS (
   SELECT * EXCEPT(frente_marcacao, frente_data),
     CASE
       WHEN marcadopor = NOME_CELESTE THEN 'Perdidos IA'   -- NOVO (22/10/2026)
+      WHEN frente_marcacao = 'Perdidos IA' THEN 'Perdidos'  -- NOVO (22/10/2026): humana nunca fica em 'Perdidos IA'
       WHEN marcadopor = 'Maria Fernanda Oliveira Martins'
        AND DATE(marcacao) <= DATE '2026-08-31'
        AND frente_marcacao NOT IN ('Canceladas', 'Inativos') THEN 'Inativos'
@@ -953,6 +958,7 @@ atend AS (
     END AS frente_marcacao,
     CASE
       WHEN marcadopor = NOME_CELESTE THEN 'Perdidos IA'   -- NOVO (22/10/2026)
+      WHEN frente_data = 'Perdidos IA' THEN 'Perdidos'      -- NOVO (22/10/2026): humana nunca fica em 'Perdidos IA'
       WHEN marcadopor = 'Maria Fernanda Oliveira Martins'
        AND DATE(data) <= DATE '2026-08-31'
        AND frente_data NOT IN ('Canceladas', 'Inativos') THEN 'Inativos'
@@ -1007,6 +1013,7 @@ vend AS (
   SELECT * EXCEPT(frente),
     CASE
       WHEN marcadopor = NOME_CELESTE THEN 'Perdidos IA'   -- NOVO (22/10/2026)
+      WHEN frente = 'Perdidos IA' THEN 'Perdidos'           -- NOVO (22/10/2026): humana nunca fica em 'Perdidos IA'
       WHEN marcadopor = 'Gisela Madeira Pinto' THEN 'Orcamento'
       WHEN marcadopor = 'Maria Fernanda Oliveira Martins'
        AND data <= DATE '2026-08-31'
