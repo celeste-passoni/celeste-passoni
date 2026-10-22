@@ -16,6 +16,7 @@ from celeste.comum import config
 
 log = logging.getLogger(__name__)
 DATASET = "ia_atendimento"
+LOCALIZACAO = "us-central1"   # 22/10/2026: a 1ª rodada criou o dataset em "US" e o funil (us-central1) não enxergava
 
 COLECOES = {  # nome da tabela → coleção (None = collection group)
     "leads": ("leads", False), "conversas": ("conversas", False), "mensagens": ("mensagens", True),
@@ -46,7 +47,17 @@ def _linha(doc) -> dict:
 def rodar(tabelas: list[str] | None = None) -> dict:
     db = firestore.Client(project=config.PROJETO_GCP)
     bq = bigquery.Client(project=config.PROJETO_GCP)
-    bq.create_dataset(bigquery.Dataset(f"{config.PROJETO_GCP}.{DATASET}"), exists_ok=True)
+    nome_ds = f"{config.PROJETO_GCP}.{DATASET}"
+    try:   # dataset criado na região errada (1ª rodada, 22/10/2026) é refeito: é só espelho, recarregado inteiro a cada rodada
+        existente = bq.get_dataset(nome_ds)
+        if (existente.location or "").lower() != LOCALIZACAO:
+            log.warning("dataset %s está em %s; recriando em %s", DATASET, existente.location, LOCALIZACAO)
+            bq.delete_dataset(nome_ds, delete_contents=True)
+    except Exception:   # noqa: BLE001  (não existe ainda)
+        pass
+    ds = bigquery.Dataset(nome_ds)
+    ds.location = LOCALIZACAO   # mesma região dos datasets da clínica (gold/silver/automacoes), senão a query do funil não consegue cruzar
+    bq.create_dataset(ds, exists_ok=True)
     resumo = {}
     for tabela, (colecao, grupo) in COLECOES.items():
         if tabelas and tabela not in tabelas:
