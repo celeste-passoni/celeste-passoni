@@ -682,18 +682,23 @@ def test_haiku_sem_thinking_nem_fallback_do_servidor():
     assert kw["thinking"] == {"type": "adaptive"} and kw["fallbacks"] == "default"
 
 
-def test_buscar_horarios_oferece_no_maximo_3_e_acumula_oferecidos():
+def test_buscar_horarios_oferece_2_do_dia_pedido_e_acumula_oferecidos():
     livres = [{"data": "2026-10-15", "hora": h} for h in ("13:00", "14:00", "15:00", "16:00")]
     livres += [{"data": "2026-10-16", "hora": "13:00"}, {"data": "2026-10-19", "hora": "13:00"}]
-    assert ferramentas_ia.selecionar_opcoes(livres, 3) == [livres[0], livres[1], livres[4]]   # 2 do 1º dia + 1 do 2º
-    assert ferramentas_ia.selecionar_opcoes(livres[:2], 3) == livres[:2]
+    assert ferramentas_ia.selecionar_opcoes(livres, 2) == livres[:2]   # 22/10/2026: 2 do dia pedido
+    assert ferramentas_ia.selecionar_opcoes(livres[3:], 2) == [livres[3], livres[4]]   # dia com 1 vaga completa com o seguinte
+    assert ferramentas_ia.selecionar_opcoes(livres[:1], 2) == livres[:1]
     ts = MagicMock(); ts.buscar_horarios.return_value = livres
     conv = {"id": "c1", "frente": "leads_perdidos", "horarios_oferecidos": ["2026-10-14 10:00"]}
     ctx = _ctx(conv, ts=ts); ctx.atualizar = lambda campos: conv.update(campos)
     saida, erro = ferramentas_ia.executar("buscar_horarios", {"profissional": "dra_luciana", "a_partir_de": "", "dias": 14}, ctx)
     d = __import__("json").loads(saida)
-    assert not erro and len(d["livres"]) == 3 and d["ha_mais_no_periodo"]
-    assert conv["horarios_oferecidos"] == ["2026-10-14 10:00", "2026-10-15 13:00", "2026-10-15 14:00", "2026-10-16 13:00"]
+    assert not erro and len(d["livres"]) == 2 and d["ha_mais_no_periodo"] and not d["dia_pedido_sem_vaga"]
+    assert conv["horarios_oferecidos"] == ["2026-10-14 10:00", "2026-10-15 13:00", "2026-10-15 14:00"]
+    # dia pedido sem vaga: devolve o dia mais próximo e sinaliza
+    saida, erro = ferramentas_ia.executar("buscar_horarios", {"profissional": "dra_luciana", "a_partir_de": "2026-10-14", "dias": 14}, ctx)
+    d = __import__("json").loads(saida)
+    assert not erro and d["dia_pedido_sem_vaga"] and "não tem vaga" in d["aviso"]
 
 
 def test_separar_baloes_limita_a_tres():

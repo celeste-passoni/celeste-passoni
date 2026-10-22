@@ -57,8 +57,8 @@ Script "duas formas de agendar" (Dra. R$1.200 / Dr. Lucas R$800) + "Qual a melho
  ↓
 [Se preço de tratamento] script "não trabalhamos com tabela fixa…" → redireciona para a consulta
  ↓
-Horários: "A Dra. Luciana atende de segunda a sexta das 12h às 17h. Tem algum dia que prefere?"
- → oferece 2–3 opções concretas
+Horários: "Prefere com a Dra. Luciana ou com o Dr. Lucas? E qual dia da semana fica melhor para você? Assim já vejo as opções." (sem citar a grade de atendimento; ela só entra se o lead perguntar)
+ → oferece 2 opções concretas no dia escolhido
  ↓
 Pré-cadastro (formulário) → agenda → confirma por escrito → endereço + antecedência → vídeo de boas-vindas
  ↓

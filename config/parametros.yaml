@@ -119,7 +119,7 @@ ia:
     oferecer_hoje: true                      # inclui o dia atual na busca de horários (ex.: contato de manhã → consulta à tarde)
     antecedencia_minima_horas: 2             # hoje: só horários a partir de agora + N h
     dias_a_frente: 14                        # janela de busca
-    opcoes_por_vez: 3                        # quantos horários a Celeste oferece de cada vez
+    opcoes_por_vez: 2                        # quantos horários a Celeste oferece de cada vez (22/10/2026: 2 do dia pedido; antes 3)
     priorizar: "mais_cedo"                   # mais_cedo | preferencia_do_lead
   follow_up_cadencia_dias: [0.2, 1, 3, 7, 15, 30, 60, 90]  # após última msg do lead
   follow_up_max_tentativas: 8

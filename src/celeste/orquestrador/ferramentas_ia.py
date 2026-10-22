@@ -47,7 +47,7 @@ FERRAMENTAS: list[dict] = [
          "responsavel": {"type": "string"}, "parentesco_responsavel": {"type": "string"}, "cpf_responsavel": {"type": "string"}},
          "required": ["cpf", "email", "celular", "nascimento", "sexo", "cep", "numero", "complemento", "como_conheceu", "responsavel", "parentesco_responsavel", "cpf_responsavel"],
          "additionalProperties": False}},
-    {"name": "buscar_horarios", "description": "Devolve ATÉ 3 horários LIVRES de consulta para UM profissional (os primeiros a partir da data). Só chame depois de saber com quem o lead quer (Dra. Luciana ou Dr. Lucas) e que dia ou período fica melhor para ele; se não souber, pergunte antes. Uma chamada por resposta, nunca para os dois profissionais de uma vez. Use a_partir_de para o dia que ele pediu. Ofereça só os horários devolvidos.",
+    {"name": "buscar_horarios", "description": "Devolve ATÉ 2 horários LIVRES de consulta para UM profissional, do dia pedido (a_partir_de) ou, se esse dia não tiver vaga, do dia mais próximo com vaga (campo dia_pedido_sem_vaga). Só chame depois de saber com quem o lead quer (Dra. Luciana ou Dr. Lucas) e qual dia da semana fica melhor para ele; se não souber, pergunte antes. Uma chamada por resposta, nunca para os dois profissionais de uma vez. Ofereça só os horários devolvidos.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "profissional": {"type": "string", "enum": ["dra_luciana", "dr_lucas"]},
          "a_partir_de": {"type": "string", "description": "AAAA-MM-DD ou vazio para a partir de hoje"},
@@ -115,24 +115,10 @@ def proxima_foto(bloco: dict, slug: str, enviadas: list, geral: list | None = No
     return None
 
 
-def selecionar_opcoes(livres: list, n: int = 3) -> list:
-    """Até n horários para oferecer, como as atendentes fazem: até 2 do primeiro dia e 1 do dia seguinte, completando em ordem."""
-    livres = list(livres)
-    if len(livres) <= n:
-        return livres
-    por_dia: dict = {}
-    for l in livres:
-        por_dia.setdefault(l["data"], []).append(l)
-    dias = list(por_dia)
-    escolha = por_dia[dias[0]][:2]
-    if len(dias) > 1:
-        escolha += por_dia[dias[1]][:1]
-    for l in livres:
-        if len(escolha) >= n:
-            break
-        if l not in escolha:
-            escolha.append(l)
-    return escolha[:n]
+def selecionar_opcoes(livres: list, n: int = 2) -> list:
+    """Até n horários para oferecer (22/10/2026, pedido da clínica): os n primeiros do primeiro dia com vaga; se esse dia
+    tiver menos que n, completa em ordem com os dias seguintes. Antes era 2 do 1º dia + 1 do 2º."""
+    return list(livres)[:n]
 
 
 class Contexto:
@@ -251,13 +237,16 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         livres = ctx.ts.buscar_horarios(e["profissional"], dias=dias, a_partir_de=inicio)
         from celeste.comum import config as _cfg
         n = int(((_cfg.parametros().get("ia") or {}).get("horarios") or {}).get("opcoes_por_vez", 3))
-        oferecer = selecionar_opcoes(livres, n)   # 14/10/2026: a clínica pediu no máximo 3 por vez (a Celeste listava 12)
+        oferecer = selecionar_opcoes(livres, n)   # 22/10/2026: 2 horários do dia pedido (antes 3; em 14/10 a Celeste listava 12)
+        sem_vaga_no_dia = bool(inicio) and bool(oferecer) and oferecer[0]["data"] != inicio.isoformat()
         ja = list(ctx.conversa.get("horarios_oferecidos") or [])
         novos = [f"{l['data']} {l['hora']}" for l in oferecer if f"{l['data']} {l['hora']}" not in ja]
         ctx.conversa["horarios_oferecidos"] = (ja + novos)[-60:]
         ctx.atualizar({"horarios_oferecidos": ctx.conversa["horarios_oferecidos"]})
         return {"profissional": e["profissional"], "livres": oferecer, "ha_mais_no_periodo": len(livres) > len(oferecer),
-                "aviso": "ofereça só estes; se o lead quiser outro dia ou horário, chame de novo com a_partir_de"}
+                "dia_pedido_sem_vaga": sem_vaga_no_dia,
+                "aviso": "ofereça só estes; se o lead quiser outro dia ou horário, chame de novo com a_partir_de"
+                         + ("; o dia pedido não tem vaga: avise em uma frase e ofereça estes, do dia mais próximo" if sem_vaga_no_dia else "")}
 
     if nome == "agendar_consulta":
         chave = f"{e['data']} {e['hora']}"
