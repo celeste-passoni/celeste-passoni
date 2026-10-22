@@ -17,6 +17,11 @@ from celeste.comum import config
 log = logging.getLogger(__name__)
 DATASET = "ia_atendimento"
 LOCALIZACAO = "us-central1"   # 22/10/2026: a 1ª rodada criou o dataset em "US" e o funil (us-central1) não enxergava
+COLUNAS_GARANTIDAS = {   # colunas que a query do funil de resgate (frente 'Perdidos IA') lê; criadas vazias se faltarem
+    "conversas": {"contato": "STRING", "status": "STRING", "opt_out": "BOOL", "opt_out_em": "TIMESTAMP", "teste": "BOOL",
+                  "criado_em": "TIMESTAMP", "agendado_em": "TIMESTAMP", "ultima_msg_celeste_em": "TIMESTAMP", "frente": "STRING"},
+    "mensagens": {"_id": "STRING", "_pai_id": "STRING", "direcao": "STRING", "tipo": "STRING", "recebido_em": "TIMESTAMP"},
+}
 
 COLECOES = {  # nome da tabela → coleção (None = collection group)
     "leads": ("leads", False), "conversas": ("conversas", False), "mensagens": ("mensagens", True),
@@ -78,6 +83,10 @@ def rodar(tabelas: list[str] | None = None) -> dict:
             # em tabela sem partição (erro 400 na 1ª rodada, 22/10/2026)
             job_config=bigquery.LoadJobConfig(write_disposition="WRITE_TRUNCATE", autodetect=True))
         job.result()
+        # 22/10/2026: o esquema é autodetectado dos dados; colunas que o funil da clínica lê precisam existir mesmo
+        # quando nenhum documento as tem ainda (ex.: opt_out antes do 1º opt-out). ADD COLUMN IF NOT EXISTS garante.
+        for col, tipo in COLUNAS_GARANTIDAS.get(tabela, {}).items():
+            bq.query(f"ALTER TABLE `{config.PROJETO_GCP}.{DATASET}.{tabela}` ADD COLUMN IF NOT EXISTS `{col}` {tipo}").result()
         resumo[tabela] = len(linhas)
     log.info("espelho BigQuery: %s", resumo)
     return resumo

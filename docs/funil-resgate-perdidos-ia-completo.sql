@@ -135,10 +135,10 @@ USING (
       CONCAT('55', REGEXP_REPLACE(CAST(t.celular_sem_ddd AS STRING), r'[^0-9]', '')) AS chave,
       t.primeira_origem AS info_extra,
       CASE WHEN c.opt_out THEN 'Não quer' ELSE c.status END AS status,
-      DATETIME(TIMESTAMP(COALESCE(c.opt_out_em, c.agendado_em, c.ultima_msg_celeste_em))) AS data_atualizacao
+      DATETIME(COALESCE(c.opt_out_em, c.agendado_em, c.ultima_msg_celeste_em)) AS data_atualizacao
     FROM `vertical-theory-489419-a7.gold.leads` t
     LEFT JOIN (
-      SELECT contato, status, opt_out, opt_out_em, agendado_em, ultima_msg_celeste_em
+      SELECT CAST(contato AS STRING) AS contato, status, opt_out, opt_out_em, agendado_em, ultima_msg_celeste_em
       FROM `vertical-theory-489419-a7.ia_atendimento.conversas`
       WHERE (teste IS NULL OR teste = FALSE)
       QUALIFY ROW_NUMBER() OVER (PARTITION BY contato ORDER BY criado_em DESC) = 1
@@ -233,31 +233,31 @@ WITH base AS (
     SELECT
       FARM_FINGERPRINT(m._id)      AS mensagem_id,
       FARM_FINGERPRINT(m._pai_id)  AS history_id,
-      0                            AS user_id,
+      0.0                          AS user_id,
       'Celeste'                    AS colaborador,
       1                            AS sent_by_operator,
       0                            AS sent_by_auto,
-      TIMESTAMP(m.recebido_em)     AS received_at,
+      FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%E3SZ', m.recebido_em) AS received_at,   -- mesmo formato (STRING, UTC) do MarketZap
       CAST(NULL AS STRING)         AS message,
-      TIMESTAMP(m.recebido_em)     AS created_at,
+      FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%E3SZ', m.recebido_em) AS created_at,
       CAST(NULL AS INT64)          AS sector_id,
       CAST(NULL AS STRING)         AS protocol,
-      c.contato                    AS contact_id,
+      CAST(c.contato AS STRING)    AS contact_id,
       CAST(NULL AS INT64)          AS messages_count,
-      CAST(NULL AS INT64)          AS closed_by_user_id,
-      c.contato                    AS celular,
+      CAST(NULL AS FLOAT64)        AS closed_by_user_id,
+      CAST(c.contato AS STRING)    AS celular,
       'Perdidos IA'                AS frente_original,
       CASE
-        WHEN EXTRACT(DAYOFWEEK FROM DATE(TIMESTAMP(m.recebido_em), 'America/Sao_Paulo')) NOT IN (1, 7)
-          AND DATE(TIMESTAMP(m.recebido_em), 'America/Sao_Paulo') NOT IN (SELECT DATE(fer.data) FROM `vertical-theory-489419-a7.silver.feriados` fer)
+        WHEN EXTRACT(DAYOFWEEK FROM DATE(m.recebido_em)) NOT IN (1, 7)
+          AND DATE(m.recebido_em) NOT IN (SELECT DATE(fer.data) FROM `vertical-theory-489419-a7.silver.feriados` fer)
         THEN 'Sim' ELSE 'Não'
       END AS dia_util,
-      CASE WHEN DATE(TIMESTAMP(m.recebido_em), 'America/Sao_Paulo') >= CURRENT_DATE() THEN 'Sim' ELSE 'Não' END AS data_futura
+      CASE WHEN DATE(m.recebido_em) >= CURRENT_DATE() THEN 'Sim' ELSE 'Não' END AS data_futura
     FROM `vertical-theory-489419-a7.ia_atendimento.mensagens` m
     JOIN `vertical-theory-489419-a7.ia_atendimento.conversas` c ON c._id = m._pai_id
     WHERE m.direcao IN ('celeste', 'template')
       AND (c.teste IS NULL OR c.teste = FALSE)
-      AND DATE(TIMESTAMP(m.recebido_em), 'America/Sao_Paulo') >= INICIO_CELESTE
+      AND DATE(m.recebido_em) >= INICIO_CELESTE
   ),
 
 base_mais_celeste AS (   -- NOVO (22/10/2026)
@@ -836,17 +836,17 @@ WITH mensagens_resgate AS (
   SELECT
     FARM_FINGERPRINT(m._id) AS mensagem_id,
     'Celeste' AS colaborador,
-    TIMESTAMP(m.recebido_em) AS created_at,
-    c.contato AS celular
+    FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%E3SZ', m.recebido_em) AS created_at,   -- STRING, como no MarketZap
+    CAST(c.contato AS STRING) AS celular
   FROM `vertical-theory-489419-a7.ia_atendimento.mensagens` m
   JOIN `vertical-theory-489419-a7.ia_atendimento.conversas` c ON c._id = m._pai_id
   WHERE m.direcao IN ('celeste', 'template')
     AND (c.teste IS NULL OR c.teste = FALSE)
-    AND DATE(TIMESTAMP(m.recebido_em), 'America/Sao_Paulo') >= INICIO_CELESTE
+    AND DATE(m.recebido_em) >= INICIO_CELESTE
 ),
 
 base AS (
-  SELECT colaborador, celular, mensagem_id, DATE(created_at, 'America/Sao_Paulo') AS data
+  SELECT colaborador, celular, mensagem_id, DATE(created_at) AS data
   FROM mensagens_resgate WHERE celular IS NOT NULL
 ),
 
