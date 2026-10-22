@@ -1,5 +1,5 @@
 -- NOVO (22/10/2026): frente 'Perdidos IA' = Celeste (IA). Nome do usuário no TI Saúde e data do lançamento.
-DECLARE NOME_CELESTE STRING DEFAULT 'Celeste';
+DECLARE NOME_CELESTE STRING DEFAULT 'Celeste Maria';   -- 22/10/2026: nome do usuário da Celeste no TI Saúde (marcadopor)
 DECLARE INICIO_CELESTE DATE DEFAULT DATE '2026-10-26';
 
 -- ============================================================
