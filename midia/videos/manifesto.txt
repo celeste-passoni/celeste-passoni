@@ -19,3 +19,5 @@ pre_shampoo.mp4                            8.7 MB  origem: PRE - SHAMPOO/PRÉ SH
 dr_lucas.mp4                              10.8 MB  origem: HISTORIA DRA. LUCIANA/APRESENTANDO A CLINICA.mp4             uso: conversa: já era o vídeo 'dr_lucas' (Dr. Lucas e Dra. juntos)
 dra_luciana.mp4                           13.6 MB  origem: HISTORIA DRA. LUCIANA/NOS AGENDAMENTOS.mp4                   uso: conversa: já era o vídeo 'dra_luciana'
 tecnologias.mp4                            3.1 MB  origem: TRATAMENTOS/TRATAMENTOS.mp4                                  uso: conversa: já era o vídeo 'tecnologias'
+
+25/10/2026: os 5 vídeos antigos (institucional, boas_vindas_consulta, como_funciona_consulta, casos_sucesso, sobre_clinica) foram baixados do bucket para esta pasta, para conferência de quem aparece em cada um.
