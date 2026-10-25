@@ -95,7 +95,7 @@ def carregar(dry_run: bool = False) -> dict:
     bq = bigquery.Client(project=config.PROJETO_GCP)
     db = firestore.Client(project=config.PROJETO_GCP)
     agora = datetime.now(timezone.utc)
-    existentes = {d.id: d.to_dict() for d in db.collection("leads").select(["status_ia", "elegivel", "passo", "disponibilizado_em", "carregado_em"]).stream()}
+    existentes = {d.id: d.to_dict() for d in db.collection("leads").select(["status_ia", "elegivel", "passo", "disponibilizado_em", "carregado_em", "teste"]).stream()}
 
     # (A) base do dia = frente 'Perdidos IA' da tabela do funil da clínica (decisão de 22/10/2026: uma fonte só,
     #     painel = Power BI por construção). Usa a execução mais recente da frente; se a frente ainda não existe
@@ -150,7 +150,8 @@ def carregar(dry_run: bool = False) -> dict:
                 lote.commit(); lote, n = db.batch(), 0
 
     validos = set(na_janela) | set(ainda_validos)
-    sairam = [cid for cid, d in existentes.items() if d.get("elegivel") and cid not in validos]
+    # 25/10/2026: lead de teste (número da clínica, criado à mão para simular a esteira) fica na base até ser removido no Firestore
+    sairam = [cid for cid, d in existentes.items() if d.get("elegivel") and cid not in validos and not d.get("teste")]
     if not dry_run:
         for cid in sairam:
             lote.set(db.collection("leads").document(cid), {"elegivel": False, "saiu_da_base_em": agora}, merge=True)

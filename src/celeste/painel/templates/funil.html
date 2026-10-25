@@ -1,0 +1,66 @@
+{% extends "base.html" %}{% block titulo %}Funil{% endblock %}
+{% block head %}<style>
+.etapas{display:flex;flex-direction:column;gap:8px;background:var(--card);border:1px solid var(--linha);border-radius:10px;padding:16px}
+.etapa{display:grid;grid-template-columns:210px 1fr 60px 60px;gap:12px;align-items:center}
+.etapa .rot{font-weight:500}.etapa .rot small{display:block;color:var(--cinza);font-weight:400;font-size:11px}
+.etapa .barra{height:26px;background:var(--bege);border-radius:6px;overflow:hidden}.etapa .barra div{height:100%;background:var(--navy);border-radius:6px;min-width:2px}
+.etapa.ok .barra div{background:var(--ok)}.etapa .n{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}.etapa .pct{text-align:right;color:var(--cinza);font-size:12px;font-variant-numeric:tabular-nums}
+.grupos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.grupo h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--cinza)}
+.grupo .linha{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--linha)}.grupo .linha:last-child{border-bottom:0}.grupo .linha b{font-variant-numeric:tabular-nums}
+.grupo .linha a{text-decoration:none}
+@media(max-width:700px){.etapa{grid-template-columns:1fr 60px 50px}.etapa .barra{grid-column:1/-1}}
+</style>{% endblock %}
+{% block corpo %}
+<h1>Funil · Leads Perdidos</h1>
+<p class="muted" style="margin:-8px 0 16px">Base elegível de hoje, por status da {{ nome_ia }}. Atualiza a cada abertura da página; a base é recarregada às 6h e os templates saem de hora em hora, das 9h às 18h.</p>
+
+<div class="cards" style="margin-bottom:16px">
+  <div class="card"><div class="n">{{ total }}</div><div class="l">leads elegíveis na base</div></div>
+  <div class="card"><div class="n">{{ contatados }}</div><div class="l">já receberam template ({{ pct(contatados) }})</div></div>
+  <div class="card"><div class="n">{{ conversaram }}</div><div class="l">responderam ({{ pct(conversaram) }})</div></div>
+  <div class="card"><div class="n">{{ agendados }}</div><div class="l">agendaram ({{ pct(agendados) }})</div></div>
+  <div class="card"><div class="n">{{ hoje_enviados }} / {{ limite_diario }}</div><div class="l">templates enviados hoje / limite{% if not disparos_ativo %}<br><span class="tag alerta">disparos desligados</span>{% endif %}</div></div>
+  <div class="card"><div class="n">{{ retornos|length }}</div><div class="l">retornos combinados a fazer</div></div>
+</div>
+
+<h2>Etapas</h2>
+<div class="etapas">
+{% for e in etapas %}
+  <div class="etapa {{ 'ok' if e.chave == 'Agendado' }}">
+    <div class="rot">{{ e.rotulo }}<small>{{ e.sub }}</small></div>
+    <div class="barra"><div style="width:{{ e.largura }}%"></div></div>
+    <div class="n">{{ e.n }}</div><div class="pct">{{ pct(e.n) }}</div>
+  </div>
+{% endfor %}
+</div>
+
+<h2>Situações fora do fluxo principal</h2>
+<div class="grupos">
+{% for g in grupos %}
+  <div class="bloco grupo"><h3>{{ g.titulo }} · {{ g.total }}</h3>
+    {% for rot, n in g.itens %}<div class="linha"><a href="/listas?status={{ rot|urlencode }}">{{ rot }}</a><b>{{ n }}</b></div>{% else %}<div class="muted">nenhum</div>{% endfor %}
+  </div>
+{% endfor %}
+</div>
+
+<h2>Esteira de templates · em que passo cada lead está</h2>
+<table>
+<tr><th>Passo</th><th>Significa</th><th style="text-align:right">Leads</th><th>Próximo envio</th></tr>
+{% for p in passos %}<tr><td>{{ p.passo }}</td><td>{{ p.desc }}</td><td style="text-align:right">{{ p.n }}</td><td class="muted">{{ p.proximo }}</td></tr>{% endfor %}
+</table>
+
+<h2>Retornos combinados e recontatos · próximos</h2>
+<table>
+<tr><th>Lead</th><th>Status</th><th>Quando</th><th>O que sai</th><th>Conversa</th></tr>
+{% for r in retornos %}
+<tr>
+  <td>{{ r.nome }}<br><span class="muted">{{ r.celular }}</span></td>
+  <td><span class="tag">{{ r.status }}</span></td>
+  <td>{{ r.quando }}{% if r.atrasado %} <span class="tag alerta">atrasado</span>{% elif r.hoje %} <span class="tag ok">hoje</span>{% endif %}</td>
+  <td>{{ r.template }}</td>
+  <td>{% if r.conversa_id %}<a href="/conversas/{{ r.conversa_id }}">abrir</a>{% else %}—{% endif %}</td>
+</tr>
+{% else %}<tr><td colspan="5" class="muted">Nenhum retorno combinado na base.</td></tr>{% endfor %}
+</table>
+{% endblock %}

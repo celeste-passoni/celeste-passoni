@@ -114,7 +114,8 @@ def gestao(request: Request, de: str = "", ate: str = "", aviso: str = "", _=Dep
     hoje = datetime.now(FUSO).strftime("%Y-%m-%d")
 
     # só os elegíveis (base atual): quem saiu da base não entra em nenhuma conta da Gestão
-    leads = [l.to_dict() for l in db.collection("leads").where("elegivel", "==", True).select(["frente", "elegivel"]).stream()]
+    leads = [l.to_dict() for l in db.collection("leads").where("elegivel", "==", True).select(["frente", "elegivel", "teste"]).stream()]
+    leads = [l for l in leads if not l.get("teste")]   # 25/10/2026: lead de teste (simulação da esteira) não entra na Gestão
     conversas = [dict(c.to_dict(), id=c.id) for c in db.collection("conversas").stream() if not (c.to_dict() or {}).get("teste")]
 
     dias = [(d + timedelta(days=i)).isoformat() for i in range((a - d).days + 1)]
@@ -456,6 +457,94 @@ def listas(request: Request, frente: str = "leads_perdidos", status: str = "", p
     return tpl.TemplateResponse(request, "listas.html", {"itens": itens, "total": total, "pagina": pagina, "paginas": paginas, "frente": frente,
                                                          "status": status, "statuses": statuses, "base": base,
                                                          "por_status": dict(por_status.most_common()), "por_pagina": POR_PAGINA})
+
+
+# ================================================================= 3b. FUNIL (25/10/2026)
+ETAPAS_FUNIL = [("Não contatado", "Não contatado", "na base, ainda sem template"),
+                ("Template enviado (1°)", "1º template enviado", "T1 saiu, sem resposta ainda"),
+                ("Template enviado (2°)", "2º/3º template enviado", "T2 ou T3 saíram, sem resposta"),
+                ("Em conversa", "Em conversa", "respondeu e a Celeste está atendendo"),
+                ("Agendado", "Agendado", "consulta marcada no TI Saúde")]
+GRUPOS_FUNIL = [("Retornos combinados", ["Vamos retornar na data solicitada", "Irá nos retornar", "Agora não"]),
+                ("Objeções", ["Achou caro", "Quer pelo convênio"]),
+                ("Fora do perfil", ["Mora em outro Estado", "Mora em outro País", "Está em outra clínica", "Receiteiro"]),
+                ("Equipe", ["Transferido para humano", "Encaminhado à recepção", "Orientado à recepção"])]
+
+
+@app.get("/funil", response_class=HTMLResponse)
+def funil(request: Request, _=Depends(autenticar)):
+    """Funil visual da base elegível: etapas, situações laterais, passo da esteira e próximos retornos combinados."""
+    p = config.parametros()
+    d = dict(p["disparos"]); d.update(db.collection("config").document("disparos").get().to_dict() or {})
+    recontato = p["leads_perdidos"]["recontato_por_status_ia"]
+    tpl_status = d.get("template_por_status") or {}
+    passos_cfg = d["passos"]
+    agora = datetime.now(FUSO); hoje = agora.date()
+    campos = ["nome", "celular", "status_ia", "passo", "ciclos", "ultimo_template_em", "ultima_msg_lead_em", "proximo_recontato_em",
+              "conversa_id", "opt_out", "teste"]
+    leads = [l.to_dict() for l in db.collection("leads").where("elegivel", "==", True).select(campos).stream()]
+    leads = [l for l in leads if not l.get("teste")]
+    total = len(leads)
+    por_status = Counter(("Não quer (opt-out)" if l.get("opt_out") else (l.get("status_ia") or "Não contatado")) for l in leads)
+    pct = lambda n: f"{(100 * n / total):.0f}%" if total else "0%"
+    maior = max([por_status.get(k, 0) for k, _, _ in ETAPAS_FUNIL] + [1])
+    etapas = [{"chave": k, "rotulo": r, "sub": s, "n": por_status.get(k, 0), "largura": round(100 * por_status.get(k, 0) / maior, 1)} for k, r, s in ETAPAS_FUNIL]
+    usados = {k for k, _, _ in ETAPAS_FUNIL}
+    grupos = []
+    for titulo, chaves in GRUPOS_FUNIL:
+        itens = [(c, por_status.get(c, 0)) for c in chaves if por_status.get(c, 0)]
+        usados.update(chaves)
+        grupos.append({"titulo": titulo, "itens": itens, "total": sum(n for _, n in itens)})
+    outros = [(k, n) for k, n in por_status.most_common() if k not in usados]
+    grupos.append({"titulo": "Outros", "itens": outros, "total": sum(n for _, n in outros)})
+    contatados = sum(1 for l in leads if int(l.get("passo") or 0) > 0 or (l.get("status_ia") or "Não contatado") != "Não contatado")
+    conversaram = sum(1 for l in leads if l.get("ultima_msg_lead_em"))
+    agendados = por_status.get("Agendado", 0)
+
+    por_passo = Counter(int(l.get("passo") or 0) for l in leads if (l.get("status_ia") or "Não contatado") in ("Não contatado", "Template enviado (1°)", "Template enviado (2°)"))
+    passos = []
+    for i in range(len(passos_cfg) + 1):
+        if i == 0:
+            desc, prox = "nenhum template ainda", f"{passos_cfg[0]['template']} na próxima rodada, dentro do limite diário"
+        elif i < len(passos_cfg):
+            desc = f"recebeu até o {passos_cfg[i - 1]['template']}"
+            prox = f"{passos_cfg[i]['template']} {passos_cfg[i]['apos_dias']} dia(s) depois do último template, se não responder"
+        else:
+            desc, prox = f"recebeu o {passos_cfg[-1]['template']} (fim da esteira)", f"pausa de {d['pausa_apos_ultimo_passo_dias']} dias e recomeça uma vez"
+        passos.append({"passo": i, "desc": desc, "n": por_passo.get(i, 0), "proximo": prox})
+
+    retornos = []
+    for l in leads:
+        st = l.get("status_ia") or ""
+        if st not in tpl_status or l.get("opt_out"):
+            continue
+        dias = recontato.get(st)
+        if dias == "na data":
+            q = l.get("proximo_recontato_em")
+            if not q:
+                continue
+            quando = (q if isinstance(q, datetime) else datetime.fromisoformat(str(q)[:10]).replace(tzinfo=FUSO)).astimezone(FUSO).date()
+        elif isinstance(dias, (int, float)):
+            base = l.get("ultima_msg_lead_em") or l.get("ultimo_template_em")
+            if not base:
+                continue
+            quando = (base.astimezone(FUSO) + timedelta(days=int(dias))).date()
+        else:
+            continue
+        retornos.append({"nome": l.get("nome") or "(sem nome)", "celular": l.get("celular"), "status": st, "conversa_id": l.get("conversa_id"),
+                         "quando": quando.strftime("%d/%m/%Y"), "ordem": quando, "atrasado": quando < hoje, "hoje": quando == hoje,
+                         "template": f"{tpl_status[st]} · {templates_texto_nome(tpl_status[st])}"})
+    retornos.sort(key=lambda r: r["ordem"])
+    hoje_doc = db.collection("disparos_diarios").document(hoje.isoformat()).get().to_dict() or {}
+    return tpl.TemplateResponse(request, "funil.html", {"total": total, "contatados": contatados, "conversaram": conversaram, "agendados": agendados,
+                                                        "etapas": etapas, "grupos": grupos, "passos": passos, "retornos": retornos, "pct": pct,
+                                                        "hoje_enviados": int(hoje_doc.get("enviados") or 0), "limite_diario": d.get("limite_diario"),
+                                                        "disparos_ativo": bool(d.get("ativo"))})
+
+
+def templates_texto_nome(codigo: str) -> str:
+    from celeste.jobs import templates_texto
+    return (templates_texto.TEMPLATES.get(codigo) or {}).get("nome", "")
 
 
 # ================================================================= 4. FRENTES DE TRABALHO

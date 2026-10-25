@@ -42,6 +42,7 @@ button,.btn{background:var(--navy);color:var(--bege);border:0;border-radius:6px;
   <nav>
     <a href="/" class="{% if p == '/' %}ativo{% endif %}"><span class="ic">▦</span> Gestão e Performance</a>
     <a href="/atendimentos" class="{% if p.startswith('/atendimentos') or p.startswith('/conversas') or p.startswith('/encaminhamentos') %}ativo{% endif %}"><span class="ic">💬</span> Atendimentos</a>
+    <a href="/funil" class="{% if p.startswith('/funil') %}ativo{% endif %}"><span class="ic">▽</span> Funil</a>
     <a href="/listas" class="{% if p.startswith('/listas') %}ativo{% endif %}"><span class="ic">☰</span> Listas</a>
     <a href="/frentes" class="{% if p.startswith('/frentes') %}ativo{% endif %}"><span class="ic">◈</span> Frentes de Trabalho</a>
     <a href="/templates" class="{% if p.startswith('/templates') %}ativo{% endif %}"><span class="ic">▤</span> Templates</a>
