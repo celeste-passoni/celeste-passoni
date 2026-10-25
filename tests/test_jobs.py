@@ -69,7 +69,8 @@ def test_pausa_e_reinicio_da_esteira():
 
 def test_templates_sao_os_da_clinica():
     from celeste.jobs import templates_texto as tt
-    assert set(tt.TEMPLATES) == {"T1", "T2", "T3", "T4"}
+    assert set(tt.TEMPLATES) == {"T1", "T2", "T3", "T4", "TR"}
+    assert tt.TEMPLATES["TR"]["nome"] == "retorno_combinado" and tt.parametros("TR", "Ana") == ["Ana"] and "[botões" not in tt.renderizar("TR", "Ana")
     assert "solicitação de consulta, feita em {2}" in tt.TEMPLATES["T1"]["corpo"] and "segue pendente" in tt.TEMPLATES["T2"]["corpo"]
     assert tt.TEMPLATES["T2"]["botoes"] == ["Quero continuar", "Agora não"] and "SAIR" not in tt.renderizar("T2", "Ana")
     assert "ainda está pendente" in tt.TEMPLATES["T3"]["corpo"] and "vamos encerrar" in tt.TEMPLATES["T4"]["corpo"]
@@ -95,7 +96,7 @@ def test_recontato_por_objecao():
     caro["ultima_msg_lead_em"] = AGORA - timedelta(days=30)
     assert disparos.decidir(caro, AGORA).template == "T1"   # "Achou caro" → tempo é cabelo
     data = _lead(status_ia="Vamos retornar na data solicitada", passo=1, ultimo_template_em=AGORA - timedelta(days=10), proximo_recontato_em="2026-10-13")
-    assert disparos.decidir(data, AGORA).template == "T2"
+    assert disparos.decidir(data, AGORA).template == "TR"   # 25/10/2026: retorno combinado, não T2
     data["proximo_recontato_em"] = "2026-10-20"
     assert disparos.decidir(data, AGORA) is None
 

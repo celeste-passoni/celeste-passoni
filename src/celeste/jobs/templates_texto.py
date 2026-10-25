@@ -45,6 +45,12 @@ TEMPLATES: dict[str, dict] = {
         "botoes": ["Quero continuar", "Pode encerrar"],
         "sem_rodape": True,
     },
+    "TR": {   # decisão da clínica em 25/10/2026: retorno na data que o lead pediu ("me chama na segunda"), no lugar do T2. UTILITY, sem botões
+        "nome": "retorno_combinado",
+        "corpo": "Olá, {1}! Como combinamos, estou retomando a nossa conversa sobre a sua consulta na Passoni Clinic. Podemos continuar?",
+        "botoes": [],
+        "sem_rodape": True,
+    },
 }
 
 MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]

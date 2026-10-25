@@ -449,15 +449,17 @@ disparos:
     T2: resgate_solicitacao_segue_pendente   # "sua solicitação segue pendente" (UTILITY, aprovado pela clínica em 13/10)
     T3: resgate_solicitacao_ainda_pendente   # "ainda está pendente" (UTILITY, aprovado pela clínica em 14/10)
     T4: resgate_solicitacao_encerramento     # "vamos encerrar a sua solicitação" (UTILITY, aprovado pela clínica em 14/10)
+    TR: retorno_combinado                    # "como combinamos, estou retomando a nossa conversa" (UTILITY; decisão da clínica em 25/10: substitui o T2 no retorno em data pedida)
   templates_alternativos:               # versões com gancho de vídeo, cadastradas em 15/10/2026 (aprovadas pela clínica); entram na esteira só depois da aprovação da Meta e do fluxo dos botões
     T3v: { nome: resgate_video_dra_luciana,  quando: "Alternativa ao T3 (3 dias depois do T2): oferece o vídeo da Dra. sobre queda de cabelo. 'Quero ver o vídeo' → vídeo dra_luciana + Celeste.", video: dra_luciana }
     T4v: { nome: resgate_video_encerramento, quando: "Alternativa ao T4 (7 dias depois do T3): antes de encerrar, oferece um vídeo. 'Quero ver o vídeo' → vídeo casos_sucesso + Celeste; 'Pode encerrar' → opt-out.", video: casos_sucesso }
-  status_apos_template: { T1: "Template enviado (1°)", T2: "Template enviado (2°)", T3: "Template enviado (2°)", T4: "Template enviado (1°)" }
+  status_apos_template: { T1: "Template enviado (1°)", T2: "Template enviado (2°)", T3: "Template enviado (2°)", T4: "Template enviado (1°)", TR: "Template enviado (2°)" }
   quando:                               # descrição para o painel (página Templates)
     T1: "Dia 0. Primeiro toque a quem está na base de Leads Perdidos e nunca respondeu."
     T2: "1 dia depois do T1, se não houve resposta (ou 1 dia depois de 'Agora não' sem motivo)."
     T3: "3 dias depois do T2, se não houve resposta."
     T4: "7 dias depois do T3, se não houve resposta. Depois: pausa de 15 dias e recomeça no T1 uma única vez."
+    TR: "Na data que o lead pediu para ser chamado ('me chama na segunda'), na primeira rodada do dia. A Celeste retoma a conversa de onde parou."
 
   passos:                               # cadência medida na atendente de referência (medianas): 3 d, 3 d, 8 d, 3 d
     - { template: T1, apos_dias: 0,  ciclo: 1 }
@@ -470,7 +472,7 @@ disparos:
   template_por_status:                  # recontato de quem respondeu e parou (dias em leads_perdidos.recontato_por_status_ia)
     "Irá nos retornar": T2
     "Agora não": T2
-    "Vamos retornar na data solicitada": T2
+    "Vamos retornar na data solicitada": TR   # 25/10/2026: era T2
     "Achou caro": T1
     "Quer pelo convênio": T1
     "Mora em outro Estado": T4
