@@ -11,7 +11,7 @@ from typing import Any, Optional
 import anthropic
 
 from celeste.comum import config
-from celeste.orquestrador import ferramentas_ia, prompt
+from celeste.orquestrador import ferramentas_ia, prompt, saneamento
 
 log = logging.getLogger(__name__)
 
@@ -150,6 +150,7 @@ class Motor:
         custo, chamadas, usadas, forcado = 0.0, 0, [], modelo
         modelo = forcado or self.cfg["conversa"]
         texto_acumulado = ""   # o modelo pode escrever balões ANTES de chamar uma ferramenta; nada se perde
+        regerado = False       # 25/10/2026: uma única regeração se a resposta for só marcação de ferramenta vazada
         while True:
             resp, modelo = self._chamar(system, messages, forcado)
             chamadas += 1
@@ -158,9 +159,27 @@ class Motor:
             if resp.stop_reason == "refusal":
                 return Resultado([], modelo, custo, tokens, chamadas, usadas, refusal=True)
             trecho = "".join(b.text for b in resp.content if b.type == "text").strip()
+            # 25/10/2026: validação sem custo. Se o modelo escreveu a chamada de ferramenta no texto (caso Curti, 24/10),
+            # a marcação sai do texto, as chamadas escritas são executadas de verdade e a conversa vai para revisão.
+            trecho, vazadas = saneamento.extrair_chamadas(trecho, ferramentas_ia.FERRAMENTAS)
+            if vazadas or saneamento.tem_marcacao(trecho):
+                log.warning("marcação de ferramenta vazada no texto (conversa %s): %s", conversa.get("id"), vazadas)
+                for nome, entrada in vazadas:
+                    t0 = time.time()
+                    saida, erro = ferramentas_ia.executar(nome, entrada, ctx)
+                    usadas.append({"nome": nome, "entrada": entrada, "saida": saida[:2000], "erro": erro, "ms": int((time.time() - t0) * 1000), "vazada": True})
+                if not any(n == "sinalizar_revisao" for n, _ in vazadas):
+                    saida, erro = ferramentas_ia.executar("sinalizar_revisao", {"duvida": "Texto gerado continha marcação de ferramenta e foi filtrado antes do envio; conferir a conversa."}, ctx)
+                    usadas.append({"nome": "sinalizar_revisao", "entrada": {"duvida": "marcação de ferramenta filtrada"}, "saida": saida[:2000], "erro": erro, "ms": 0, "vazada": True})
             if trecho:
                 texto_acumulado = (texto_acumulado + "\n---\n" + trecho) if texto_acumulado else trecho
             if resp.stop_reason != "tool_use" or chamadas >= int(self.cfg["max_chamadas_por_resposta"]):
+                if vazadas and not texto_acumulado.strip() and not regerado and resp.stop_reason != "tool_use":
+                    regerado = True   # sobrou nada para o lead: pede a resposta de novo, uma vez só
+                    messages.append({"role": "assistant", "content": [{"type": "text", "text": "".join(b.text for b in resp.content if b.type == "text") or "."}]})
+                    messages.append({"role": "user", "content": "[sistema] Sua resposta anterior continha apenas marcação de ferramenta e não foi enviada ao lead. "
+                                                                "As ferramentas já foram executadas. Escreva agora só as mensagens para o lead."})
+                    continue
                 return Resultado(separar_baloes(texto_acumulado), modelo, custo, tokens, chamadas, usadas)
             messages.append({"role": "assistant", "content": resp.content})
             resultados = []

@@ -796,3 +796,53 @@ def test_enviar_antes_e_depois_uma_vez_por_doenca_e_config_consistente():
     enum = next(t for t in ferramentas_ia.FERRAMENTAS if t["name"] == "enviar_antes_e_depois")["input_schema"]["properties"]["doenca"]["enum"]
     assert set(enum) == set(cfg["doencas"]) and all(d["arquivos"] for d in cfg["doencas"].values())
     assert "{doenca}" in cfg["legenda"]
+
+
+# ------------------------------------------------------------------ saneamento: marcação de ferramenta vazada no texto (caso Curti, 24/10/2026)
+_VAZADO = ('E se conseguir ver antes, é só me mandar uma mensagem que já verifico as opções para você. 💛\n\n'
+           '<invoke name="atualizar_status">\n<parameter name="status">Vamos retornar na data solicitada</parameter>\n'
+           '<parameter name="data_retorno">2026-10-26</parameter>\n</invoke>\n'
+           '<invoke name="sinalizar_revisao">\n<parameter name="duvida">Perguntou qual médico fala no vídeo.</parameter>\n</invoke>\n'
+           '</function_calls>')
+
+
+def test_saneamento_extrai_chamadas_e_limpa_texto():
+    from celeste.orquestrador import saneamento
+    limpo, chamadas = saneamento.extrair_chamadas(_VAZADO, ferramentas_ia.FERRAMENTAS)
+    assert limpo == "E se conseguir ver antes, é só me mandar uma mensagem que já verifico as opções para você. 💛"
+    assert chamadas == [("atualizar_status", {"status": "Vamos retornar na data solicitada", "data_retorno": "2026-10-26"}),
+                        ("sinalizar_revisao", {"duvida": "Perguntou qual médico fala no vídeo."})]
+    assert not saneamento.tem_marcacao(limpo) and saneamento.tem_marcacao("ok <function_calls>")
+    # texto normal passa intacto; ferramenta inexistente é descartada mas a marcação some; inteiro vira int
+    assert saneamento.extrair_chamadas("Oi, tudo bem?\n---\nPosso ajudar?", ferramentas_ia.FERRAMENTAS) == ("Oi, tudo bem?\n---\nPosso ajudar?", [])
+    limpo, chamadas = saneamento.extrair_chamadas('Oi <invoke name="nao_existe"><parameter name="x">1</parameter></invoke>', ferramentas_ia.FERRAMENTAS)
+    assert (limpo, chamadas) == ("Oi", [])
+    _, ch = saneamento.extrair_chamadas('<invoke name="agendar_consulta"><parameter name="id_paciente">6504</parameter></invoke>', ferramentas_ia.FERRAMENTAS)
+    assert ch[0][1]["id_paciente"] == 6504 and ch[0][1]["profissional"] == ""
+
+
+def test_motor_filtra_marcacao_vazada_executa_e_sinaliza():
+    cliente = MagicMock()
+    cliente.beta.messages.create.return_value = _resp("end_turn", [SimpleNamespace(type="text", text="Imagina, Curti!\n---\n" + _VAZADO)])
+    conv = {"id": "c1", "contato": "55", "nome": "Curti"}
+    ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos)
+    res = motor.Motor(cliente=cliente).responder("leads_perdidos", conv, [{"role": "user", "content": "oi"}], ctx)
+    assert res.baloes == ["Imagina, Curti!", "E se conseguir ver antes, é só me mandar uma mensagem que já verifico as opções para você. 💛"]
+    assert res.chamadas == 1   # nenhuma chamada extra ao modelo
+    assert [f["nome"] for f in res.ferramentas] == ["atualizar_status", "sinalizar_revisao"] and all(f["vazada"] for f in res.ferramentas)
+    assert conv["status"] == "Vamos retornar na data solicitada" and conv["proximo_recontato_em"] == "2026-10-26" and conv["revisar"]
+
+
+def test_motor_regera_uma_vez_se_sobrou_so_marcacao():
+    cliente = MagicMock()
+    so_marcacao = '<invoke name="atualizar_status"><parameter name="status">Achou caro</parameter><parameter name="data_retorno"></parameter></invoke>'
+    cliente.beta.messages.create.side_effect = [
+        _resp("end_turn", [SimpleNamespace(type="text", text=so_marcacao)]),
+        _resp("end_turn", [SimpleNamespace(type="text", text="Entendo! Qualquer coisa, me chama.")]),
+    ]
+    conv = {"id": "c1", "contato": "55", "nome": "Ana"}
+    ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos)
+    res = motor.Motor(cliente=cliente).responder("leads_perdidos", conv, [{"role": "user", "content": "caro demais"}], ctx)
+    assert res.baloes == ["Entendo! Qualquer coisa, me chama."] and res.chamadas == 2
+    assert conv["status"] == "Achou caro" and conv["revisar"]
+    assert "[sistema]" in cliente.beta.messages.create.call_args.kwargs["messages"][-1]["content"]
