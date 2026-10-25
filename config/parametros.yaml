@@ -439,7 +439,7 @@ modelos:
 disparos:
   ativo: false                          # chave geral: nada sai enquanto false
   limite_diario: 100                    # templates por dia (todas as frentes)
-  limite_por_execucao: 25               # por rodada do job (roda a cada 30 min no horário permitido)
+  limite_por_execucao: 25               # por rodada do job (roda de hora em hora no horário permitido; 25/10/2026: era a cada 30 min)
   horario: { dias_uteis: true, inicio: 9, fim: 18 }   # hora local (America/Sao_Paulo)
   intervalo_entre_envios_segundos: [4, 12]            # ritmo humano entre um lead e outro
   priorizar: "mais_recentes"            # mais_recentes | mais_antigos

@@ -40,7 +40,7 @@
   <form class="inline" method="post" action="/config/disparos">
     <label><input type="checkbox" name="ativo" {% if disp.ativo %}checked{% endif %}> Disparos ligados</label>
     <label>Limite diário <input type="number" name="limite_diario" value="{{ disp.limite_diario }}" min="0" style="width:80px"></label>
-    <label>Por rodada (30 min) <input type="number" name="limite_por_execucao" value="{{ disp.limite_por_execucao }}" min="0" style="width:70px"></label>
+    <label>Por rodada (1 h) <input type="number" name="limite_por_execucao" value="{{ disp.limite_por_execucao }}" min="0" style="width:70px"></label>
     <span class="muted">seg–sex {{ disp.horario.inicio }}h–{{ disp.horario.fim }}h · esteira: {% for p in disp.passos %}{{ p.template }}{% if not loop.last %} → {% endif %}{% endfor %}</span>
     <button type="submit">Salvar</button>
   </form>
