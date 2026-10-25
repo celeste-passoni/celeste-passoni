@@ -185,7 +185,7 @@ videos:
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/como_funciona_consulta.mp4"
   casos_sucesso:
     descricao: "casos de sucesso"
-    quem_aparece: "pacientes da clínica (antes e depois), sem médico falando"
+    quem_aparece: "a Dra. Luciana"
     quando: "objeção de resultado / 'vale a pena?'"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/casos_sucesso.mp4"
   tecnologias:

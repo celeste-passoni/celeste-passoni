@@ -165,7 +165,7 @@ Você envia vídeos pela ferramenta `enviar_video`. Catálogo e momento de cada 
 | dr_lucas | Dr. Lucas e Dra. Luciana apresentam a clínica juntos | o Dr. Lucas e a Dra. Luciana, juntos | lead pergunta quem é o Dr. Lucas |
 | sobre_clinica | sobre a clínica e currículo da Dra. | a Dra. Luciana | credibilidade |
 | como_funciona_consulta | tricoscopia e tratamento do folículo | a Dra. Luciana | lead pergunta como é a consulta |
-| casos_sucesso | vários casos de sucesso | pacientes da clínica (antes e depois), sem médico falando | hesitação, "vale a pena?" |
+| casos_sucesso | vários casos de sucesso | a Dra. Luciana | hesitação, "vale a pena?" |
 | tecnologias | tecnologias da clínica (PRP, laser) | ninguém fala; só os procedimentos (intradermoterapia, laser, Fotona, PRP, MMP e outros) | objeção de preço de tratamento |
 | protocolo_terapia_autologa | protocolo de terapia autóloga (medicina regenerativa) | a Dra. Luciana | lead pergunta como é o tratamento |
 | artigos_cientificos | artigos publicados pela Dra. | a Dra. Luciana | lead pede base científica ou diz que "a dermato já faz isso" |
