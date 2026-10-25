@@ -201,7 +201,7 @@ videos:
   # ---- acrescentados em 14/10/2026 a partir da pasta de vídeos da clínica (OneDrive), só os que cabem no WhatsApp (≤ 16 MB)
   resultado_alopecia_androgenetica:
     descricao: "antes e depois em vídeo de alopecia androgenética (afinamento dos fios), 38 s"
-    quem_aparece: "a confirmar pela clínica"
+    quem_aparece: "a Dra. Luciana apresenta e depois aparecem as fotos de antes e depois"
     quando: "lead com queda/afinamento ou que citou alopecia androgenética e pediu/aceitou ver resultado"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/resultado_alopecia_androgenetica.mp4"
   resultado_androgenetica_masculina:

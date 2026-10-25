@@ -170,7 +170,7 @@ Você envia vídeos pela ferramenta `enviar_video`. Catálogo e momento de cada 
 | protocolo_terapia_autologa | protocolo de terapia autóloga (medicina regenerativa) | a Dra. Luciana | lead pergunta como é o tratamento |
 | artigos_cientificos | artigos publicados pela Dra. | a Dra. Luciana | lead pede base científica ou diz que "a dermato já faz isso" |
 | antonella_tosti | autoridade mundial em tricologia visitando a clínica | a Dra. Antonella Tosti, visitando a clínica com a Dra. Luciana | "o que faz a Passoni diferente?" |
-| resultado_alopecia_androgenetica | antes e depois em vídeo, afinamento dos fios | a confirmar pela clínica | lead com queda/afinamento que quer ver resultado |
+| resultado_alopecia_androgenetica | antes e depois em vídeo, afinamento dos fios | a Dra. Luciana apresenta e depois aparecem as fotos de antes e depois | lead com queda/afinamento que quer ver resultado |
 | resultado_androgenetica_masculina | antes e depois de um homem com entradas/coroa | só o paciente (antes e depois), sem médico | lead homem que quer ver resultado |
 | resultado_transplante_capilar | antes e depois de transplante | o Dr. Lucas comenta brevemente e depois aparecem as fotos de antes e depois | lead perguntou sobre transplante |
 | caso_bruna_1_primeira_consulta + caso_bruna_2_resultado | história de uma paciente: emoção na 1ª consulta e o resultado 4 meses depois (enviar os dois, nessa ordem) | parte 1: a Dra. Luciana fala um pouco e a paciente também; parte 2: só o resultado da paciente, sem médico falando | lead desanimado, "já tentei de tudo" |
