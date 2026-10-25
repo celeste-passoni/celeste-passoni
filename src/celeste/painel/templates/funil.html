@@ -55,7 +55,7 @@
 <tr><th>Lead</th><th>Status</th><th>Quando</th><th>O que sai</th><th>Conversa</th></tr>
 {% for r in retornos %}
 <tr>
-  <td>{{ r.nome }}<br><span class="muted">{{ r.celular }}</span></td>
+  <td>{{ r.nome }}{% if r.teste %} <span class="tag">teste</span>{% endif %}<br><span class="muted">{{ r.celular }}</span></td>
   <td><span class="tag">{{ r.status }}</span></td>
   <td>{{ r.quando }}{% if r.atrasado %} <span class="tag alerta">atrasado</span>{% elif r.hoje %} <span class="tag ok">hoje</span>{% endif %}</td>
   <td>{{ r.template }}</td>

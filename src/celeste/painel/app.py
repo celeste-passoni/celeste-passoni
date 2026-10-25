@@ -482,8 +482,8 @@ def funil(request: Request, _=Depends(autenticar)):
     agora = datetime.now(FUSO); hoje = agora.date()
     campos = ["nome", "celular", "status_ia", "passo", "ciclos", "ultimo_template_em", "ultima_msg_lead_em", "proximo_recontato_em",
               "conversa_id", "opt_out", "teste"]
-    leads = [l.to_dict() for l in db.collection("leads").where("elegivel", "==", True).select(campos).stream()]
-    leads = [l for l in leads if not l.get("teste")]
+    todos = [l.to_dict() for l in db.collection("leads").where("elegivel", "==", True).select(campos).stream()]
+    leads = [l for l in todos if not l.get("teste")]   # contagens só com leads reais; os de teste aparecem apenas nos retornos, marcados
     total = len(leads)
     por_status = Counter(("Não quer (opt-out)" if l.get("opt_out") else (l.get("status_ia") or "Não contatado")) for l in leads)
     pct = lambda n: f"{(100 * n / total):.0f}%" if total else "0%"
@@ -514,7 +514,7 @@ def funil(request: Request, _=Depends(autenticar)):
         passos.append({"passo": i, "desc": desc, "n": por_passo.get(i, 0), "proximo": prox})
 
     retornos = []
-    for l in leads:
+    for l in todos:
         st = l.get("status_ia") or ""
         if st not in tpl_status or l.get("opt_out"):
             continue
@@ -531,7 +531,7 @@ def funil(request: Request, _=Depends(autenticar)):
             quando = (base.astimezone(FUSO) + timedelta(days=int(dias))).date()
         else:
             continue
-        retornos.append({"nome": l.get("nome") or "(sem nome)", "celular": l.get("celular"), "status": st, "conversa_id": l.get("conversa_id"),
+        retornos.append({"nome": l.get("nome") or "(sem nome)", "celular": l.get("celular"), "status": st, "conversa_id": l.get("conversa_id"), "teste": bool(l.get("teste")),
                          "quando": quando.strftime("%d/%m/%Y"), "ordem": quando, "atrasado": quando < hoje, "hoje": quando == hoje,
                          "template": f"{tpl_status[st]} · {templates_texto_nome(tpl_status[st])}"})
     retornos.sort(key=lambda r: r["ordem"])
