@@ -583,7 +583,7 @@ def _enviar_video(mt: meta.Meta, ref, conv: dict, chave: str) -> str:
     v = config.parametros()["videos"][chave]
     wamid = mt.enviar_video_link(conv["contato"], v["url"])
     ref.collection("mensagens").document(wamid).set({
-        "direcao": "celeste", "tipo": "video", "texto": f"[vídeo: {chave} — {v['descricao']}]", "video": chave,
+        "direcao": "celeste", "tipo": "video", "texto": f"[vídeo: {chave} — {v['descricao']}; quem aparece: {v.get('quem_aparece', 'a confirmar pela clínica')}]", "video": chave,
         "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
     return wamid
 

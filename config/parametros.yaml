@@ -160,75 +160,93 @@ Equipe Passoni Clinic"         # repete a orientação se a pessoa voltar a escr
 videos:
   institucional:
     descricao: "apresenta o trabalho da Dra. Luciana e os tratamentos"
+    quem_aparece: "a Dra. Luciana"
     quando: "logo após a saudação, no primeiro contato"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/institucional.mp4"
   dra_luciana:
     descricao: "vídeo da Dra. Luciana"
+    quem_aparece: "a Dra. Luciana"
     quando: "junto com a apresentação das modalidades"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/dra_luciana.mp4"
   dr_lucas:
     descricao: "vídeo do Dr. Lucas Vieira"
+    quem_aparece: "o Dr. Lucas e a Dra. Luciana, juntos"
     quando: "quando o lead considera a opção de R$ 800"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/dr_lucas.mp4"
   boas_vindas_consulta:
     descricao: "pós-confirmação / o que esperar no dia"
+    quem_aparece: "a Dra. Luciana"
     quando: "após confirmar o agendamento"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/boas_vindas_consulta.mp4"
   como_funciona_consulta:
     descricao: "explica tricoscopia e tratamento do folículo"
+    quem_aparece: "a Dra. Luciana"
     quando: "dúvida clínica"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/como_funciona_consulta.mp4"
   casos_sucesso:
     descricao: "casos de sucesso"
+    quem_aparece: "pacientes da clínica (antes e depois), sem médico falando"
     quando: "objeção de resultado / 'vale a pena?'"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/casos_sucesso.mp4"
   tecnologias:
     descricao: "tecnologias da clínica"
+    quem_aparece: "ninguém fala; só os procedimentos (intradermoterapia, laser, Fotona, PRP, MMP e outros)"
     quando: "objeção de preço de tratamento"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/tecnologias.mp4"
   sobre_clinica:
     descricao: "sobre a clínica e currículo da Dra."
+    quem_aparece: "a Dra. Luciana"
     quando: "lead pergunta quem é a Dra. / credibilidade"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/sobre_clinica.mp4"
   # ---- acrescentados em 14/10/2026 a partir da pasta de vídeos da clínica (OneDrive), só os que cabem no WhatsApp (≤ 16 MB)
   resultado_alopecia_androgenetica:
     descricao: "antes e depois em vídeo de alopecia androgenética (afinamento dos fios), 38 s"
+    quem_aparece: "a confirmar pela clínica"
     quando: "lead com queda/afinamento ou que citou alopecia androgenética e pediu/aceitou ver resultado"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/resultado_alopecia_androgenetica.mp4"
   resultado_androgenetica_masculina:
     descricao: "antes e depois em vídeo de um paciente homem com alopecia androgenética, 15 s"
+    quem_aparece: "só o paciente (antes e depois), sem médico"
     quando: "lead homem com entradas/coroa rareando que pediu/aceitou ver resultado"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/resultado_androgenetica_masculina.mp4"
   resultado_transplante_capilar:
     descricao: "antes e depois de transplante capilar, 18 s"
+    quem_aparece: "o Dr. Lucas comenta brevemente e depois aparecem as fotos de antes e depois"
     quando: "lead perguntou sobre transplante"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/resultado_transplante_capilar.mp4"
   caso_bruna_1_primeira_consulta:
     descricao: "história de uma paciente: depoimento emocionado na primeira consulta (4 meses antes do resultado), 34 s"
+    quem_aparece: "a Dra. Luciana fala um pouco e a paciente também"
     quando: "lead hesitante ou desanimado ('já tentei de tudo'); enviar junto com caso_bruna_2_resultado"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/caso_bruna_1_primeira_consulta.mp4"
   caso_bruna_2_resultado:
     descricao: "história da mesma paciente: a Dra. mostra o resultado 4 meses depois, 21 s"
+    quem_aparece: "só o resultado da paciente, sem médico falando"
     quando: "sempre logo depois de caso_bruna_1_primeira_consulta"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/caso_bruna_2_resultado.mp4"
   antonella_tosti:
     descricao: "a Dra. Antonella Tosti (autoridade mundial em tricologia) visitando a clínica, 25 s"
+    quem_aparece: "a Dra. Antonella Tosti, visitando a clínica com a Dra. Luciana"
     quando: "lead questiona credibilidade ou 'o que faz a Passoni diferente'"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/antonella_tosti.mp4"
   artigos_cientificos:
     descricao: "artigos científicos publicados pela Dra. Luciana, 42 s"
+    quem_aparece: "a Dra. Luciana"
     quando: "lead pede referências científicas ou diz que 'a dermato já faz isso'"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/artigos_cientificos.mp4"
   protocolo_terapia_autologa:
     descricao: "protocolo de terapia autóloga (medicina regenerativa) usado na clínica, 26 s"
+    quem_aparece: "a Dra. Luciana"
     quando: "lead pergunta como é o tratamento ou o que é feito na clínica"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/protocolo_terapia_autologa.mp4"
   agendou_dra_luciana:
     descricao: "a Dra. Luciana dá as boas-vindas a quem acabou de agendar com ela, 13 s"
+    quem_aparece: "a Dra. Luciana"
     quando: "logo após confirmar o agendamento com a Dra. Luciana (no lugar de boas_vindas_consulta)"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/agendou_dra_luciana.mp4"
   agendou_dr_lucas:
     descricao: "o Dr. Lucas dá as boas-vindas a quem acabou de agendar com ele, 17 s"
+    quem_aparece: "o Dr. Lucas"
     quando: "logo após confirmar o agendamento com o Dr. Lucas (no lugar de boas_vindas_consulta)"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/agendou_dr_lucas.mp4"
 
