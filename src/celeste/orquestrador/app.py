@@ -72,6 +72,8 @@ def responder(p: Pedido):
     if conv.get("frente") not in FRENTES_IA and not _e_numero_teste(conv.get("contato", "")):
         return _orientar_recepcao(ref, conv)   # sem frente ou campanha da recepção: a IA não atende
     if not _pode_responder(conv.get("contato", "")):
+        if _cfg_atendimento().get("modo", "teste") == "producao":   # 25/10/2026: lead da base ainda não disparado → mesmo caminho de quem não tem frente
+            return _orientar_recepcao(ref, conv)
         ref.set({"pendente_resposta": False, "modo_teste_ignorado": True}, merge=True)
         log.info("modo teste: número fora da lista; mensagem gravada sem resposta (conversa %s)", p.conversa_id)
         return {"ok": True, "ignorado": "modo teste: número não autorizado"}
@@ -487,8 +489,15 @@ def _pre_verificar_paciente(ref, conv: dict, ts) -> None:
     ref.set(campos, merge=True)
 
 
+def _lead_contatado(contato: str) -> bool:
+    """Lead da base que já recebeu ao menos um template da Celeste (passo > 0). 25/10/2026: em produção, só esses são atendidos;
+    um lead da base que escreve antes de ser disparado é tratado como sem frente (orientação à recepção)."""
+    doc = db.collection("leads").document(contato).get()
+    return bool(doc.exists and int((doc.to_dict() or {}).get("passo") or 0) > 0)
+
+
 def _pode_responder(contato: str) -> bool:
-    """teste: só numeros_teste · producao: quem está na base de leads (coleção `leads`) ou em numeros_teste · aberto: todos.
+    """teste: só numeros_teste · producao: numeros_teste + leads que já receberam template da Celeste · aberto: todos.
     Override: Firestore config/atendimento {modo, numeros_teste}."""
     cfg = _cfg_atendimento()
     modo = cfg.get("modo", "teste")
@@ -497,7 +506,7 @@ def _pode_responder(contato: str) -> bool:
     if contato in {str(n) for n in (cfg.get("numeros_teste") or [])}:
         return True
     if modo == "producao":
-        return db.collection("leads").document(contato).get().exists
+        return _lead_contatado(contato)
     return False
 
 

@@ -217,18 +217,19 @@ def test_modo_teste_gate(monkeypatch):
         def get(self): return self
         def to_dict(self): return self._d
     class DB:
-        def __init__(self, cfg, leads): self.cfg, self.leads = cfg, leads
+        def __init__(self, cfg, leads, nunca_disparados=()): self.cfg, self.leads, self.nunca_disparados = cfg, leads, set(nunca_disparados)
         def collection(self, nome):
             db = self
             class Col:
                 def document(self, id_):
                     if nome == "config": return Ref(db.cfg)
-                    return Ref({}, exists=id_ in db.leads)
+                    return Ref({"passo": 1 if id_ in db.leads else 0}, exists=id_ in db.leads or id_ in db.nunca_disparados)
             return Col()
     monkeypatch.setattr(orq, "db", DB({"modo": "teste", "numeros_teste": ["5511999990000"]}, {"5511555550000"}))
     assert orq._pode_responder("5511999990000") and not orq._pode_responder("5511555550000") and not orq._pode_responder("5511777770000")
-    monkeypatch.setattr(orq, "db", DB({"modo": "producao", "numeros_teste": ["5511999990000"]}, {"5511555550000"}))
+    monkeypatch.setattr(orq, "db", DB({"modo": "producao", "numeros_teste": ["5511999990000"]}, {"5511555550000"}, nunca_disparados={"5511666660000"}))
     assert orq._pode_responder("5511555550000") and orq._pode_responder("5511999990000") and not orq._pode_responder("5511777770000")
+    assert not orq._pode_responder("5511666660000")   # 25/10/2026: lead da base que ainda não recebeu template não é atendido
     monkeypatch.setattr(orq, "db", DB({"modo": "aberto"}, set()))
     assert orq._pode_responder("5511777770000")
 

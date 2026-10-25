@@ -100,12 +100,14 @@ def _conversa_aberta(telefone: str, nome: str | None):
     abertas = db.collection("conversas").where("contato", "==", telefone).where("aberta", "==", True).limit(1).stream()
     for c in abertas:
         return c.reference
-    # frente: quem está na base de leads (coleção `leads`) é Leads Perdidos; quem não está fica SEM frente
+    # frente: lead da base que JÁ recebeu template da Celeste (passo > 0) é Leads Perdidos; quem não está, ou ainda não foi
+    # disparado, fica SEM frente (25/10/2026, decisão da clínica: a IA só atende quem ela mesma abordou)
     frente, campanha, teste = None, None, False
     cfg = db.collection("config").document("atendimento").get().to_dict() or {}
+    lead = db.collection("leads").document(telefone).get()
     if telefone in {str(n) for n in (cfg.get("numeros_teste") or [])}:
         frente, teste = "leads_perdidos", True            # número de teste da clínica: Celeste atende como lead novo, TI Saúde simulado
-    elif db.collection("leads").document(telefone).get().exists:
+    elif lead.exists and int((lead.to_dict() or {}).get("passo") or 0) > 0:
         frente = "leads_perdidos"
     else:
         cc = db.collection("campanha_contatos").document(telefone).get()

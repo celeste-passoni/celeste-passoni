@@ -95,7 +95,7 @@ ia:
   idioma: "pt-BR"
   operacao_24_7: true                 # responde a qualquer hora
   ignorar_mensagens_antes_de: "2026-09-29"   # a Meta reentrega mensagens represadas de até 7 dias; anteriores a esta data (SP) são descartadas
-  modo: "teste"                       # teste = só responde aos numeros_teste | producao = só quem está na base de leads (coleção leads) + numeros_teste | aberto = todos
+  modo: "teste"                       # teste = só responde aos numeros_teste | producao = numeros_teste + leads que já receberam template da Celeste (passo > 0; 25/10/2026) | aberto = todos
                                       # em qualquer modo, quem não é respondido fica gravado no painel, sem custo
   numeros_teste: []                   # ex.: ["5511999990000"]; o painel/Firestore (config/atendimento) sobrescreve modo e lista
   numeros_teste_escrita_real: []      # subconjunto dos numeros_teste que agenda DE VERDADE no TI Saúde (os outros testes só simulam); Firestore sobrescreve
