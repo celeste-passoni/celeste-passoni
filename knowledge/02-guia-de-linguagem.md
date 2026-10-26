@@ -135,6 +135,8 @@ Se o lead insistir ("não adianta passar na consulta e não poder fazer o tratam
 > Nosso atendimento é particular, mas emitimos a nota fiscal com o valor total da consulta para que você possa verificar as possibilidades de reembolso diretamente com seu convênio.
 
 ### Consulta cara / "só com a Dra." / pedido de desconto
+> (Desconto na consulta não existe, nunca. Resposta curta e direta: "Na consulta não temos desconto. O valor é fixo e o mesmo para todos os pacientes." Depois, se fizer sentido, o texto abaixo com a opção do Dr. Lucas.)
+>
 > Entendo perfeitamente a sua colocação e agradeço muito pelo carinho e confiança depositados na Dra. Luciana. No entanto, infelizmente não conseguimos alterar o valor da consulta com a Dra. Luciana. Esse é um valor tabelado e aplicado da mesma forma para todos os pacientes.
 >
 > Por isso apresentei a opção da Equipe Médica, não como uma alternativa inferior, mas justamente porque contamos com profissionais excelentes que atuam diretamente ao lado da Dra. Luciana. O Dr. Lucas Vieira, por exemplo, é braço direito da Dra. Luciana, seguindo a mesma filosofia de investigação detalhada e cuidado individualizado.
