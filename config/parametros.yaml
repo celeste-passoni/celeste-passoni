@@ -442,6 +442,12 @@ modelos:
   cap_diario_usd: 15.0                 # ao estourar, conversas ficam pausadas com alerta
   aquecer_cache: true                  # job a cada 50 min reenvia o prompt fixo com max_tokens=0: mantém o cache de 1 h vivo (custa só uma leitura, ~US$ 0,004)
 
+portao:                                # 26/10/2026 (aprovado pela clínica): revisor antes do envio, só em respostas de risco (valor, data, hora, doença, tratamento, política)
+  ativo: true
+  modelo: "claude-haiku-5-5"           # ~US$ 0,0005 por revisão (base da clínica em cache); +1 a 2 s na resposta revisada
+  max_tokens: 250
+  fallback: "Deixa eu confirmar essa informação com a equipe para não te passar nada errado, tá? Já te retorno por aqui."
+
 # ---------------------------------------------------------------------
 # Disparos de templates (Leads Perdidos) — controlados pelo painel
 # ---------------------------------------------------------------------

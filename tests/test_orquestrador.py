@@ -120,7 +120,8 @@ def _resp(stop, content, modelo="claude-opus-5-5", uso=None):
     return SimpleNamespace(stop_reason=stop, content=content, model=modelo, usage=uso or _uso())
 
 
-def test_motor_ciclo_de_ferramenta_e_custo():
+def test_motor_ciclo_de_ferramenta_e_custo(monkeypatch):
+    monkeypatch.setattr(motor.portao, "ativo", lambda: False)   # custo medido sem o revisor
     cliente = MagicMock()
     tool_use = SimpleNamespace(type="tool_use", id="tu1", name="buscar_horarios", input={"profissional": "dr_lucas", "a_partir_de": "", "dias": 7})
     cliente.beta.messages.create.side_effect = [
@@ -866,3 +867,60 @@ def test_confirmar_presenca_simulado_envia_texto_e_video(monkeypatch):
     assert "confirmou_dra_luciana" in mt.enviar_video_link.call_args.args[1]
     campos = ref.set.call_args.args[0]
     assert campos["agendamento"]["status"] == "Confirmado" and campos["rotinas_consulta"]["confirmado_no_tisaude"] and not campos.get("revisar")
+
+
+
+# ------------------------------------------------------------------ portão antes do envio (26/10/2026)
+def _juiz(aprovado, motivo=""):
+    txt = '{"aprovado": true}' if aprovado else '{"aprovado": false, "motivo": "%s"}' % motivo
+    return SimpleNamespace(content=[SimpleNamespace(type="text", text=txt)], usage=_uso(input_tokens=4000, output_tokens=20))
+
+
+def test_portao_gatilhos_e_parse():
+    from celeste.orquestrador import portao
+    assert portao.arriscada(["Com a Dra. Luciana, na sexta, 16/10, tenho às 13h."]) and portao.arriscada(["A consulta é R$ 1.200,00."])
+    assert portao.arriscada(["Tem desconto para indicação?"]) and not portao.arriscada(["Oi, Ana! Tudo bem? Posso te ajudar com mais alguma coisa?"])
+    assert portao._parse('{"aprovado": false, "motivo": "valor errado"}') == (False, "valor errado")
+    assert portao._parse("blá {\"aprovado\": true} blá") == (True, "") and portao._parse("sem json") is None
+    cliente = MagicMock(); cliente.messages.create.side_effect = RuntimeError("api fora")
+    ok, motivo, uso = portao.avaliar(cliente, [{"role": "user", "content": "oi"}], ["R$ 10"], [])
+    assert ok and uso is None and "indispon" in motivo
+
+
+def test_motor_portao_reprova_regera_e_aprova():
+    cliente = MagicMock()
+    cliente.beta.messages.create.side_effect = [
+        _resp("end_turn", [SimpleNamespace(type="text", text="A consulta com a Dra. custa R$ 500,00.")]),
+        _resp("end_turn", [SimpleNamespace(type="text", text="A consulta com a Dra. Luciana Passoni é R$ 1.200,00.")]),
+    ]
+    cliente.messages.create.side_effect = [_juiz(False, "valor da consulta errado; na base é R$ 1.200,00"), _juiz(True)]
+    conv = {"id": "c1", "contato": "55", "nome": "Ana"}
+    ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos)
+    res = motor.Motor(cliente=cliente).responder("leads_perdidos", conv, [{"role": "user", "content": "quanto custa?"}], ctx)
+    assert res.baloes == ["A consulta com a Dra. Luciana Passoni é R$ 1.200,00."] and res.chamadas == 2
+    portoes = [f for f in res.ferramentas if f["nome"] == "portao"]
+    assert len(portoes) == 2 and portoes[0]["erro"] and not portoes[1]["erro"]
+    assert "[sistema] O revisor interno reprovou" in cliente.beta.messages.create.call_args.kwargs["messages"][-1]["content"]
+    assert res.tokens["input_tokens"] == 2 * 1000 + 2 * 4000 and not conv.get("revisar")
+
+
+def test_motor_portao_reprova_duas_vezes_manda_fallback():
+    cliente = MagicMock()
+    cliente.beta.messages.create.side_effect = [
+        _resp("end_turn", [SimpleNamespace(type="text", text="Atendemos aos sábados às 9h.")]),
+        _resp("end_turn", [SimpleNamespace(type="text", text="Aos sábados temos vaga às 10h.")]),
+    ]
+    cliente.messages.create.side_effect = [_juiz(False, "não atende sábado"), _juiz(False, "não atende sábado")]
+    conv = {"id": "c1", "contato": "55", "nome": "Ana"}
+    ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos)
+    res = motor.Motor(cliente=cliente).responder("leads_perdidos", conv, [{"role": "user", "content": "atende sábado?"}], ctx)
+    assert res.baloes == [config.parametros()["portao"]["fallback"]] and conv.get("revisar")
+    assert [f["nome"] for f in res.ferramentas] == ["portao", "portao", "sinalizar_revisao"]
+
+
+def test_motor_portao_nao_revisa_resposta_sem_risco():
+    cliente = MagicMock()
+    cliente.beta.messages.create.return_value = _resp("end_turn", [SimpleNamespace(type="text", text="Oi, Ana! Tudo bem? Posso te ajudar com mais alguma coisa?")])
+    conv = {"id": "c1", "contato": "55", "nome": "Ana"}
+    res = motor.Motor(cliente=cliente).responder("leads_perdidos", conv, [{"role": "user", "content": "oi"}], _ctx(conv))
+    assert res.baloes and not cliente.messages.create.called

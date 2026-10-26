@@ -11,7 +11,7 @@ from typing import Any, Optional
 import anthropic
 
 from celeste.comum import config
-from celeste.orquestrador import ferramentas_ia, prompt, saneamento
+from celeste.orquestrador import ferramentas_ia, portao, prompt, saneamento
 
 log = logging.getLogger(__name__)
 
@@ -151,6 +151,7 @@ class Motor:
         modelo = forcado or self.cfg["conversa"]
         texto_acumulado = ""   # o modelo pode escrever balões ANTES de chamar uma ferramenta; nada se perde
         regerado = False       # 25/10/2026: uma única regeração se a resposta for só marcação de ferramenta vazada
+        regerado_portao = False   # 26/10/2026: uma única regeração se o revisor (portão) reprovar
         while True:
             resp, modelo = self._chamar(system, messages, forcado)
             chamadas += 1
@@ -180,7 +181,29 @@ class Motor:
                     messages.append({"role": "user", "content": "[sistema] Sua resposta anterior continha apenas marcação de ferramenta e não foi enviada ao lead. "
                                                                 "As ferramentas já foram executadas. Escreva agora só as mensagens para o lead."})
                     continue
-                return Resultado(separar_baloes(texto_acumulado), modelo, custo, tokens, chamadas, usadas)
+                baloes = separar_baloes(texto_acumulado)
+                # 26/10/2026 (aprovado pela clínica): portão antes do envio. Só respostas de risco passam pelo revisor (Haiku).
+                if baloes and portao.ativo() and portao.arriscada(baloes) and not (forcado and "haiku" in forcado):
+                    t0 = time.time()
+                    ok, motivo, uso = portao.avaliar(self.cliente, messages, baloes, usadas)
+                    if uso is not None:
+                        _somar(tokens, uso)
+                        custo += _custo(config.parametros()["portao"].get("modelo", "claude-haiku-5-5"), uso)
+                    usadas.append({"nome": "portao", "entrada": {"baloes": baloes}, "saida": motivo, "erro": not ok, "ms": int((time.time() - t0) * 1000)})
+                    if not ok:
+                        log.warning("portão reprovou (conversa %s, regeração=%s): %s", conversa.get("id"), regerado_portao, motivo)
+                        if not regerado_portao:
+                            regerado_portao = True
+                            messages.append({"role": "assistant", "content": [{"type": "text", "text": texto_acumulado}]})
+                            messages.append({"role": "user", "content": "[sistema] O revisor interno reprovou a sua resposta: " + motivo
+                                             + " Reescreva só as mensagens para o lead corrigindo isso, usando apenas o que está na base de conhecimento e o que as "
+                                               "ferramentas devolveram. Se não tiver a informação, diga que vai confirmar com a equipe e chame sinalizar_revisao."})
+                            texto_acumulado = ""
+                            continue
+                        saida, erro = ferramentas_ia.executar("sinalizar_revisao", {"duvida": f"Portão reprovou duas vezes a resposta: {motivo}"[:300]}, ctx)
+                        usadas.append({"nome": "sinalizar_revisao", "entrada": {"duvida": "portão reprovou duas vezes"}, "saida": saida[:2000], "erro": erro, "ms": 0})
+                        return Resultado([config.parametros()["portao"]["fallback"]], modelo, custo, tokens, chamadas, usadas)
+                return Resultado(baloes, modelo, custo, tokens, chamadas, usadas)
             messages.append({"role": "assistant", "content": resp.content})
             resultados = []
             for b in resp.content:
