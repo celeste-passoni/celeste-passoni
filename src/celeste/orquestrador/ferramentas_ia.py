@@ -63,7 +63,7 @@ FERRAMENTAS: list[dict] = [
     {"name": "reagendar", "description": "Muda data/hora de uma consulta que a Celeste agendou. O novo horário deve vir de buscar_horarios.",
      "strict": True, "input_schema": {"type": "object", "properties": {"id_agendamento": {"type": "integer"}, "data": {"type": "string"}, "hora": {"type": "string"}},
                                       "required": ["id_agendamento", "data", "hora"], "additionalProperties": False}},
-    {"name": "cancelar", "description": "Desmarca uma consulta que a Celeste agendou. SÓ pode ser chamada depois de: (1) perguntar ao lead o motivo, (2) oferecer uma solução para o motivo (remarcar, valor, dúvida) com escassez, e (3) o lead confirmar que mesmo assim quer cancelar. Chamar antes disso devolve erro.",
+    {"name": "cancelar", "description": "Desmarca uma consulta que a Celeste agendou. SÓ pode ser chamada depois de UMA tentativa: você ofereceu uma alternativa (remarcar, Dr. Lucas, esclarecer a dúvida) em uma mensagem e o lead respondeu que quer cancelar mesmo assim. Nunca uma segunda tentativa. Chamar antes da alternativa devolve erro.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "id_agendamento": {"type": "integer"},
          "motivo_do_lead": {"type": "string", "description": "o motivo que o LEAD disse, com as palavras dele (ex.: 'vai viajar na data', 'achou caro'); vazio se ele não disse"},
@@ -285,10 +285,8 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         return {"ok": True, "data": a.get("data"), "hora": a.get("hora")}
 
     if nome == "cancelar":
-        motivo = (e.get("motivo_do_lead") or "").strip()
+        motivo = (e.get("motivo_do_lead") or "").strip() or "não informado"   # 26/10/2026: motivo é opcional; a alternativa e a confirmação não
         solucao = (e.get("solucao_oferecida") or "").strip()
-        if len(motivo) < 4:
-            raise ValueError("ainda não há motivo: pergunte ao lead com empatia o que aconteceu antes de cancelar")
         if len(solucao) < 4:
             raise ValueError("ainda não houve tentativa de solução: ofereça uma saída para o motivo (remarcar com horários de buscar_horarios, valor, dúvida) com escassez, e só cancele se o lead insistir")
         if not e.get("lead_confirmou_apos_solucao"):

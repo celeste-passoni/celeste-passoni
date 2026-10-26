@@ -306,7 +306,7 @@ def test_cancelar_exige_motivo_solucao_e_confirmacao():
     ts = MagicMock(); conv = {"id": "c1"}
     ctx = _ctx(conv, ts); ctx.atualizar = lambda campos: conv.update(campos)
     base = {"id_agendamento": 1, "motivo_do_lead": "", "solucao_oferecida": "", "lead_confirmou_apos_solucao": False}
-    s, erro = ferramentas_ia.executar("cancelar", dict(base), ctx); assert erro and "motivo" in s and not ts.cancelar.called
+    s, erro = ferramentas_ia.executar("cancelar", dict(base), ctx); assert erro and "solução" in s and not ts.cancelar.called   # 26/10: motivo opcional
     s, erro = ferramentas_ia.executar("cancelar", dict(base, motivo_do_lead="vai viajar"), ctx); assert erro and "solução" in s
     s, erro = ferramentas_ia.executar("cancelar", dict(base, motivo_do_lead="vai viajar", solucao_oferecida="remarcar sexta 10h"), ctx); assert erro and "confirmou" in s
     s, erro = ferramentas_ia.executar("cancelar", dict(base, motivo_do_lead="vai viajar", solucao_oferecida="remarcar sexta 10h", lead_confirmou_apos_solucao=True), ctx)
@@ -534,7 +534,7 @@ def test_prompt_v2_exemplos_e_regras():
     assert ex.count("### Exemplo") >= 50 and "- **Celeste:**" in ex and "- **Lead:**" in ex
     import re
     assert not re.search(r"(?i)maria fernanda|raiane|@[\w.]+\.|\d{3}\.\d{3}\.\d{3}-\d{2}", ex)   # anonimizado
-    for trecho in ("Pedido de cancelamento — ordem obrigatória", "Quando encaminhar à recepção", "Nome completo, sem abreviações",
+    for trecho in ("Pedido de cancelamento — UMA tentativa só", "Quando encaminhar à recepção", "Nome completo, sem abreviações",
                    "Alteração de cadastro, a pedido do lead", "só os retornados por `buscar_horarios`", "Qual seria a melhor opção para você?",
                    "Os agendamentos são realizados por todos os setores da clínica", "Não inventa informação", "sinalizar_revisao"):
         assert trecho in pr, trecho
