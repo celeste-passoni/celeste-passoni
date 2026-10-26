@@ -116,7 +116,10 @@ def avaliar(cliente, messages: list[dict], baloes: list[str], ferramentas_usadas
     system = [{"type": "text", "text": CHECKLIST + "\n\nBASE DE CONHECIMENTO DA CLÍNICA (única fonte de fatos permitida):\n" + _base_conhecimento(),
                "cache_control": {"type": "ephemeral"}}]
     try:
-        resp = cliente.messages.create(model=cfg.get("modelo", "claude-haiku-5-5"), max_tokens=int(cfg.get("max_tokens", 250)),
+        # Haiku 5.5 raciocina por padrão e consumia todo o max_tokens sem escrever o JSON (26/10/2026, 8 revisões vazias):
+        # raciocínio desligado (permitido em effort low) e espaço suficiente para a resposta.
+        resp = cliente.messages.create(model=cfg.get("modelo", "claude-haiku-5-5"), max_tokens=int(cfg.get("max_tokens", 600)),
+                                       thinking={"type": "disabled"}, output_config={"effort": "low"},
                                        system=system, messages=[{"role": "user", "content": user}])
     except Exception as e:   # noqa: BLE001
         log.warning("portão: revisor falhou (%s); resposta liberada", e)
@@ -128,6 +131,7 @@ def avaliar(cliente, messages: list[dict], baloes: list[str], ferramentas_usadas
                           cache_creation_input_tokens=int(getattr(u, "cache_creation_input_tokens", 0) or 0))
     r = _parse(texto)
     if r is None:
-        log.warning("portão: resposta do revisor sem JSON válido (%r); resposta liberada", (texto or "")[:160])
+        log.warning("portão: resposta do revisor sem JSON válido (%r; stop=%s; blocos=%s); resposta liberada", (texto or "")[:160],
+                    getattr(resp, "stop_reason", None), [getattr(b, "type", "?") for b in (getattr(resp, "content", []) or [])])
         return True, "revisor sem resposta válida", uso
     return r[0], r[1] or ("ok" if r[0] else "reprovado sem motivo"), uso

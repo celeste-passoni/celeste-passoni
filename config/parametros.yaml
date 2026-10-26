@@ -445,7 +445,7 @@ modelos:
 portao:                                # 26/10/2026 (aprovado pela clínica): revisor antes do envio, só em respostas de risco (valor, data, hora, doença, tratamento, política)
   ativo: true
   modelo: "claude-haiku-5-5"           # ~US$ 0,0005 por revisão (base da clínica em cache); +1 a 2 s na resposta revisada
-  max_tokens: 250
+  max_tokens: 600                       # raciocínio desligado no revisor; 600 sobra para o JSON
   fallback: "Deixa eu confirmar essa informação com a equipe para não te passar nada errado, tá? Já te retorno por aqui."
 
 # ---------------------------------------------------------------------
