@@ -468,12 +468,15 @@ WHEN NOT MATCHED THEN
 -- ============================================================
 UPDATE `vertical-theory-489419-a7.automacoes.leads_disponibilizados_diario` T
 SET
+  -- ALTERADO (26/10/2026): isolado por frente. 'Perdidos IA' só conta mensagem da Celeste; as frentes humanas não contam a Celeste.
+  -- Antes, um lead da frente IA que a Maria Fernanda tinha abordado no mês aparecia como "mensagem no mês" sem a Celeste ter falado.
   mensagem_no_mes = CASE
     WHEN EXISTS (
       SELECT 1
       FROM `vertical-theory-489419-a7.gold.mensagens_resgate` m
       WHERE m.celular = T.contato
         AND DATE_TRUNC(DATE(m.created_at), MONTH) = T.mes_ref
+        AND ((T.frente = 'Perdidos IA' AND m.colaborador = 'Celeste') OR (T.frente != 'Perdidos IA' AND m.colaborador != 'Celeste'))
     ) THEN 'Sim'
     ELSE 'Não'
   END,
@@ -482,6 +485,7 @@ SET
     FROM `vertical-theory-489419-a7.gold.mensagens_resgate` m
     WHERE m.celular = T.contato
       AND DATE_TRUNC(DATE(m.created_at), MONTH) = T.mes_ref
+      AND ((T.frente = 'Perdidos IA' AND m.colaborador = 'Celeste') OR (T.frente != 'Perdidos IA' AND m.colaborador != 'Celeste'))
   )
 WHERE T.mes_ref = DATE_TRUNC(CURRENT_DATE(), MONTH);
 
