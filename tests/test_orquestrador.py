@@ -887,7 +887,8 @@ def test_portao_gatilhos_e_parse():
     assert ok and uso is None and "indispon" in motivo
 
 
-def test_motor_portao_reprova_regera_e_aprova():
+def test_motor_portao_reprova_regera_e_aprova(monkeypatch):
+    monkeypatch.setattr(motor.portao, "ativo", lambda: True)   # o portão está desligado no YAML (26/10); o teste liga só aqui
     cliente = MagicMock()
     cliente.beta.messages.create.side_effect = [
         _resp("end_turn", [SimpleNamespace(type="text", text="A consulta com a Dra. custa R$ 500,00.")]),
@@ -904,7 +905,8 @@ def test_motor_portao_reprova_regera_e_aprova():
     assert res.tokens["input_tokens"] == 2 * 1000 + 2 * 4000 and not conv.get("revisar")
 
 
-def test_motor_portao_reprova_duas_vezes_manda_fallback():
+def test_motor_portao_reprova_duas_vezes_manda_fallback(monkeypatch):
+    monkeypatch.setattr(motor.portao, "ativo", lambda: True)   # o portão está desligado no YAML (26/10); o teste liga só aqui
     cliente = MagicMock()
     cliente.beta.messages.create.side_effect = [
         _resp("end_turn", [SimpleNamespace(type="text", text="Atendemos aos sábados às 9h.")]),
