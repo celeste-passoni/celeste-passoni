@@ -645,6 +645,9 @@ def test_limpar_pontuacao_dois_pontos(entrada, esperado):
 
 def test_classificar_botao_t1():
     from celeste.orquestrador import app as oapp
+    assert oapp.classificar_botao_consulta("Confirmar presença", "Confirmar presença") == "confirmar_presenca"
+    assert oapp.classificar_botao_consulta(None, "confirmar presença") == "confirmar_presenca"
+    assert oapp.classificar_botao_consulta("Preciso remarcar", "Preciso remarcar") is None
     assert oapp.classificar_botao_t1("Agora não", "Agora não") == "agora_nao"
     assert oapp.classificar_botao_t1("agora não", None) == "agora_nao"
     assert oapp.classificar_botao_t1("nao_quero_continuar", "Não quero continuar") == "sair"
@@ -847,3 +850,19 @@ def test_motor_regera_uma_vez_se_sobrou_so_marcacao():
     assert res.baloes == ["Entendo! Qualquer coisa, me chama."] and res.chamadas == 2
     assert conv["status"] == "Achou caro" and conv["revisar"]
     assert "[sistema]" in cliente.beta.messages.create.call_args.kwargs["messages"][-1]["content"]
+
+
+def test_confirmar_presenca_simulado_envia_texto_e_video(monkeypatch):
+    from celeste.orquestrador import app as oapp
+    monkeypatch.setattr(oapp, "_cfg_atendimento", lambda: {"modo": "teste", "numeros_teste": ["5511900000001"], "numeros_teste_escrita_real": []})
+    ref, mt = MagicMock(), MagicMock()
+    mt.enviar_texto.return_value = "wamid.txt"; mt.enviar_video_link.return_value = "wamid.vid"
+    conv = {"id": "c1", "contato": "5511900000001", "nome": "Ana Souza", "teste": True, "id_agendamento_tisaude": 123,
+            "agendamento": {"data": "2026-10-29", "hora": "14:00", "profissional": "dra_luciana"}}
+    r = oapp._responder_confirmar_presenca(ref, conv, mt)
+    assert r["fluxo"] == "consulta_confirmar" and r["tisaude"] == "simulado" and r["enviado"] == 2
+    texto = mt.enviar_texto.call_args.args[1]
+    assert "Presença confirmada" in texto and "quinta-feira, 29/10" in texto and "14h" in texto and texto.startswith("Perfeito, Ana!")
+    assert "confirmou_dra_luciana" in mt.enviar_video_link.call_args.args[1]
+    campos = ref.set.call_args.args[0]
+    assert campos["agendamento"]["status"] == "Confirmado" and campos["rotinas_consulta"]["confirmado_no_tisaude"] and not campos.get("revisar")

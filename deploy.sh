@@ -71,9 +71,10 @@ deploy_jobs() {
     fi
   }
   agendar celeste-carregar-base "0 6 * * *"        /jobs/carregar-base
-  agendar celeste-disparos      "*/30 9-18 * * 1-5" /jobs/disparos
+  agendar celeste-disparos      "0 9-18 * * 1-5"    /jobs/disparos        # de hora em hora (decisão da clínica, 25/10/2026)
   agendar celeste-espelho       "30 23 * * *"       /jobs/espelho
   agendar celeste-lembretes     "0 9-19 * * 1-5"  /jobs/lembretes      # retomada no mesmo dia; fica PAUSADO até a clínica liberar
+  agendar celeste-rotinas-consulta "0 7-19 * * *"  /jobs/rotinas-consulta   # lembretes da consulta agendada (C48/C24/CHOJ); nasce PAUSADO
   agendar celeste-aquecer-cache "0,50 6-23 * * *"  /jobs/aquecer-cache   # 06:00 até 23:50 (cache vale até 00:50)
   # mantém o orquestrador acordado (GET /status, sem custo de modelo): sem isso a instância desliga após ~15 min ocioso
   # e a 1ª resposta da conversa paga a inicialização (14/10/2026: 4 religadas em 3 h de teste)

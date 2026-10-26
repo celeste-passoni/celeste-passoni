@@ -109,6 +109,29 @@ def test_horario_de_disparo():
     assert not disparos.dentro_do_horario(datetime(2026, 10, 17, 10, 0, tzinfo=sp))  # sábado
 
 
+def test_rotinas_consulta_decidir_e_parametros():
+    from datetime import date
+    from zoneinfo import ZoneInfo
+    from celeste.jobs import rotinas_consulta as rc
+    F = ZoneInfo("America/Sao_Paulo")
+    base = {"status": "Agendado", "modo": "ia", "nome": "Ana Souza", "agendado_em": datetime(2026, 10, 20, 15, 0, tzinfo=F),
+            "agendamento": {"data": "2026-10-29", "hora": "14:00", "profissional": "dra_luciana"}}
+    assert rc.decidir(dict(base), datetime(2026, 10, 27, 10, 5, tzinfo=F)) == "C48"
+    assert rc.decidir(dict(base), datetime(2026, 10, 27, 9, 0, tzinfo=F)) is None                      # antes das 10h
+    assert rc.decidir(dict(base, rotinas_consulta={"C48_em": 1}), datetime(2026, 10, 27, 11, 0, tzinfo=F)) is None
+    assert rc.decidir(dict(base), datetime(2026, 10, 28, 10, 0, tzinfo=F)) == "C24"
+    assert rc.decidir(dict(base, rotinas_consulta={"confirmado_em": 1}), datetime(2026, 10, 28, 10, 0, tzinfo=F)) is None   # já confirmou
+    assert rc.decidir(dict(base), datetime(2026, 10, 29, 7, 30, tzinfo=F)) == "CHOJ"
+    assert rc.decidir(dict(base), datetime(2026, 10, 29, 14, 10, tzinfo=F)) is None                    # consulta já passou
+    assert rc.decidir(dict(base, status="Em conversa"), datetime(2026, 10, 27, 10, 5, tzinfo=F)) is None
+    assert rc.decidir(dict(base, agendamento=dict(base["agendamento"], status="Cancelado")), datetime(2026, 10, 27, 10, 5, tzinfo=F)) is None
+    assert rc.decidir(dict(base, agendado_em=datetime(2026, 10, 27, 9, 0, tzinfo=F)), datetime(2026, 10, 27, 10, 5, tzinfo=F)) is None  # marcou hoje
+    assert rc.parametros("C48", base) == ["Ana", "quinta-feira, 29/10", "14h"]
+    assert rc.parametros("CHOJ", dict(base, agendamento={"data": "2026-10-29", "hora": "09:30"})) == ["Ana", "9h30"]
+    assert "quinta-feira, 29/10, às 14h" in rc.renderizar("C48", base) and "[botões: Confirmar presença · Preciso remarcar]" in rc.renderizar("C48", base)
+    assert "HOJE às 14h" in rc.renderizar("CHOJ", base)
+
+
 def test_lembretes_elegibilidade():
     from datetime import datetime, timedelta, timezone
     from celeste.jobs import lembretes

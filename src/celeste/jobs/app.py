@@ -4,6 +4,7 @@
   POST /jobs/carregar-base      diário 06:00   BigQuery → Firestore leads
   POST /jobs/disparos           a cada 30 min  templates conforme os ciclos (só no horário permitido)
   POST /jobs/espelho            diário 23:30   Firestore → BigQuery ia_atendimento
+  POST /jobs/rotinas-consulta   de hora em hora lembretes da consulta agendada (C48/C24/CHOJ)
 
 CLI:  python -m celeste.jobs.app carregar-base|disparos|espelho [--dry-run] [--forcar-horario] [--limite N]
 """
@@ -18,7 +19,7 @@ from fastapi import FastAPI
 
 import os
 
-from celeste.jobs import base_leads, campanhas, disparos, espelho, lembretes
+from celeste.jobs import base_leads, campanhas, disparos, espelho, lembretes, rotinas_consulta
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI(title="Celeste · Jobs")
@@ -47,6 +48,12 @@ def job_campanhas():
 @app.post("/jobs/lembretes")
 def job_lembretes(dry_run: bool = False):
     return lembretes.rodar(os.environ.get("URL_ORQUESTRADOR", ""), dry_run=dry_run)
+
+
+@app.post("/jobs/rotinas-consulta")
+def job_rotinas_consulta(dry_run: bool = False):
+    """Lembretes da consulta agendada pela Celeste (C48, C24, CHOJ). Aprovado pela clínica em 26/10/2026."""
+    return rotinas_consulta.rodar(dry_run=dry_run)
 
 
 @app.post("/jobs/aquecer-cache")

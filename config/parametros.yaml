@@ -251,6 +251,15 @@ videos:
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/agendou_dr_lucas.mp4"
 
 # Vídeos reservados para as rotinas de consulta (confirmação D-1, desmarcou) e pós-consulta; NÃO entram na ferramenta enviar_video.
+rotinas_consulta:                        # 26/10/2026 (aprovado pela clínica): só consultas agendadas pela Celeste (status "Agendado")
+  ativo: true                            # o liga/desliga é o scheduler celeste-rotinas-consulta (nasce pausado; roda de hora em hora, 7h-19h, todos os dias)
+  hora_48h: 10                           # C48 sai a partir das 10h de 2 dias antes
+  hora_vespera: 10                       # C24 sai a partir das 10h da véspera, só para quem não confirmou
+  hora_dia: 7                            # CHOJ sai a partir das 7h do dia, antes da hora da consulta
+consulta_botoes:                         # botões dos templates C48/C24 (texto exato cadastrado na Meta)
+  confirmar: "Confirmar presença"        # → orquestrador: status Confirmado no TI Saúde + texto abaixo + vídeo confirmou_<profissional>, sem modelo
+  remarcar: "Preciso remarcar"           # → a Celeste (modelo) consulta o agendamento, pergunta o dia e reagenda
+  confirmado_texto: "Perfeito, {nome}! Presença confirmada para {dia}, às {hora}. Te esperamos na Av. República do Líbano, 886, Moema, com 15 minutos de antecedência 💙"
 videos_rotinas:
   confirmou_dra_luciana: { descricao: "a Dra. Luciana agradece a confirmação da consulta, 20 s", url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/confirmou_dra_luciana.mp4" }
   confirmou_dr_lucas:    { descricao: "o Dr. Lucas agradece a confirmação da consulta, 31 s",    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/confirmou_dr_lucas.mp4" }
@@ -504,11 +513,11 @@ lembretes:
   so_dentro_janela_24h: true           # texto livre só até 24 h da última msg do lead; depois, só template
 
 # Templates das rotinas de consulta (aprovados na Meta como UTILITY; conferido em 15/10/2026). Só para consultas agendadas pela Celeste.
-# As rotinas de envio ainda não existem; esta lista alimenta a página Templates do painel.
+# Rotinas C48/C24/CHOJ: job celeste-rotinas-consulta (src/celeste/jobs/rotinas_consulta.py), aprovado pela clínica em 26/10/2026.
 templates_consulta:
-  C48:  { nome: consulta_48_horas,            quando: "48 h antes da consulta. Botões: Confirmar presença / Preciso remarcar." }
-  C24:  { nome: consulta_confirmar_24_horas,  quando: "Véspera da consulta. Quem já confirmou no toque anterior recebe sem botões." }
-  CHOJ: { nome: consulta_hoje,                quando: "Manhã do dia da consulta." }
-  CFAL: { nome: faltou_a_consulta,            quando: "Fim do dia, quando a consulta ficou com status Falta no TI Saúde." }
+  C48:  { nome: consulta_48_horas,            quando: "2 dias antes da consulta, a partir das 10h. Botões: Confirmar presença (grava Confirmado no TI Saúde, agradece e manda o vídeo do profissional) / Preciso remarcar (a Celeste reagenda pela conversa)." }
+  C24:  { nome: consulta_confirmar_24_horas,  quando: "Véspera, a partir das 10h, só para quem ainda não confirmou. Mesmos botões." }
+  CHOJ: { nome: consulta_hoje,                quando: "Manhã do dia da consulta, a partir das 7h, antes da hora marcada." }
+  CFAL: { nome: faltou_a_consulta,            quando: "Fim do dia, quando a consulta ficou com status Falta no TI Saúde. Ainda não automatizado." }
   CCAN: { nome: consulta_cancelada_clinica,   quando: "Manual, pela recepção no painel, quando a clínica precisa cancelar." }
   CATR: { nome: atrasos,                      quando: "Recepção, pacientes em tratamento (fora da Celeste)." }

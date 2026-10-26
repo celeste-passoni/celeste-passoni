@@ -14,7 +14,7 @@ import base64
 import logging
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException
@@ -99,6 +99,9 @@ def responder(p: Pedido):
         return _responder_agora_nao(ref, conv, mt)
     if acao in ("sair", "encerrar"):
         return _responder_sair(ref, conv, mt, acao)
+
+    if _acao_botao_consulta(ref, ultimo_wamid) == "confirmar_presenca":   # 26/10/2026: botão do lembrete da consulta, sem modelo
+        return _responder_confirmar_presenca(ref, conv, mt)
 
     # abertura sem modelo (15/10/2026): conversa nova, não vinda de template, cuja 1ª mensagem é só um cumprimento
     conteudo = historico[-1]["content"]   # string (só texto) ou lista de blocos (com mídia)
@@ -447,6 +450,72 @@ def _responder_agora_nao(ref, conv: dict, mt: meta.Meta) -> dict:
     conv.update(campos); ref.set(campos, merge=True)
     _espelhar_lead(conv)
     return {"ok": True, "enviado": 1, "fluxo": "t1_agora_nao"}
+
+
+def _acao_botao_consulta(ref, ultimo_wamid: str | None) -> str | None:
+    """Se a última mensagem do lead foi o botão 'Confirmar presença' dos lembretes da consulta, devolve 'confirmar_presenca'."""
+    if not ultimo_wamid:
+        return None
+    m = ref.collection("mensagens").document(ultimo_wamid).get().to_dict() or {}
+    return classificar_botao_consulta(m.get("botao"), m.get("texto"))
+
+
+def classificar_botao_consulta(botao: str | None, texto: str | None) -> str | None:
+    b = config.parametros().get("consulta_botoes") or {}
+    cand = {str(x or "").strip().casefold() for x in (botao, texto)}
+    if b.get("confirmar", "").casefold() in cand:
+        return "confirmar_presenca"
+    return None   # "Preciso remarcar" vai para o modelo: a Celeste consulta o agendamento e reagenda pela conversa
+
+
+def _responder_confirmar_presenca(ref, conv: dict, mt: meta.Meta) -> dict:
+    """Lead tocou 'Confirmar presença' (C48/C24): status Confirmado no TI Saúde, agradecimento fixo e vídeo do profissional. Sem modelo.
+    Aprovado pela clínica em 26/10/2026."""
+    from celeste.jobs.rotinas_consulta import formatar_dia, formatar_hora
+    p = config.parametros()
+    b = p["consulta_botoes"]
+    ag = dict(conv.get("agendamento") or {})
+    ida = conv.get("id_agendamento_tisaude")
+    simulado = bool(conv.get("teste") or _e_numero_teste(conv.get("contato", ""))) and not _escreve_no_tisaude(conv.get("contato", ""))
+    ts = TiSaudeSimulado() if simulado else _svc()[2]
+    gravou = False
+    if ida:
+        try:
+            ts.confirmar_presenca(int(ida))
+            gravou = True
+        except Exception as e:   # noqa: BLE001
+            log.warning("confirmar presença no TI Saúde falhou (conversa %s, agendamento %s): %s", conv.get("id"), ida, e)
+    nome = ((conv.get("nome") or "").strip().split() or [""])[0].title()
+    try:
+        dia = formatar_dia(date.fromisoformat(str(ag.get("data"))[:10]))
+    except (TypeError, ValueError):
+        dia = "o dia marcado"
+    texto = b["confirmado_texto"].replace("{nome}", nome or "tudo bem").replace("{dia}", dia).replace("{hora}", formatar_hora(ag.get("hora", "")))
+    agora = datetime.now(timezone.utc)
+    wamid = mt.enviar_texto(conv["contato"], texto)
+    ref.collection("mensagens").document(wamid).set({
+        "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": "fluxo consulta",
+        "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
+    enviados = 1
+    chave = "confirmou_dra_luciana" if ag.get("profissional") == "dra_luciana" else "confirmou_dr_lucas"
+    v = (p.get("videos_rotinas") or {}).get(chave)
+    if v:
+        try:
+            wv = mt.enviar_video_link(conv["contato"], v["url"])
+            ref.collection("mensagens").document(wv).set({
+                "direcao": "celeste", "tipo": "video", "texto": f"[vídeo: {chave} — {v['descricao']}]", "video": chave, "modelo": "fluxo consulta",
+                "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
+            enviados += 1
+        except Exception as e:   # noqa: BLE001
+            log.warning("vídeo de confirmação não enviado (conversa %s): %s", conv.get("id"), e)
+    rot = dict(conv.get("rotinas_consulta") or {}); rot.update({"confirmado_em": agora, "confirmado_no_tisaude": gravou})
+    ag["status"] = "Confirmado" if gravou else ag.get("status")
+    campos = {"rotinas_consulta": rot, "agendamento": ag, "pendente_resposta": False,
+              "ultima": {"texto": texto[:160], "direcao": "celeste", "tipo": "text", "em": agora}, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP}
+    if ida and not gravou:
+        campos.update({"revisar": True, "revisar_motivo": "confirmação de presença não gravou no TI Saúde"})
+    conv.update(campos); ref.set(campos, merge=True)
+    return {"ok": True, "enviado": enviados, "fluxo": "consulta_confirmar", "tisaude": "simulado" if simulado else ("confirmado" if gravou else "falhou")}
 
 
 def _responder_sair(ref, conv: dict, mt: meta.Meta, acao: str = "sair") -> dict:
