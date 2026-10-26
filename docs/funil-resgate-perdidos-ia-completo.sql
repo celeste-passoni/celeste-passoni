@@ -1,6 +1,17 @@
 -- NOVO (22/10/2026): frente 'Perdidos IA' = Celeste (IA). NOME_CELESTE é o nome do usuário no TI Saúde (marcadopor) E o rótulo da coluna colaborador (26/10/2026).
 DECLARE NOME_CELESTE STRING DEFAULT 'Celeste Maria';   -- 22/10/2026: nome do usuário da Celeste no TI Saúde (marcadopor)
-DECLARE INICIO_CELESTE DATE DEFAULT DATE '2026-10-26';
+DECLARE INICIO_CELESTE DATE DEFAULT DATE '2026-10-28';   -- 26/10/2026: início dos testes; antes disso a frente 'Perdidos IA' não existe no funil
+
+-- ============================================================
+-- PASSO 0-IA (26/10/2026): a frente 'Perdidos IA' só conta a partir de INICIO_CELESTE. Linhas criadas antes
+-- (período de preparação, 22 a 27/10) saem das duas tabelas de leads; depois do início esta limpeza não encontra nada.
+-- ============================================================
+DELETE FROM `vertical-theory-489419-a7.automacoes.resgate_leads_diario`
+WHERE frente = 'Perdidos IA' AND data_execucao < INICIO_CELESTE;
+
+DELETE FROM `vertical-theory-489419-a7.automacoes.leads_disponibilizados_diario`
+WHERE frente = 'Perdidos IA' AND data_disponibilizacao < INICIO_CELESTE;
+
 
 -- ============================================================
 -- PASSO 1: atualiza resgate_leads_diario com quem é elegível hoje.
@@ -150,6 +161,7 @@ USING (
       AND LOWER(CAST(t.dentro_2_dias_uteis AS STRING)) IN ('não', 'nao')
       AND LOWER(CAST(t.participou_acao_lead_perdidos AS STRING)) = 'não'
       AND (c.opt_out IS NULL OR c.opt_out = FALSE)
+      AND CURRENT_DATE() >= INICIO_CELESTE   -- NOVO (26/10/2026): a frente só entra no funil a partir do início dos testes
     QUALIFY ROW_NUMBER() OVER (PARTITION BY t.celular_sem_ddd ORDER BY t.created_at DESC) = 1
   )
 
