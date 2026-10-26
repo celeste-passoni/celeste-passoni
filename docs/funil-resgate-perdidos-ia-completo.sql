@@ -1,4 +1,4 @@
--- NOVO (22/10/2026): frente 'Perdidos IA' = Celeste (IA). Nome do usuário no TI Saúde e data do lançamento.
+-- NOVO (22/10/2026): frente 'Perdidos IA' = Celeste (IA). NOME_CELESTE é o nome do usuário no TI Saúde (marcadopor) E o rótulo da coluna colaborador (26/10/2026).
 DECLARE NOME_CELESTE STRING DEFAULT 'Celeste Maria';   -- 22/10/2026: nome do usuário da Celeste no TI Saúde (marcadopor)
 DECLARE INICIO_CELESTE DATE DEFAULT DATE '2026-10-26';
 
@@ -234,7 +234,7 @@ WITH base AS (
       FARM_FINGERPRINT(m._id)      AS mensagem_id,
       FARM_FINGERPRINT(m._pai_id)  AS history_id,
       0.0                          AS user_id,
-      'Celeste'                    AS colaborador,
+      NOME_CELESTE                    AS colaborador,
       1                            AS sent_by_operator,
       0                            AS sent_by_auto,
       FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%E3SZ', m.recebido_em) AS received_at,   -- mesmo formato (STRING, UTC) do MarketZap
@@ -285,7 +285,7 @@ com_frente AS (
     celular,
     CASE
       -- NOVO (22/10/2026): a frente 'Perdidos IA' é só da Celeste; humana que falou com um lead da IA conta na frente dela
-      WHEN colaborador = 'Celeste' THEN 'Perdidos IA'
+      WHEN colaborador = NOME_CELESTE THEN 'Perdidos IA'
       WHEN frente_original = 'Perdidos IA' THEN 'Perdidos'
       -- NOVO (18/09/2026): a Gisela só trabalha Orcamento; tudo dela vira Orcamento
       WHEN colaborador = 'Gisela Madeira Pinto' THEN 'Orcamento'
@@ -393,7 +393,7 @@ UPDATE `vertical-theory-489419-a7.automacoes.resgate_leads_diario`
 SET colaborador =
   CASE
     -- NOVO (22/10/2026): a frente da IA é sempre da Celeste
-    WHEN frente = 'Perdidos IA' THEN 'Celeste'
+    WHEN frente = 'Perdidos IA' THEN NOME_CELESTE
     -- ALTERADO (10/10/2026): Orcamento passa para a Maria Fernanda; a Gisela sai.
     -- A partir de 10/10 todas as frentes são da Maria Fernanda.
     WHEN data_execucao >= DATE '2026-10-10' THEN 'Maria Fernanda Oliveira Martins'
@@ -476,7 +476,7 @@ SET
       FROM `vertical-theory-489419-a7.gold.mensagens_resgate` m
       WHERE m.celular = T.contato
         AND DATE_TRUNC(DATE(m.created_at), MONTH) = T.mes_ref
-        AND ((T.frente = 'Perdidos IA' AND m.colaborador = 'Celeste') OR (T.frente != 'Perdidos IA' AND m.colaborador != 'Celeste'))
+        AND ((T.frente = 'Perdidos IA' AND m.colaborador = NOME_CELESTE) OR (T.frente != 'Perdidos IA' AND m.colaborador != NOME_CELESTE))
     ) THEN 'Sim'
     ELSE 'Não'
   END,
@@ -485,7 +485,7 @@ SET
     FROM `vertical-theory-489419-a7.gold.mensagens_resgate` m
     WHERE m.celular = T.contato
       AND DATE_TRUNC(DATE(m.created_at), MONTH) = T.mes_ref
-      AND ((T.frente = 'Perdidos IA' AND m.colaborador = 'Celeste') OR (T.frente != 'Perdidos IA' AND m.colaborador != 'Celeste'))
+      AND ((T.frente = 'Perdidos IA' AND m.colaborador = NOME_CELESTE) OR (T.frente != 'Perdidos IA' AND m.colaborador != NOME_CELESTE))
   )
 WHERE T.mes_ref = DATE_TRUNC(CURRENT_DATE(), MONTH);
 
@@ -842,7 +842,7 @@ WITH mensagens_resgate AS (
   UNION ALL   -- NOVO (22/10/2026): mensagens da Celeste (espelho do Firestore)
   SELECT
     FARM_FINGERPRINT(m._id) AS mensagem_id,
-    'Celeste' AS colaborador,
+    NOME_CELESTE AS colaborador,
     FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%E3SZ', m.recebido_em) AS created_at,   -- STRING, como no MarketZap
     CAST(c.contato AS STRING) AS celular
   FROM `vertical-theory-489419-a7.ia_atendimento.mensagens` m
@@ -903,7 +903,7 @@ base_dia_raw AS (
 base_dia AS (
   SELECT * EXCEPT(frente),
     CASE
-      WHEN colaborador = 'Celeste' THEN 'Perdidos IA'   -- NOVO (22/10/2026)
+      WHEN colaborador = NOME_CELESTE THEN 'Perdidos IA'   -- NOVO (22/10/2026)
       WHEN frente = 'Perdidos IA' THEN 'Perdidos'          -- NOVO (22/10/2026): humana nunca fica em 'Perdidos IA'
       WHEN colaborador = 'Gisela Madeira Pinto' THEN 'Orcamento'
       WHEN colaborador = 'Maria Fernanda Oliveira Martins'
@@ -1086,11 +1086,11 @@ fatos AS (
   FROM UNNEST(GENERATE_DATE_ARRAY(DATE '2026-01-01', LAST_DAY(CURRENT_DATE(), MONTH))) AS dt
   CROSS JOIN UNNEST(['Raiane Santana Souza Santos',
                      'Maria Fernanda Oliveira Martins',
-                     'Gisela Madeira Pinto', 'Celeste', 'Total']) AS colab   -- ALTERADO (22/10/2026): Celeste
+                     'Gisela Madeira Pinto', NOME_CELESTE, 'Total']) AS colab   -- ALTERADO (22/10/2026): Celeste
   CROSS JOIN UNNEST(['Orcamento', 'Inativos', 'Canceladas', 'Perdidos', 'Perdidos IA']) AS fr   -- ALTERADO (22/10/2026)
   -- NOVO (22/10/2026): a Celeste só existe em 'Perdidos IA' e a partir do lançamento; as humanas não têm 'Perdidos IA'
-  WHERE NOT (colab = 'Celeste' AND (fr != 'Perdidos IA' OR dt < INICIO_CELESTE))
-    AND NOT (colab NOT IN ('Celeste', 'Total') AND fr = 'Perdidos IA')
+  WHERE NOT (colab = NOME_CELESTE AND (fr != 'Perdidos IA' OR dt < INICIO_CELESTE))
+    AND NOT (colab NOT IN (NOME_CELESTE, 'Total') AND fr = 'Perdidos IA')
     AND NOT (colab = 'Raiane Santana Souza Santos' AND dt >= DATE '2026-09-18')
     AND NOT (colab = 'Gisela Madeira Pinto' AND dt <  DATE '2026-09-18')
     -- ALTERADO (16/10/2026): removido o corte da Gisela a partir de 10/10 — o esqueleto
