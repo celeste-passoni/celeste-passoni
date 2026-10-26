@@ -924,3 +924,12 @@ def test_motor_portao_nao_revisa_resposta_sem_risco():
     conv = {"id": "c1", "contato": "55", "nome": "Ana"}
     res = motor.Motor(cliente=cliente).responder("leads_perdidos", conv, [{"role": "user", "content": "oi"}], _ctx(conv))
     assert res.baloes and not cliente.messages.create.called
+
+
+def test_portao_contexto_ignora_reprovacao_anterior():
+    from celeste.orquestrador import portao
+    msgs = [{"role": "user", "content": "tem desconto?"},
+            {"role": "assistant", "content": [{"type": "text", "text": "Temos condições especiais!"}]},
+            {"role": "user", "content": "[sistema] O revisor interno reprovou a sua resposta: promete condições especiais. Reescreva."}]
+    ctx = portao.contexto_recente(msgs)
+    assert ctx == "LEAD: tem desconto?" and "[sistema]" not in ctx and "condições especiais" not in ctx

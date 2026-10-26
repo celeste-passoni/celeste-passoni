@@ -79,12 +79,19 @@ def _texto(conteudo: Any) -> str:
 
 
 def contexto_recente(messages: list[dict], n: int = 8) -> str:
+    """Últimos turnos como texto. Uma resposta reprovada pelo próprio portão e a instrução [sistema] de reescrita NÃO entram:
+    o revisor avalia só a resposta nova (26/10/2026: ele reprovou a reescrita correta por ver a reprovação anterior no histórico)."""
     linhas = []
     for m in messages[-n:]:
         quem = "LEAD" if m.get("role") == "user" else "CELESTE"
         t = _texto(m.get("content")).strip()
-        if t:
-            linhas.append(f"{quem}: {t[:700]}")
+        if not t:
+            continue
+        if quem == "LEAD" and t.startswith("[sistema]"):
+            if linhas and linhas[-1].startswith("CELESTE:"):
+                linhas.pop()   # a resposta reprovada que antecede a instrução
+            continue
+        linhas.append(f"{quem}: {t[:700]}")
     return "\n".join(linhas) or "(sem histórico)"
 
 
@@ -112,7 +119,8 @@ def avaliar(cliente, messages: list[dict], baloes: list[str], ferramentas_usadas
     cfg = _cfg()
     ferr = "\n".join(f"- {f.get('nome')}: {str(f.get('saida'))[:500]}" for f in (ferramentas_usadas or []) if f.get("nome") != "portao") or "(nenhuma)"
     user = (f"CONVERSA RECENTE:\n{contexto_recente(messages)}\n\nFERRAMENTAS CHAMADAS NESTA VEZ (resultados reais do sistema):\n{ferr}\n\n"
-            f"RESPOSTA A REVISAR (cada linha é um balão que iria ao lead):\n" + "\n".join(f"- {b}" for b in baloes) + "\n\nJSON:")
+            f"RESPOSTA A REVISAR (cada linha é um balão que iria ao lead):\n" + "\n".join(f"- {b}" for b in baloes)
+            + "\n\nAvalie SOMENTE a resposta acima. Se ela estiver correta, responda aprovado=true; o campo aprovado tem que bater com a sua conclusão.\n\nJSON:")
     system = [{"type": "text", "text": CHECKLIST + "\n\nBASE DE CONHECIMENTO DA CLÍNICA (única fonte de fatos permitida):\n" + _base_conhecimento(),
                "cache_control": {"type": "ephemeral"}}]
     try:
