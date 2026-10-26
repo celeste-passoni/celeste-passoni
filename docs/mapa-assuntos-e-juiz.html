@@ -1,0 +1,186 @@
+<title>Mapa de Assuntos e Juiz</title>
+<style>
+:root{--bg:#f7f3ec;--fg:#1c1c1c;--muted:#6b6b6b;--line:#e3dccd;--card:#fff;--navy:#12152b;--champ:#d9c7a5;--ok:#2f7d4f;--okbg:#dff0e5;--warn:#8a5a12;--warnbg:#fff1d6;--bad:#b8532a;--badbg:#f8e3d8;--neu:#4b4b4b;--neubg:#ebe6dc}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15171f;--fg:#ece7dc;--muted:#a39d91;--line:#2d3140;--card:#1d2029;--navy:#d9c7a5;--champ:#8a7a52;--ok:#7fc79a;--okbg:#1f3a2a;--warn:#e3b765;--warnbg:#3a2f16;--bad:#f0a07f;--badbg:#3f2418;--neu:#c9c3b6;--neubg:#2a2d36;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15171f;--fg:#ece7dc;--muted:#a39d91;--line:#2d3140;--card:#1d2029;--navy:#d9c7a5;--champ:#8a7a52;--ok:#7fc79a;--okbg:#1f3a2a;--warn:#e3b765;--warnbg:#3a2f16;--bad:#f0a07f;--badbg:#3f2418;--neu:#c9c3b6;--neubg:#2a2d36;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px;padding-inline:16px}
+h1{font-size:26px;margin:0 0 6px;text-wrap:balance}h2{font-size:19px;margin:34px 0 10px;border-bottom:2px solid var(--champ);padding-bottom:4px}h3{font-size:16px;margin:18px 0 6px}
+.sub{color:var(--muted);margin:0 0 20px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:14px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}.card .n{font-size:24px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums}.card .l{color:var(--muted);font-size:12.5px}
+.tw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}table{border-collapse:collapse;width:100%;min-width:900px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left;font-size:13.5px}th{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:var(--neubg)}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.ex{color:var(--muted);font-size:12px;margin-top:3px}
+.tag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:12px;white-space:normal}.tag.dentro{background:var(--okbg);color:var(--ok)}.tag.fora{background:var(--badbg);color:var(--bad)}.tag.misto{background:var(--warnbg);color:var(--warn)}.tag.outros{background:var(--neubg);color:var(--neu)}
+.legenda span{margin-right:12px}
+.bloco{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:10px 0}
+ul{padding-left:20px;margin:6px 0}li{margin:3px 0}
+.dois{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.nota{font-size:13px;color:var(--muted)}
+p{max-width:72ch}
+</style>
+<div class="wrap">
+<h1>Mapa de assuntos das conversas e proposta de Juiz</h1>
+<p class="sub">Passoni Clinic · mensagens recebidas de leads e pacientes no WhatsApp da clínica (MarketZap), 26/04 a 25/10/2026 · classificação por regras de palavras-chave, sem uso de modelo · gerado em 26/10/2026</p>
+
+<div class="cards">
+  <div class="card"><div class="n">75,020</div><div class="l">mensagens recebidas em 6 meses, 4 setores</div></div>
+  <div class="card"><div class="n">30</div><div class="l">assuntos mapeados</div></div>
+  <div class="card"><div class="n">77%</div><div class="l">das mensagens caem em um assunto; o resto são fragmentos de conversa</div></div>
+  <div class="card"><div class="n">63%</div><div class="l">das mensagens de Leads Perdidos a Celeste resolve sozinha; 5% ela encaminha</div></div>
+</div>
+
+<h2>1. Assuntos, volume e o que a Celeste faz com cada um</h2>
+<p class="legenda"><span class="tag dentro">resolve</span><span class="tag misto">resolve em parte · encaminha o resto</span><span class="tag fora">encaminha à recepção</span><span class="tag outros">não classificado</span></p>
+<div class="tw"><table>
+<tr><th>Assunto e exemplos reais</th><th>Msgs 6 m</th><th>Leads Perdidos</th><th>Novos Leads</th><th>Confirmações e pacientes</th><th>Escopo da Celeste</th><th>O que ela faz</th></tr>
+<tr class="dentro"><td><b>Cumprimento / confirmação curta / agradecimento</b><div class="ex">“Bom dia tudo bem?”<br>“Ola. bom dia Ingrid”</div></td><td class="num">17.290</td><td class="num">1.066</td><td class="num">9.615</td><td class="num">6.609</td><td><span class="tag dentro">resolve</span></td><td>Responde no tom da clínica; abertura fixa no primeiro contato.</td></tr>
+<tr class="outros"><td><b>Outros (não classificado)</b><div class="ex">“Para vc tb! Beijos 😘”<br>“Boa tarde a dra Renata ficou de passar nome do protetor térmico para os fios”</div></td><td class="num">16.958</td><td class="num">1.203</td><td class="num">9.643</td><td class="num">6.112</td><td><span class="tag outros">?</span></td><td>Fragmentos de conversa (respostas soltas. contexto de pacientes em tratamento). A Celeste responde pelo contexto; o que for de paciente. encaminha.</td></tr>
+<tr class="dentro"><td><b>Agendar / horários / disponibilidade</b><div class="ex">“Quarta de manhã no primeiro horário?”<br>“Olá! Conheci a Dra. Luciana no instagram pessoal dela e gostaria de agendar uma consulta.”</div></td><td class="num">9.489</td><td class="num">599</td><td class="num">7.173</td><td class="num">1.717</td><td><span class="tag dentro">resolve</span></td><td>Pergunta profissional e dia da semana. consulta a agenda real do TI Saúde e oferece 2 horários.</td></tr>
+<tr class="dentro"><td><b>Resposta de agenda: dia ou hora escolhido</b><div class="ex">“Pode ser dia 26/06 (sexta dessa mesma semana)?”<br>“Menos de segunda que eu não consigo”</div></td><td class="num">6.384</td><td class="num">435</td><td class="num">3.252</td><td class="num">2.697</td><td><span class="tag dentro">resolve</span></td><td>Converte para data pela data do dia. consulta a agenda e agenda no TI Saúde.</td></tr>
+<tr class="misto"><td><b>Cancelar / remarcar / confirmar consulta marcada</b><div class="ex">“Bom dia ! 
+Acordei com muita dor de cabeça e sinusite . 
+Podemos remarcar a seção de hj ?”<br>“Boa tarde. Confirmado.”</div></td><td class="num">5.127</td><td class="num">110</td><td class="num">1.975</td><td class="num">3.042</td><td><span class="tag misto">resolve (consultas da Celeste) · encaminha (outras)</span></td><td>Consultas que ela marcou: confirma. remarca ou cancela (motivo → solução → só então cancela). Consulta marcada pela clínica: encaminha à recepção.</td></tr>
+<tr class="dentro"><td><b>Mídia: áudio</b><div class="ex"></div></td><td class="num">2.473</td><td class="num">132</td><td class="num">1.400</td><td class="num">941</td><td><span class="tag dentro">resolve (transcrição)</span></td><td>Transcreve o áudio e responde normalmente.</td></tr>
+<tr class="fora"><td><b>Já é paciente: sessão. aplicação. retorno. pós-procedimento</b><div class="ex">“Oi bom dia! Tudo bem?
+
+Vou ter q adiar minha próxima sessão.”<br>“Boa tarde ! Pode me confirmar o horário do meu tratamento no dia 18 por favor ? Aqui quem fala é Janete Gentil…”</div></td><td class="num">2.076</td><td class="num">85</td><td class="num">1.449</td><td class="num">542</td><td><span class="tag fora">encaminha</span></td><td>Encaminha à recepção com o botão Falar com Recepção.</td></tr>
+<tr class="dentro"><td><b>Informações gerais sobre a clínica / quem é a Dra.</b><div class="ex">“Olá! Vi o anúncio da Dra. Luciana e gostaria de mais informações.”<br>“https://www.instagram.com/p/DY8IdgpFL3r/?img_index=4&amp;igsh=eG42anhyZjNzbWxp”</div></td><td class="num">1.916</td><td class="num">166</td><td class="num">1.718</td><td class="num">32</td><td><span class="tag dentro">resolve</span></td><td>Apresentação da clínica. referências da imprensa. artigos. vídeos a pedido.</td></tr>
+<tr class="fora"><td><b>Receita / medicação / prescrição / farmácia</b><div class="ex">“Quanto aos medicamentos solicitados. surgiu uma dúvida na farmácia de manipulação.”<br>“Eu tinha falado que preciso de novas receitas pois minha medicação está acabando. vou mandar tbm a receita do …”</div></td><td class="num">1.855</td><td class="num">42</td><td class="num">1.001</td><td class="num">812</td><td><span class="tag fora">encaminha</span></td><td>Encaminha à recepção: assunto clínico.</td></tr>
+<tr class="misto"><td><b>Valor / orçamento / parcelamento do tratamento</b><div class="ex">“Bom dia!!! 
+
+Legal. parece ser bem detalhado. 
+Em relação a valores como que funciona essa primeira etapa”<br>“Olá. bom dia! Agradeço o retorno. Seria possível dar uma estimativa de valores do implante sem raspagem?”</div></td><td class="num">1.491</td><td class="num">188</td><td class="num">1.230</td><td class="num">73</td><td><span class="tag misto">resolve (política) · encaminha (paciente negociando)</span></td><td>Explica que não há tabela e que o valor é definido após a consulta; parcelamento em até 10x. Paciente negociando orçamento: encaminha.</td></tr>
+<tr class="fora"><td><b>Mídia: imagem / documento enviado</b><div class="ex"></div></td><td class="num">1.456</td><td class="num">71</td><td class="num">785</td><td class="num">600</td><td><span class="tag fora">encaminha se for exame ou receita</span></td><td>Imagem é descrita; se for exame. receita ou comprovante. encaminha.</td></tr>
+<tr class="dentro"><td><b>Dr. Lucas × Dra. Luciana / quem atende</b><div class="ex">“Qual o tempo de espera aproximado pra uma consulta com a Dra Luciana?”<br>“Bom dia. tudo bem?
+Gostaria de agendar uma consilta com a Dra. Luciana Passoni.”</div></td><td class="num">1.317</td><td class="num">161</td><td class="num">1.063</td><td class="num">93</td><td><span class="tag dentro">resolve</span></td><td>Texto aprovado pela clínica sobre o Dr. Lucas e a Dra.; vídeo de apresentação a pedido.</td></tr>
+<tr class="dentro"><td><b>Valor da consulta</b><div class="ex">“Qual valor da consulta”<br>“Gostaria de saber o valor da consulta da Dra ?”</div></td><td class="num">1.141</td><td class="num">150</td><td class="num">987</td><td class="num">4</td><td><span class="tag dentro">resolve</span></td><td>Só quando perguntado: valores das duas modalidades e o que inclui.</td></tr>
+<tr class="dentro"><td><b>Dados cadastrais enviados (nome. CPF. nascimento. e-mail. CEP)</b><div class="ex">“luanedinhojr@gmail.com”<br>“e gostaria de ver sobre a possibiidade de cuidar do cabelo desde a nova fase de nascimento/crescimento pois ja…”</div></td><td class="num">1.024</td><td class="num">169</td><td class="num">819</td><td class="num">36</td><td><span class="tag dentro">resolve (cadastro)</span></td><td>Cria o paciente no TI Saúde; sem CPF. cadastro genérico e aviso de que a recepção completa.</td></tr>
+<tr class="fora"><td><b>Exames / laudo / resultado de exame</b><div class="ex">“Boa tarde Natalia. tudo bem e você??
+Entendi. Qual a diferença entre a consulta com a Dr Luciana e o Dr Lucas?…”<br>“Na consulta com a equipe da Dra não é realizado a anamnese e o exame de tricôscopia?”</div></td><td class="num">921</td><td class="num">43</td><td class="num">576</td><td class="num">302</td><td><span class="tag fora">encaminha</span></td><td>Encaminha à recepção: assunto clínico.</td></tr>
+<tr class="misto"><td><b>Dúvida clínica: diagnóstico. sintomas. doença</b><div class="ex">“Olá. não tenho problema de queda. estou com uma espinha/glandula inflamada na parte de trás da cabeça”<br>“Queda e afinamento dos fios”</div></td><td class="num">748</td><td class="num">56</td><td class="num">494</td><td class="num">198</td><td><span class="tag misto">resolve (genérico) · encaminha (orientação médica)</span></td><td>Explica o que é a doença pela base e que o diagnóstico é na tricoscopia; nunca diagnostica nem orienta tratamento.</td></tr>
+<tr class="dentro"><td><b>Outra cidade / viagem / distância</b><div class="ex">“Eu não consegui ir para Sp. eu moro em Bauru”<br>“Como eu moro em Ribeirão Preto e ele faz faculdade em São Paulo 
+Estarei aí no dia 20 de agosto 
+Vc tem horári…”</div></td><td class="num">540</td><td class="num">64</td><td class="num">383</td><td class="num">93</td><td><span class="tag dentro">resolve</span></td><td>Informa endereço. atendimento presencial e organiza a data da viagem com a agenda.</td></tr>
+<tr class="dentro"><td><b>Endereço / como chegar / estacionamento</b><div class="ex">“Me manda o endereço por favor”<br>“Qual endereço daí?”</div></td><td class="num">425</td><td class="num">44</td><td class="num">365</td><td class="num">16</td><td><span class="tag dentro">resolve</span></td><td>Endereço. referência do Ibirapuera e valet cortesia.</td></tr>
+<tr class="dentro"><td><b>Convênio / reembolso / plano de saúde</b><div class="ex">“Olá! Conheci a Dra. Luciana no instagram pessoal dela e gostaria de saber onde é o consultório e se aceita pla…”<br>“Aceita convênio?”</div></td><td class="num">415</td><td class="num">26</td><td class="num">380</td><td class="num">9</td><td><span class="tag dentro">resolve</span></td><td>Particular; nota fiscal para reembolso.</td></tr>
+<tr class="fora"><td><b>Produtos / shampoo / loja / apliques e próteses</b><div class="ex">“E o shampoo da abelha que indicou a Luisa”<br>“Vou comprar o pré-shampoo”</div></td><td class="num">354</td><td class="num">5</td><td class="num">174</td><td class="num">175</td><td><span class="tag fora">encaminha</span></td><td>Fora da base: encaminha à recepção.</td></tr>
+<tr class="dentro"><td><b>Criança / adolescente / menor de idade</b><div class="ex">“Boa tarde. tudo bem?
+Vi recentemente tratamento de um criança de 4 anos que teve cabelos de volta !”<br>“E um horário para meu filho consulta”</div></td><td class="num">312</td><td class="num">30</td><td class="num">254</td><td class="num">28</td><td><span class="tag dentro">resolve</span></td><td>Atende; no cadastro pede responsável e parentesco.</td></tr>
+<tr class="dentro"><td><b>Tratamentos e tecnologias: o que é. como funciona. resultado</b><div class="ex">“Mas eu vi uma reportagem da dra que dá pra fazer algo pra crescer”<br>“Eu não farei a laser terapia nesse dia pois irei ver outras opções de pagamento. Mas agradeço”</div></td><td class="num">279</td><td class="num">19</td><td class="num">176</td><td class="num">84</td><td><span class="tag dentro">resolve</span></td><td>Explica pela base. vídeos de resultado e fotos de antes e depois a pedido.</td></tr>
+<tr class="fora"><td><b>Documentos: atestado. declaração. nota fiscal. prontuário</b><div class="ex">“Ainda não recebi a NF do tratamento do dia 22/09 q fiz”<br>“Dra moro em MG.
+Então não precisa colocar horário. 
+É só declaração que estive na data .
+Ok”</div></td><td class="num">266</td><td class="num">10</td><td class="num">177</td><td class="num">79</td><td><span class="tag fora">encaminha</span></td><td>Encaminha à recepção.</td></tr>
+<tr class="fora"><td><b>Quer falar com atendente / pessoa / ligação</b><div class="ex">“Posso falar com vcs por telefone ?”<br>“Oii. bom diaa! Gostaria de falar com alguem da equipe médica!”</div></td><td class="num">177</td><td class="num">2</td><td class="num">132</td><td class="num">43</td><td><span class="tag fora">encaminha</span></td><td>Encaminha à recepção (pedido explícito de falar com uma pessoa).</td></tr>
+<tr class="fora"><td><b>Pagamento / contrato: pix. link. comprovante. estorno</b><div class="ex">“Fui aí indicada pra tratar com ela . Paguei 16 mil reais e não vou passar por ela . Injuriada”<br>“Eu já paguei 5 parcelas das 10.”</div></td><td class="num">142</td><td class="num">12</td><td class="num">109</td><td class="num">21</td><td><span class="tag fora">encaminha (financeiro)</span></td><td>Encaminha à recepção: financeiro.</td></tr>
+<tr class="dentro"><td><b>Consulta online / teleconsulta</b><div class="ex">“Olá! Conheci a Dra. Luciana no instagram pessoal dela e gostaria de saber o preço da consulta e se tem consult…”<br>“Olá! Conheci a Dra. Luciana no instagram pessoal dela e gostaria de agendar uma consulta. Moro nos Estados Uni…”</div></td><td class="num">135</td><td class="num">8</td><td class="num">122</td><td class="num">5</td><td><span class="tag dentro">resolve (política)</span></td><td>Explica que a consulta é presencial por causa da tricoscopia.</td></tr>
+<tr class="dentro"><td><b>Preparo da consulta: o que levar. duração. cabelo lavado</b><div class="ex">“Pq aí a noite tenho tempo de lavar o cabelo 
+De manhã não tenho tempo”<br>“Precisa lavar o cabelo no dia?”</div></td><td class="num">104</td><td class="num">5</td><td class="num">72</td><td class="num">27</td><td><span class="tag dentro">resolve</span></td><td>Orientações da confirmação: cabelo limpo e seco. exames do último ano. 15 minutos de antecedência.</td></tr>
+<tr class="dentro"><td><b>Transplante capilar</b><div class="ex">“Estou acompanhando com um dermatologista para ver a possibilidade/necessidade de um transplante capilar eventu…”<br>“Ola
+Tudo bem? Vcs contratam medicos com pós graduação em tricologia e transplante capilar?”</div></td><td class="num">79</td><td class="num">9</td><td class="num">61</td><td class="num">9</td><td><span class="tag dentro">resolve</span></td><td>Informa que a clínica faz; avaliação na consulta; vídeo de resultado a pedido.</td></tr>
+<tr class="dentro"><td><b>Horário de funcionamento / dias de atendimento</b><div class="ex">“Dia de semana é um pouco mais complicado. ele atende de sábado?”<br>“Qual horário de funcionamento dos dois ?”</div></td><td class="num">67</td><td class="num">8</td><td class="num">38</td><td class="num">21</td><td><span class="tag dentro">resolve</span></td><td>Informa a grade quando perguntada; nunca sábado. domingo ou feriado.</td></tr>
+<tr class="dentro"><td><b>Parar mensagens / sem interesse</b><div class="ex">“Oii! No momento não tenho interesse”<br>“Entendi então não tenho interesse
+Pois eu vi muitos assuntos relacionados a doutora Luciana e achei muito inte…”</div></td><td class="num">37</td><td class="num">21</td><td class="num">14</td><td class="num">2</td><td><span class="tag dentro">resolve (opt-out)</span></td><td>Despedida e opt-out; sai da esteira.</td></tr>
+<tr class="fora"><td><b>Reclamação / problema no atendimento</b><div class="ex">“Nem parece padrão de vcs!
+Se foram vcs que marcaram porque era única data. o que eu tenho a ver com isso?”<br>“Absurdo ser atendido na calçada!
+Estou na porta da clínica”</div></td><td class="num">22</td><td class="num">1</td><td class="num">16</td><td class="num">5</td><td><span class="tag fora">encaminha</span></td><td>Encaminha à recepção.</td></tr>
+</table></div>
+<p class="nota">Setores do MarketZap: Leads Perdidos (38306, a frente da Celeste), Novos Leads (32139), Confirmações e pós-agendamento (32144) e o setor 34184, de pacientes em tratamento. Uma mensagem entra em um único assunto, pela primeira regra que casa; "Outros" concentra respostas soltas no meio de conversas ("Ok vou na segunda", "Vou pensar mais um pouquinho") e contexto de pacientes em tratamento.</p>
+
+<h2>2. O que sai da Celeste, por assunto</h2>
+<div class="dois">
+<div class="bloco"><h3>Ela encaminha à recepção, com o botão "Falar com Recepção"</h3>
+<ul>
+<li><b>Paciente em tratamento</b>: sessão, aplicação, retorno, manutenção, pós-procedimento, "fotos de comparação", "montagens de hoje". É o maior grupo fora do escopo: 2.076 mensagens, quase todas dos setores de pacientes.</li>
+<li><b>Assunto clínico</b>: receita, renovação, farmácia de manipulação, dosagem, exames, laudos, biópsia, imagens de exame.</li>
+<li><b>Financeiro e documentos</b>: pix, link, comprovante, estorno, contrato, nota fiscal, atestado, declaração, prontuário.</li>
+<li><b>Produtos</b>: shampoo, tônico, kit, apliques, próteses, entregas. A base não cobre venda de produtos.</li>
+<li><b>Reclamação</b> e <b>pedido explícito de falar com uma pessoa</b> ou de ligação.</li>
+<li><b>Consulta marcada pela clínica</b>, não por ela: confirmar, remarcar ou cancelar. Ela só mexe no que ela mesma agendou.</li>
+</ul></div>
+<div class="bloco"><h3>Ela resolve sozinha, sem encaminhar</h3>
+<ul>
+<li>Agendar, horários, escolha de dia e hora, cadastro, confirmação, remarcação e cancelamento das consultas dela.</li>
+<li>Valor da consulta, política de valor do tratamento, parcelamento, convênio, consulta online, desconto. Pedido fora da política não é encaminhado: ela explica e oferece o que existe.</li>
+<li>Dr. Lucas e Dra. Luciana, quem é a Dra., referências, artigos, vídeos, fotos de antes e depois.</li>
+<li>Dúvida sobre a doença em termos gerais, sem diagnóstico; tratamentos e tecnologias; transplante.</li>
+<li>Endereço, estacionamento, grade de atendimento, criança, outra cidade, preparo para a consulta, áudio.</li>
+<li>Sem interesse: despedida e opt-out.</li>
+</ul></div>
+</div>
+<div class="bloco"><h3>Lacunas encontradas no mapa, para decidir</h3>
+<ul>
+<li><b>Produtos e apliques</b> aparecem 354 vezes. Hoje a Celeste encaminha. Se a clínica quiser, uma linha na base resolve ("vendemos na recepção" ou "não trabalhamos com").</li>
+<li><b>"Indicando, ganho desconto?"</b> e menções a promoções antigas. A base diz que não há desconto; falta dizer o que vale para indicação, se houver programa.</li>
+<li><b>Retorno de paciente</b> ("na verdade seria o retorno") chega pelo mesmo número. Ela encaminha; convém a recepção saber que isso vai chegar pelo painel.</li>
+<li><b>Nota fiscal pedida por lead</b> (antes da consulta, para reembolso) ela responde pela política; pedida por paciente, encaminha. A regra existe, mas vale um exemplo na base.</li>
+<li><b>Leads que já falaram com "a moça do comercial"</b>: a Celeste não vê o histórico do MarketZap. Para esses, a resposta correta é encaminhar, e o prompt já cobre pelo critério "já é paciente".</li>
+</ul></div>
+
+<h2>3. Avaliação da qualidade da Celeste hoje</h2>
+<div class="cards">
+  <div class="card"><div class="n">38</div><div class="l">conversas de teste (todas internas; nenhum lead real ainda)</div></div>
+  <div class="card"><div class="n">320</div><div class="l">chamadas ao modelo</div></div>
+  <div class="card"><div class="n">10,2 s</div><div class="l">geração média por chamada · p90 16,4 s</div></div>
+  <div class="card"><div class="n">0</div><div class="l">recusas do modelo · 2 erros de ferramenta</div></div>
+  <div class="card"><div class="n">15</div><div class="l">chamadas que sinalizaram revisão</div></div>
+  <div class="card"><div class="n">US$ 24,71</div><div class="l">custo total dos testes · US$ 0,65 por conversa</div></div>
+</div>
+<div class="dois">
+<div class="bloco"><h3>Pontos fortes</h3>
+<ul>
+<li>Tom e empatia com o Opus 5.5, validados pela clínica nas conversas de referência.</li>
+<li>O que importa é determinístico, no código: horários só da agenda real do TI Saúde, 2 por vez; cancelamento só depois de motivo e solução; no máximo 3 envios e 1 emoji; mídia só a pedido; opt-out e botões sem modelo; abertura fixa.</li>
+<li>Filtro de saída sem custo: marcação de ferramenta nunca chega ao lead e as chamadas são executadas de verdade.</li>
+<li>Referências por código, nunca por link digitado pelo modelo.</li>
+</ul></div>
+<div class="bloco"><h3>Incidentes nos testes e o que foi feito</h3>
+<ul>
+<li>Chamada de ferramenta escrita no texto (Curti, 24/10): filtro de saída, 25/10.</li>
+<li>Seis horários de dois profissionais em dia de feriado (Tati, 21/10): pergunta médico e dia antes da agenda; 2 horários.</li>
+<li>Grade de atendimento despejada na primeira abordagem (Tati, 22/10): removida.</li>
+<li>"Quem é a médica do vídeo?" encaminhado à equipe: catálogo com quem aparece, 25/10.</li>
+<li>Link de artigo redigitado errado pelo modelo: códigos de referência, 20/10.</li>
+<li>Ansiedade na oferta de agenda e emojis em todo balão: regras de ritmo e limite no código.</li>
+</ul></div>
+</div>
+<div class="bloco"><h3>Riscos que permanecem</h3>
+<ul>
+<li><b>Amostra pequena</b>: 38 conversas, todas de pessoas da clínica, que sabem o que a Celeste deveria fazer. O piloto com 50 leads reais é o primeiro teste de verdade. Leads reais escrevem errado, mandam áudio, mudam de assunto e perguntam coisas que não estão na base.</li>
+<li><b>Fato fora da base</b>: o modelo pode completar com conhecimento próprio (um preço de tratamento, uma cidade com unidade). O prompt proíbe, mas não há verificação automática.</li>
+<li><b>Revisão sinalizada demais</b>: 15 chamadas em 38 conversas. Parte foi correta, parte era resposta que estava na base. Vale acompanhar a lista de revisões no painel na primeira semana.</li>
+<li><b>Latência</b>: 10 s por chamada, mais quando há ferramenta. Está dentro do que a clínica aceitou, mas conversas com agenda e cadastro passam de 20 s.</li>
+<li><b>Mudança de prompt sem teste de regressão</b>: cada ajuste de regra pode quebrar outra. Hoje não há bateria de conversas de referência que rode automaticamente.</li>
+</ul></div>
+
+<h2>4. Juiz automático: é viável? O que ele garante?</h2>
+<p>É viável e barato. O que ele não faz é garantir zero erros: um juiz é outro modelo lendo a conversa com uma lista de verificação, e também erra, menos que a Celeste porque a tarefa é mais simples, mas erra. O ganho real é transformar erro silencioso em erro visível, no mesmo dia, e medir a qualidade ao longo do tempo. As garantias de verdade continuam sendo as regras no código.</p>
+<div class="tw"><table>
+<tr><th>Modo</th><th>Como funciona</th><th>Modelo</th><th>Custo</th><th>Latência</th><th>Para que serve</th></tr>
+<tr><td><b>Juiz noturno</b></td><td>Todo dia à noite, lê cada conversa do dia inteira e dá nota por critério (fatos fora da base, horários inventados, tom, pressa, encaminhamento certo, promessa fora da política). Nota baixa marca a conversa para revisão no painel, com o trecho e o motivo.</td><td>Sonnet 5.5</td><td>≈ US$ 0,02 por conversa · 50 conversas/dia ≈ US$ 1/dia</td><td>nenhuma para o lead</td><td>Auditoria diária, painel de qualidade, aprendizado para ajustar prompt e base.</td></tr>
+<tr><td><b>Portão antes do envio</b></td><td>Antes de cada resposta ir ao WhatsApp, um modelo pequeno confere a resposta contra a lista: tem preço ou data que não veio de ferramenta? tem orientação médica? tem promessa fora da política? Se reprovar, a Celeste regera uma vez; se reprovar de novo, não envia e sinaliza revisão.</td><td>Haiku 5.5</td><td>≈ US$ 0,0005 por resposta · US$ 0,005 por conversa (1%)</td><td>+1 a 2 s por resposta</td><td>Barrar o erro grave antes de acontecer. Só para respostas de risco: que citam valor, data, hora, doença ou tratamento.</td></tr>
+<tr><td><b>Bateria de referência</b></td><td>30 conversas roteirizadas (as situações deste mapa, incluindo as que devem ser encaminhadas) rodam contra a Celeste em modo simulado toda vez que o prompt ou a base mudam; o juiz noturno avalia e compara com a rodada anterior.</td><td>Celeste Opus + juiz Sonnet</td><td>≈ US$ 13 por rodada</td><td>fora do atendimento</td><td>Teste de regressão: saber que um ajuste não quebrou outra coisa antes de publicar.</td></tr>
+</table></div>
+<div class="dois">
+<div class="bloco"><h3>Recomendação</h3>
+<ol>
+<li><b>Juiz noturno</b> desde o piloto, com coluna de nota na página Atendimentos e lista das conversas reprovadas. É onde a clínica vai aprender mais rápido.</li>
+<li><b>Portão antes do envio</b> só para respostas de risco, com Haiku. Custa quase nada e barra o pior caso. Não usar em toda resposta: latência.</li>
+<li><b>Bateria de referência</b> a partir da segunda semana, com as 30 situações mais frequentes deste mapa. Antes disso o prompt ainda vai mudar muito.</li>
+</ol>
+<p class="nota">Esforço: juiz noturno e painel, 1 dia; portão, meio dia; bateria, 1 a 2 dias para roteirizar as conversas com a clínica.</p></div>
+<div class="bloco"><h3>Critérios do juiz, primeira versão</h3>
+<ul>
+<li>Fato fora da base: valor, prazo, cidade, procedimento, nome que não está na base de conhecimento.</li>
+<li>Horário, data ou profissional que não veio de ferramenta.</li>
+<li>Diagnóstico ou orientação de tratamento ou medicação.</li>
+<li>Promessa fora da política: desconto, encaixe, consulta online, tratamento sem consulta.</li>
+<li>Encaminhamento: encaminhou o que deveria resolver, ou resolveu o que deveria encaminhar.</li>
+<li>Ritmo e tom: pressa, insistência depois de um não, mais de um emoji, mais de 3 balões, apresentação repetida.</li>
+<li>Cadastro e agendamento: dados pedidos na ordem, confirmação por escrito, vídeo certo depois de agendar.</li>
+</ul></div>
+</div>
+<p class="nota">Preços usados: Sonnet 5.5 US$ 2 por milhão de tokens de entrada e US$ 10 de saída; Haiku 5.5 US$ 0,10 e US$ 0,50; Opus 5.5 US$ 4 e US$ 20, conforme a tabela de preços configurada na Celeste. Estimativa de 8 mil tokens por conversa avaliada e 4 mil por resposta verificada.</p>
+</div>
