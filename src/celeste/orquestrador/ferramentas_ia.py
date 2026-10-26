@@ -279,7 +279,9 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         if chave not in (ctx.conversa.get("horarios_oferecidos") or []):
             raise ValueError("horário não veio de buscar_horarios")
         a = ctx.ts.reagendar(int(e["id_agendamento"]), date.fromisoformat(e["data"]), e["hora"])
-        ctx.atualizar({"agendamento": {"data": e["data"], "hora": e["hora"]}, "status": "Agendado"})
+        ag = dict(ctx.conversa.get("agendamento") or {})   # 26/10/2026: mantém o profissional; nova data zera os lembretes (C48/C24/CHOJ) e a confirmação
+        ag.update({"data": e["data"], "hora": e["hora"], "status": "Marcado"})
+        ctx.atualizar({"agendamento": ag, "status": "Agendado", "rotinas_consulta": {}, "reagendado_em": datetime.now(timezone.utc)})
         return {"ok": True, "data": a.get("data"), "hora": a.get("hora")}
 
     if nome == "cancelar":
