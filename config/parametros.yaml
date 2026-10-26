@@ -466,7 +466,7 @@ disparos:
     T4: resgate_solicitacao_encerramento     # "vamos encerrar a sua solicitação" (UTILITY, aprovado pela clínica em 14/10)
     TR: retorno_combinado                    # "como combinamos, estou retomando a nossa conversa" (UTILITY; decisão da clínica em 25/10: substitui o T2 no retorno em data pedida)
   templates_alternativos:               # versões com gancho de vídeo, cadastradas em 15/10/2026 (aprovadas pela clínica); entram na esteira só depois da aprovação da Meta e do fluxo dos botões
-    T3v: { nome: resgate_video_dra_luciana,  quando: "Alternativa ao T3 (3 dias depois do T2): oferece o vídeo da Dra. sobre queda de cabelo. 'Quero ver o vídeo' → vídeo dra_luciana + Celeste.", video: dra_luciana }
+    T3v: { nome: resgate_video_solicitacao_pendente,  quando: "Alternativa ao T3 (3 dias depois do T2): oferece o vídeo da Dra. sobre queda de cabelo (UTILITY, cadastrado em 26/10/2026 no lugar de resgate_video_dra_luciana, que a Meta aprovou como MARKETING). 'Quero ver o vídeo' → vídeo dra_luciana + Celeste.", video: dra_luciana }
     T4v: { nome: resgate_video_encerramento, quando: "Alternativa ao T4 (7 dias depois do T3): antes de encerrar, oferece um vídeo. 'Quero ver o vídeo' → vídeo casos_sucesso + Celeste; 'Pode encerrar' → opt-out.", video: casos_sucesso }
   status_apos_template: { T1: "Template enviado (1°)", T2: "Template enviado (2°)", T3: "Template enviado (2°)", T4: "Template enviado (1°)", TR: "Template enviado (2°)" }
   quando:                               # descrição para o painel (página Templates)
