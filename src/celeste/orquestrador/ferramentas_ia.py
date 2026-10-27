@@ -142,6 +142,30 @@ def _nome_completo_valido(nome: str) -> tuple[bool, str]:
     return nome_completo_valido(nome)
 
 
+def _registrar_paciente(ctx: "Contexto", id_paciente: int, nome: str | None, confirmado: bool, cadastro_generico: bool | None = None) -> None:
+    """27/10/2026: um cadastro por pessoa. O primeiro paciente da conversa (ou o mesmo, pelo nome) vira o principal, que é quem fala
+    no WhatsApp; outra pessoa (o filho, a esposa) entra em `pacientes_adicionais`, sem trocar o principal nem o nome da conversa."""
+    conv = ctx.conversa
+    atual, nome_atual = conv.get("id_paciente_tisaude"), conv.get("paciente_tisaude_nome") or ""
+    principal = not atual or int(atual) == int(id_paciente) or (not conv.get("identidade_confirmada") and not _mesma_pessoa(nome_atual, conv.get("nome") or ""))
+    if atual and int(atual) != int(id_paciente) and (conv.get("identidade_confirmada") or _mesma_pessoa(nome_atual, conv.get("nome") or "")):
+        principal = False   # o principal já está confirmado como quem fala: este é outra pessoa
+    campos: dict
+    if principal:
+        campos = {"id_paciente_tisaude": int(id_paciente), "paciente_tisaude_nome": nome or ""}
+        if confirmado:
+            campos["identidade_confirmada"] = True
+        if not conv.get("nome") or _mesma_pessoa(nome or "", conv.get("nome") or ""):
+            campos["nome"] = nome or conv.get("nome")
+    else:
+        extras = [p for p in (conv.get("pacientes_adicionais") or []) if int(p.get("id") or 0) != int(id_paciente)]
+        campos = {"pacientes_adicionais": extras + [{"id": int(id_paciente), "nome": nome or ""}]}
+    if cadastro_generico is not None and principal:
+        campos["cadastro_generico"] = cadastro_generico
+    conv.update(campos)
+    ctx.atualizar(campos)
+
+
 def executar(nome: str, entrada: dict, ctx: Contexto) -> tuple[str, bool]:
     """Executa a ferramenta; retorna (resultado_json, is_error)."""
     try:
@@ -209,9 +233,13 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
                  "como_conheceu": g.get("indicado", ""), "cep": g.get("cep", ""), "numero": g.get("numero", ""), "complemento": g.get("complemento", "")}
         elif not re.sub(r"\D", "", e.get("cpf") or ""):
             raise ValueError("CPF não informado: peça o CPF; só cadastre sem CPF com dados_genericos=true, depois de o lead recusar os dados após UMA insistência")
-        if ctx.conversa.get("id_paciente_tisaude") and (ctx.conversa.get("identidade_confirmada")
-                                                        or _mesma_pessoa(ctx.conversa.get("paciente_tisaude_nome") or "", e["nome"])):
+        # 27/10/2026 (decisão da clínica): um cadastro por paciente. Só reaproveita o cadastro da conversa se for a MESMA pessoa
+        # pelo nome; antes, "identidade confirmada" bastava e o cadastro do filho podia cair no do pai que estava falando.
+        if ctx.conversa.get("id_paciente_tisaude") and _mesma_pessoa(ctx.conversa.get("paciente_tisaude_nome") or "", e["nome"]):
             return {"id": ctx.conversa["id_paciente_tisaude"], "aviso": "paciente já existia; use este id"}
+        for p in (ctx.conversa.get("pacientes_adicionais") or []):   # segunda pessoa já cadastrada nesta conversa
+            if p.get("nome") and _mesma_pessoa(p["nome"], e["nome"]):
+                return {"id": p["id"], "aviso": f"{p['nome']} já tem cadastro nesta conversa; use este id"}
         end = ctx.viacep(e["cep"])
         if not end:
             raise ValueError("CEP inválido: peça ao lead para conferir o CEP")
@@ -219,14 +247,14 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
             raise ValueError("menor de idade: colete nome, parentesco e CPF do responsável antes de cadastrar")
         existente = ctx.ts.buscar_paciente(cpf=e["cpf"]) if re.sub(r"\D", "", e.get("cpf") or "") else None   # CPF já cadastrado: adota em vez de duplicar
         if isinstance(existente, dict) and existente.get("id"):
-            ctx.atualizar({"id_paciente_tisaude": existente["id"], "paciente_tisaude_nome": existente.get("nome"), "identidade_confirmada": True})
+            _registrar_paciente(ctx, existente["id"], existente.get("nome"), confirmado=True)
             return {"id": existente["id"], "aviso": f"este CPF já está cadastrado como {existente.get('nome')}; use este id para agendar (não criei cadastro novo)"}
         p = ctx.ts.criar_paciente({"nome": e["nome"], "cpf": e["cpf"], "nascimento": e["nascimento"], "sexo": e["sexo"],
                                    "celular": ctx.telefone, "email": e["email"], "indicado": e["como_conheceu"], "cep": e["cep"],
                                    "n": e["numero"], "apt": e.get("complemento", ""), **end,
                                    "responsavel": e.get("responsavel", ""), "parentesco_responsavel": e.get("parentesco_responsavel", ""),
                                    "cpf_responsavel": e.get("cpf_responsavel", "")})
-        ctx.atualizar({"id_paciente_tisaude": p["id"], "nome": e["nome"], "cadastro_generico": bool(e.get("dados_genericos"))})
+        _registrar_paciente(ctx, p["id"], e["nome"], confirmado=False, cadastro_generico=bool(e.get("dados_genericos")))
         if e.get("dados_genericos"):
             return {"id": p["id"], "aviso": "cadastro feito com dados genéricos e sem CPF; depois de agendar, avise o lead: " + str((config.parametros().get("cadastro_generico") or {}).get("aviso_ao_lead", ""))}
         return {"id": p["id"]}

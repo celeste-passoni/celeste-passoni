@@ -85,7 +85,9 @@ def contexto_lead(conversa: dict) -> str:
         nome_lead = (conversa.get("nome") or "").strip()
         bate = bool(nome_ts and nome_lead) and nome_lead.split()[0].lower() in nome_ts.lower()
         if bate or not nome_ts or conversa.get("identidade_confirmada"):
-            linhas.append(f"- TI Saúde: JÁ É PACIENTE cadastrado (id {conversa['id_paciente_tisaude']}" + (f", nome {nome_ts}" if nome_ts else "") + "). Não chame buscar_paciente nem criar_paciente; use este id para agendar.")
+            linhas.append(f"- TI Saúde: JÁ É PACIENTE cadastrado (id {conversa['id_paciente_tisaude']}" + (f", nome {nome_ts}" if nome_ts else "") + "). "
+                          "Para a consulta DELE(A), não chame buscar_paciente nem criar_paciente; use este id. Se a consulta for para OUTRA pessoa "
+                          "(filho, cônjuge), ela precisa do cadastro próprio: buscar_paciente com o CPF dela ou, se não existir, os dados dela e criar_paciente.")
         else:
             linhas.append(f"- TI Saúde: este NÚMERO está no cadastro de outra pessoa: {nome_ts} (id {conversa['id_paciente_tisaude']}). "
                           f"ANTES de agendar, confirme com naturalidade se a consulta é para {nome_ts.split()[0].title()} ou para quem está falando "
@@ -99,6 +101,10 @@ def contexto_lead(conversa: dict) -> str:
                       "Nunca diga que o CPF 'está vinculado a outra pessoa' sem o resultado de buscar_paciente. Só se o CPF não existir, faça o pré-cadastro e use criar_paciente.")
     elif conversa.get("paciente_tisaude_ausente"):
         linhas.append("- TI Saúde: número NÃO cadastrado (já verificado pelo sistema). Não chame buscar_paciente; faça o pré-cadastro antes de agendar.")
+    extras = conversa.get("pacientes_adicionais") or []
+    if extras:
+        linhas.append("- OUTROS PACIENTES já cadastrados nesta conversa (cada um com o próprio cadastro; para agendar para eles, use o id deles): "
+                      + "; ".join(f"{p.get('nome') or '?'} (id {p['id']})" for p in extras))
     ag = conversa.get("agendamento") or {}
     if conversa.get("id_agendamento_tisaude"):
         ida = conversa["id_agendamento_tisaude"]

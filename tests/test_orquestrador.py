@@ -363,6 +363,19 @@ def test_criar_paciente_nao_reaproveita_id_de_outra_pessoa():
     conv2 = {"id": "c2", "id_paciente_tisaude": 4942, "paciente_tisaude_nome": "ARTHUR SPERRY CEZAR FILHO"}
     saida, erro = ferramentas_ia.executar("criar_paciente", {**e, "nome": "Arthur Cezar"}, _ctx(conv2, ts))
     assert '"id": 4942' in saida
+    # 27/10/2026: identidade confirmada do pai NÃO faz o cadastro do filho cair no dele
+    ts.criar_paciente.return_value = {"id": 778}
+    conv4 = {"id": "c4", "nome": "Curti", "id_paciente_tisaude": 101, "paciente_tisaude_nome": "CURTI LOPES", "identidade_confirmada": True}
+    ctx4 = _ctx(conv4, ts); ctx4.atualizar = lambda campos: conv4.update(campos)
+    filho = {**e, "nome": "Pedro Lopes", "cpf": "39053344705", "nascimento": "01/01/2015", "responsavel": "Curti Lopes", "parentesco_responsavel": "Pai", "cpf_responsavel": "69800545034"}
+    saida, erro = ferramentas_ia.executar("criar_paciente", filho, ctx4)
+    assert not erro and '"id": 778' in saida and ts.criar_paciente.called
+    assert conv4["id_paciente_tisaude"] == 101 and conv4["nome"] == "Curti"            # o pai continua sendo o principal
+    assert conv4["pacientes_adicionais"] == [{"id": 778, "nome": "Pedro Lopes"}]
+    ts.criar_paciente.reset_mock()
+    saida, erro = ferramentas_ia.executar("criar_paciente", filho, ctx4)                 # de novo: reaproveita o do Pedro
+    assert '"id": 778' in saida and not ts.criar_paciente.called
+    assert "OUTROS PACIENTES" in prompt.contexto_lead(conv4) and "Pedro Lopes (id 778)" in prompt.contexto_lead(conv4)
     # CPF já existe em outro cadastro → adota em vez de duplicar
     ts.buscar_paciente.return_value = {"id": 2301, "nome": "TATIANA FREITAS"}
     conv3 = {"id": "c3"}; ctx3 = _ctx(conv3, ts); ctx3.atualizar = lambda campos: conv3.update(campos)
