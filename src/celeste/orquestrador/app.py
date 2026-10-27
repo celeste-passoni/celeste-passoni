@@ -606,7 +606,7 @@ def _historico(ref, mt: meta.Meta) -> tuple[list[dict], str | None]:
         turnos.insert(0, {"role": "user", "content": "[início da conversa — a Celeste enviou a primeira mensagem]"})
     # o motor injeta o contexto do lead no 1º turno se ele for string: compactamos blocos só-texto em string
     for t in turnos:
-        if t["role"] == "user" and all(b.get("type") == "text" for b in t["content"]):
+        if t["role"] == "user" and isinstance(t["content"], list) and all(b.get("type") == "text" for b in t["content"]):   # 27/10: o turno "[início…]" já é string
             t["content"] = "\n".join(b["text"] for b in t["content"])
     return turnos, ultimo_wamid
 

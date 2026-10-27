@@ -964,3 +964,20 @@ def test_espelhar_lead_cria_fila_para_numero_de_teste(monkeypatch):
     ref.get.return_value.exists = True; ref.set.reset_mock()
     oapp._espelhar_lead({"id": "c1", "contato": "5511900000001", "status": "Em conversa"})
     assert "teste" not in ref.set.call_args.args[0]   # lead existente: só atualiza
+
+
+def test_historico_conversa_que_comeca_com_template(monkeypatch):
+    # 27/10/2026: lead tocou "Quero continuar" no T1 e a Celeste não respondeu (AttributeError no 1º turno, que já é string)
+    from datetime import datetime, timezone
+    from google.cloud import firestore
+    monkeypatch.setattr(firestore, "Client", MagicMock())
+    from celeste.orquestrador import app as orq
+    msgs = [SimpleNamespace(id="w1", to_dict=lambda: {"direcao": "template", "tipo": "template", "texto": "Olá, Carlos! Aqui é a Celeste",
+                                                       "recebido_em": datetime(2026, 10, 27, 22, 12, tzinfo=timezone.utc)}),
+            SimpleNamespace(id="w2", to_dict=lambda: {"direcao": "lead", "tipo": "button", "texto": "Quero continuar",
+                                                       "recebido_em": datetime(2026, 10, 27, 22, 13, tzinfo=timezone.utc)})]
+    col = MagicMock(); col.order_by.return_value.stream.return_value = msgs
+    ref = MagicMock(); ref.collection.return_value = col
+    turnos, ultimo = orq._historico(ref, MagicMock())
+    assert [t["role"] for t in turnos] == ["user", "assistant", "user"]
+    assert isinstance(turnos[0]["content"], str) and "Quero continuar" in turnos[2]["content"] and ultimo == "w2"
