@@ -110,26 +110,49 @@ def test_horario_de_disparo():
 
 
 def test_rotinas_consulta_decidir_e_parametros():
-    from datetime import date
     from zoneinfo import ZoneInfo
     from celeste.jobs import rotinas_consulta as rc
     F = ZoneInfo("America/Sao_Paulo")
-    base = {"status": "Agendado", "modo": "ia", "nome": "Ana Souza", "agendado_em": datetime(2026, 10, 20, 15, 0, tzinfo=F),
-            "agendamento": {"data": "2026-10-29", "hora": "14:00", "profissional": "dra_luciana"}}
-    assert rc.decidir(dict(base), datetime(2026, 10, 27, 10, 5, tzinfo=F)) == "C48"
-    assert rc.decidir(dict(base), datetime(2026, 10, 27, 9, 0, tzinfo=F)) is None                      # antes das 10h
-    assert rc.decidir(dict(base, rotinas_consulta={"C48_em": 1}), datetime(2026, 10, 27, 11, 0, tzinfo=F)) is None
-    assert rc.decidir(dict(base), datetime(2026, 10, 28, 10, 0, tzinfo=F)) == "C24"
-    assert rc.decidir(dict(base, rotinas_consulta={"confirmado_em": 1}), datetime(2026, 10, 28, 10, 0, tzinfo=F)) is None   # já confirmou
-    assert rc.decidir(dict(base), datetime(2026, 10, 29, 7, 30, tzinfo=F)) == "CHOJ"
-    assert rc.decidir(dict(base), datetime(2026, 10, 29, 14, 10, tzinfo=F)) is None                    # consulta já passou
-    assert rc.decidir(dict(base, status="Em conversa"), datetime(2026, 10, 27, 10, 5, tzinfo=F)) is None
-    assert rc.decidir(dict(base, agendamento=dict(base["agendamento"], status="Cancelado")), datetime(2026, 10, 27, 10, 5, tzinfo=F)) is None
-    assert rc.decidir(dict(base, agendado_em=datetime(2026, 10, 27, 9, 0, tzinfo=F)), datetime(2026, 10, 27, 10, 5, tzinfo=F)) is None  # marcou hoje
-    assert rc.parametros("C48", base) == ["Ana", "quinta-feira, 29/10", "14h"]
-    assert rc.parametros("CHOJ", dict(base, agendamento={"data": "2026-10-29", "hora": "09:30"})) == ["Ana", "9h30"]
-    assert "quinta-feira, 29/10, às 14h" in rc.renderizar("C48", base) and "[botões: Confirmar presença · Preciso remarcar]" in rc.renderizar("C48", base)
-    assert "HOJE às 14h" in rc.renderizar("CHOJ", base)
+    c = {"id_agendamento": 10, "id_paciente": 1, "paciente_nome": "Ana Souza", "profissional": "dra_luciana", "data": "2026-10-29", "hora": "14:00",
+         "status": "Marcado", "agendado_em": datetime(2026, 10, 20, 15, 0, tzinfo=F), "rotinas": {}}
+    assert rc.decidir(dict(c), datetime(2026, 10, 27, 10, 5, tzinfo=F)) == "C48"
+    assert rc.decidir(dict(c), datetime(2026, 10, 27, 9, 0, tzinfo=F)) is None                      # antes das 10h
+    assert rc.decidir(dict(c, rotinas={"C48_em": 1}), datetime(2026, 10, 27, 11, 0, tzinfo=F)) is None
+    assert rc.decidir(dict(c), datetime(2026, 10, 28, 10, 0, tzinfo=F)) == "C24"
+    assert rc.decidir(dict(c, rotinas={"confirmado_em": 1}), datetime(2026, 10, 28, 10, 0, tzinfo=F)) is None   # já confirmou
+    assert rc.decidir(dict(c), datetime(2026, 10, 29, 7, 30, tzinfo=F)) == "CHOJ"
+    assert rc.decidir(dict(c), datetime(2026, 10, 29, 14, 10, tzinfo=F)) is None                    # consulta já passou
+    assert rc.decidir(dict(c, status="Desmarcado"), datetime(2026, 10, 27, 10, 5, tzinfo=F)) is None
+    assert rc.decidir(dict(c, agendado_em=datetime(2026, 10, 27, 9, 0, tzinfo=F)), datetime(2026, 10, 27, 10, 5, tzinfo=F)) is None  # marcou hoje
+    conv = {"status": "Agendado", "modo": "ia", "nome": "Ana Souza", "consultas": [c]}
+    assert [cod for _, cod in rc.pendentes(conv, datetime(2026, 10, 27, 10, 5, tzinfo=F))] == ["C48"]
+    assert rc.pendentes(dict(conv, status="Em conversa"), datetime(2026, 10, 27, 10, 5, tzinfo=F)) == []
+    assert rc.parametros("C48", conv, c) == ["Ana", "quinta-feira, 29/10", "14h"]
+    assert rc.parametros("CHOJ", conv, dict(c, hora="09:30")) == ["Ana", "9h30"]
+    assert "quinta-feira, 29/10, às 14h" in rc.renderizar("C48", conv, c) and "[botões: Confirmar presença · Preciso remarcar]" in rc.renderizar("C48", conv, c)
+    assert "HOJE às 14h" in rc.renderizar("CHOJ", conv, c)
+    # conversa antiga (uma consulta só nos campos antigos) continua funcionando
+    antiga = {"status": "Agendado", "modo": "ia", "nome": "Ana Souza", "id_agendamento_tisaude": 10, "agendado_em": c["agendado_em"],
+              "agendamento": {"data": "2026-10-29", "hora": "14:00", "profissional": "dra_luciana"}}
+    assert [cod for _, cod in rc.pendentes(antiga, datetime(2026, 10, 27, 10, 5, tzinfo=F))] == ["C48"]
+
+
+def test_rotinas_consulta_pai_e_filho():
+    from zoneinfo import ZoneInfo
+    from celeste.jobs import rotinas_consulta as rc
+    F = ZoneInfo("America/Sao_Paulo")
+    antes = datetime(2026, 10, 20, 15, 0, tzinfo=F)
+    pai = {"id_agendamento": 10, "id_paciente": 1, "paciente_nome": "Curti Lopes", "profissional": "dr_lucas", "data": "2026-10-29", "hora": "14:00",
+           "status": "Marcado", "agendado_em": antes, "rotinas": {}}
+    filho = {"id_agendamento": 11, "id_paciente": 2, "paciente_nome": "Pedro Lopes", "profissional": "dr_lucas", "data": "2026-10-30", "hora": "10:00",
+             "status": "Marcado", "agendado_em": antes, "rotinas": {}}
+    conv = {"status": "Agendado", "modo": "ia", "nome": "Curti", "consultas": [pai, filho]}
+    # 28/10 às 10h: véspera do pai (C24) e 48 h do filho (C48), cada um com o seu lembrete
+    pend = rc.pendentes(conv, datetime(2026, 10, 28, 10, 0, tzinfo=F))
+    assert sorted((c["id_agendamento"], cod) for c, cod in pend) == [(10, "C24"), (11, "C48")]
+    assert rc.parametros("C48", conv, filho) == ["Curti", "sexta-feira, 30/10 (Pedro)", "10h"]       # nome do filho junto da data
+    assert rc.parametros("C24", conv, pai) == ["Curti", "quinta-feira, 29/10", "14h"]                # consulta do próprio lead: sem nome
+    assert rc.parametros("CHOJ", conv, filho) == ["Curti", "10h (Pedro)"]
 
 
 def test_lembretes_elegibilidade():

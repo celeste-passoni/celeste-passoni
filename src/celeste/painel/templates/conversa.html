@@ -19,7 +19,8 @@
       <b>Template de origem:</b> {{ c.template_origem or '—' }} · <b>Ciclo:</b> {{ c.ciclo or '—' }}<br>
       <b>Lead criado na clínica em:</b> {{ lead.lead_created_at|local or '—' }} · <b>Status na clínica:</b> {{ lead.status_clinica or '—' }}<br>
       <b>Paciente TI Saúde:</b> {{ c.id_paciente_tisaude or '—' }} · <b>Agendamento:</b> {{ c.id_agendamento_tisaude or '—' }}
-      {% if c.agendamento %}<br><b>Consulta:</b> {{ c.agendamento.data }} {{ c.agendamento.hora }} · {{ c.agendamento.profissional }}{% endif %}
+      {% if c.consultas %}{% for x in c.consultas %}<br><b>Consulta:</b> {{ x.paciente_nome or '—' }} · {{ x.data }} {{ x.hora }} · {{ x.profissional }} · {{ x.status }} <span class="muted">(id {{ x.id_agendamento }})</span>{% endfor %}
+      {% elif c.agendamento %}<br><b>Consulta:</b> {{ c.agendamento.data }} {{ c.agendamento.hora }} · {{ c.agendamento.profissional }}{% endif %}
       {% if c.motivo_encaminhamento %}<br><b>Encaminhado por:</b> {{ c.motivo_encaminhamento }}{% endif %}
       {% if c.proximo_recontato_em %}<br><b>Recontato em:</b> {{ c.proximo_recontato_em }}{% endif %}</p>
       <p><b>Vídeos enviados:</b> {{ (c.videos_enviados or [])|join(', ') or '—' }}</p>

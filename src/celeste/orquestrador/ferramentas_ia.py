@@ -12,6 +12,7 @@ from datetime import date, datetime, timezone
 from typing import Any, Callable
 
 from celeste.comum import config
+from celeste.comum import consultas as cons
 from celeste.ferramentas import tisaude as ts
 
 log = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ FERRAMENTAS: list[dict] = [
          "cpf": {"type": "string", "description": "CPF informado pelo lead (11 dígitos, com ou sem pontuação); vazio se não informou"},
          "nome_completo": {"type": "string", "description": "nome completo informado pelo lead, para desempatar quando o telefone tem vários cadastros; vazio se não tiver"}},
          "required": ["cpf", "nome_completo"], "additionalProperties": False}},
-    {"name": "criar_paciente", "description": "Cria o cadastro do lead no TI Saúde. Só chame com TODOS os campos coletados; nunca para quem já existe.",
+    {"name": "criar_paciente", "description": "Cria o cadastro de UM paciente no TI Saúde. Um cadastro por pessoa: se o lead agenda para ele e para outra pessoa (o filho, por exemplo), cada um tem o seu, com os dados dele; nunca reaproveite dados ou cadastro de uma pessoa para outra. Só chame com TODOS os campos coletados; nunca para quem já existe.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "nome": {"type": "string"}, "cpf": {"type": "string"}, "nascimento": {"type": "string", "description": "dd/mm/AAAA"},
          "sexo": {"type": "string", "enum": ["Masculino", "Feminino"]}, "email": {"type": "string"},
@@ -44,8 +45,9 @@ FERRAMENTAS: list[dict] = [
          "numero": {"type": "string", "description": "número da residência; obrigatório se o CEP mudou"},
          "complemento": {"type": "string"},
          "como_conheceu": {"type": "string", "description": "valor do sistema para 'Encaminhado por'; vazio se não muda"},
-         "responsavel": {"type": "string"}, "parentesco_responsavel": {"type": "string"}, "cpf_responsavel": {"type": "string"}},
-         "required": ["cpf", "email", "celular", "nascimento", "sexo", "cep", "numero", "complemento", "como_conheceu", "responsavel", "parentesco_responsavel", "cpf_responsavel"],
+         "responsavel": {"type": "string"}, "parentesco_responsavel": {"type": "string"}, "cpf_responsavel": {"type": "string"},
+         "id_paciente": {"type": "integer", "description": "id do paciente a alterar, um dos pacientes desta conversa (veja o contexto); 0 = o próprio lead"}},
+         "required": ["cpf", "email", "celular", "nascimento", "sexo", "cep", "numero", "complemento", "como_conheceu", "responsavel", "parentesco_responsavel", "cpf_responsavel", "id_paciente"],
          "additionalProperties": False}},
     {"name": "buscar_horarios", "description": "Devolve ATÉ 2 horários LIVRES de consulta para UM profissional, do dia pedido (a_partir_de) ou, se esse dia não tiver vaga, do dia mais próximo com vaga (campo dia_pedido_sem_vaga). Só chame depois de saber com quem o lead quer (Dra. Luciana ou Dr. Lucas) e qual dia da semana fica melhor para ele; se não souber, pergunte antes. Uma chamada por resposta, nunca para os dois profissionais de uma vez. Ofereça só os horários devolvidos.",
      "strict": True, "input_schema": {"type": "object", "properties": {
@@ -53,17 +55,22 @@ FERRAMENTAS: list[dict] = [
          "a_partir_de": {"type": "string", "description": "AAAA-MM-DD ou vazio para a partir de hoje"},
          "dias": {"type": "integer", "description": "quantos dias à frente (1 a 30)"}},
          "required": ["profissional", "a_partir_de", "dias"], "additionalProperties": False}},
-    {"name": "agendar_consulta", "description": "Agenda a Consulta no TI Saúde em um horário que veio de buscar_horarios. Exige o id do paciente (de buscar_paciente ou criar_paciente).",
+    {"name": "agendar_consulta", "description": "Agenda UMA Consulta no TI Saúde em um horário que veio de buscar_horarios, para UM paciente desta conversa (id de buscar_paciente ou criar_paciente). Uma consulta por chamada; cada paciente tem no máximo uma consulta ativa (para mudar a data de quem já tem, use reagendar). Para outra pessoa, primeiro o cadastro dela.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "id_paciente": {"type": "integer"}, "profissional": {"type": "string", "enum": ["dra_luciana", "dr_lucas"]},
          "data": {"type": "string", "description": "AAAA-MM-DD"}, "hora": {"type": "string", "description": "HH:MM"}},
          "required": ["id_paciente", "profissional", "data", "hora"], "additionalProperties": False}},
-    {"name": "consultar_agendamento", "description": "Lê no TI Saúde o estado REAL da consulta agendada nesta conversa (data, hora, profissional, status). Chame SEMPRE que o lead falar da consulta marcada (quando é, confirmar, trocar, desmarcar, 'está marcada?') ANTES de responder. Nunca afirme nada sobre o agendamento sem esta consulta.",
-     "strict": True, "input_schema": {"type": "object", "properties": {}, "required": [], "additionalProperties": False}},
-    {"name": "reagendar", "description": "Muda data/hora de uma consulta que a Celeste agendou. O novo horário deve vir de buscar_horarios.",
+    {"name": "consultar_agendamento", "description": "Lê no TI Saúde o estado REAL das consultas desta conversa (data, hora, profissional, paciente, status). Chame SEMPRE que o lead falar de consulta marcada (quando é, confirmar, trocar, desmarcar, 'está marcada?') ANTES de responder; nunca afirme nada sobre agendamento sem ela. Com mais de uma consulta na conversa e o lead sem dizer de qual fala, devolva todas (id_agendamento 0) e PERGUNTE qual (pelo nome do paciente e a data) antes de confirmar, remarcar ou cancelar.",
+     "strict": True, "input_schema": {"type": "object", "properties": {
+         "id_agendamento": {"type": "integer", "description": "id de uma consulta desta conversa (veja o contexto); 0 = todas"}},
+         "required": ["id_agendamento"], "additionalProperties": False}},
+    {"name": "reagendar", "description": "Muda data/hora de UMA consulta que a Celeste agendou nesta conversa (id_agendamento do contexto). Com mais de uma consulta e o lead sem dizer qual, pergunte antes. O novo horário deve vir de buscar_horarios, do mesmo profissional.",
      "strict": True, "input_schema": {"type": "object", "properties": {"id_agendamento": {"type": "integer"}, "data": {"type": "string"}, "hora": {"type": "string"}},
                                       "required": ["id_agendamento", "data", "hora"], "additionalProperties": False}},
-    {"name": "cancelar", "description": "Desmarca uma consulta que a Celeste agendou. SÓ pode ser chamada depois de UMA tentativa: você ofereceu uma alternativa (remarcar, Dr. Lucas, esclarecer a dúvida) em uma mensagem e o lead respondeu que quer cancelar mesmo assim. Nunca uma segunda tentativa. Chamar antes da alternativa devolve erro.",
+    {"name": "confirmar_presenca", "description": "Confirma a presença em UMA consulta que a Celeste agendou nesta conversa (status Confirmado no TI Saúde). Use quando o lead escrever que confirma (o botão 'Confirmar presença' o sistema trata sozinho). Com mais de uma consulta e o lead sem dizer qual, pergunte antes.",
+     "strict": True, "input_schema": {"type": "object", "properties": {"id_agendamento": {"type": "integer"}},
+                                      "required": ["id_agendamento"], "additionalProperties": False}},
+    {"name": "cancelar", "description": "Desmarca UMA consulta que a Celeste agendou nesta conversa (id_agendamento do contexto; com mais de uma e o lead sem dizer qual, pergunte antes). SÓ pode ser chamada depois de UMA tentativa: você ofereceu uma alternativa (remarcar, Dr. Lucas, esclarecer a dúvida) em uma mensagem e o lead respondeu que quer cancelar mesmo assim. Nunca uma segunda tentativa. Chamar antes da alternativa devolve erro.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "id_agendamento": {"type": "integer"},
          "motivo_do_lead": {"type": "string", "description": "o motivo que o LEAD disse, com as palavras dele (ex.: 'vai viajar na data', 'achou caro'); vazio se ele não disse"},
@@ -142,6 +149,39 @@ def _nome_completo_valido(nome: str) -> tuple[bool, str]:
     return nome_completo_valido(nome)
 
 
+def _gravar(ctx: "Contexto", campos: dict) -> None:
+    ctx.conversa.update(campos)
+    ctx.atualizar(campos)
+
+
+def _registrar_paciente(ctx: "Contexto", id_paciente: int, nome: str | None, confirmado: bool = True) -> None:
+    """Põe o paciente na lista da conversa (27/10/2026). O paciente principal (quem fala no WhatsApp) só muda se ainda não
+    houver um confirmado; senão é uma segunda pessoa (o filho, por exemplo) e entra só na lista."""
+    conv = ctx.conversa
+    campos: dict = {"pacientes": cons.com_paciente(cons.pacientes(conv), id_paciente, nome)}
+    atual = conv.get("id_paciente_tisaude")
+    if not atual or not conv.get("identidade_confirmada") or int(atual) == int(id_paciente):
+        campos.update({"id_paciente_tisaude": id_paciente, "paciente_tisaude_nome": nome, "identidade_confirmada": bool(confirmado or conv.get("identidade_confirmada"))})
+    _gravar(ctx, campos)
+
+
+def _ids_pacientes(conv: dict) -> set[int]:
+    ids = {int(p["id"]) for p in cons.pacientes(conv) if p.get("id")}
+    if conv.get("id_paciente_tisaude"):
+        ids.add(int(conv["id_paciente_tisaude"]))
+    return ids
+
+
+def _consulta_da_conversa(ctx: "Contexto", id_agendamento: int) -> tuple[list[dict], dict]:
+    cs = cons.lista(ctx.conversa)
+    c = cons.achar(cs, id_agendamento)
+    if not c:
+        ativas = cons.ativas(cs)
+        lista = "; ".join(f"id {x['id_agendamento']}: {cons.rotulo(x)}" for x in ativas) or "nenhuma"
+        raise ValueError(f"o id_agendamento {id_agendamento} não é de uma consulta desta conversa. Consultas ativas: {lista}")
+    return cs, c
+
+
 def executar(nome: str, entrada: dict, ctx: Contexto) -> tuple[str, bool]:
     """Executa a ferramenta; retorna (resultado_json, is_error)."""
     try:
@@ -168,11 +208,14 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
                 return {"encontrado": False, "aviso": "não localizei com segurança pelo nome; peça o CPF ao lead e chame buscar_paciente de novo"}
         else:
             raise ValueError("informe o CPF (ou o nome completo) do lead")
-        ctx.atualizar({"id_paciente_tisaude": p["id"], "paciente_tisaude_nome": p.get("nome"), "identidade_confirmada": True, "pacientes_mesmo_numero": []})
+        _registrar_paciente(ctx, p["id"], p.get("nome"))
+        _gravar(ctx, {"pacientes_mesmo_numero": []})
         return {"encontrado": True, "id": p["id"], "nome": p.get("nome"), "aviso": "é este o paciente; use este id para agendar"}
 
     if nome == "atualizar_cadastro":
-        idp = ctx.conversa.get("id_paciente_tisaude")
+        idp = int(e.get("id_paciente") or 0) or ctx.conversa.get("id_paciente_tisaude")
+        if idp and int(idp) not in _ids_pacientes(ctx.conversa):
+            raise ValueError("este id_paciente não é de um paciente desta conversa; use o id do contexto")
         if not idp:
             raise ValueError("paciente ainda não identificado: localize pelo CPF (buscar_paciente) antes de alterar o cadastro")
         if ctx.conversa.get("pacientes_mesmo_numero") and not ctx.conversa.get("identidade_confirmada"):
@@ -180,7 +223,7 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         mapa = {"cpf": "cpf", "email": "email", "celular": "celular", "nascimento": "nascimento", "sexo": "sexo", "como_conheceu": "indicado",
                 "complemento": "apt", "numero": "n", "responsavel": "responsavel", "parentesco_responsavel": "parentesco_responsavel",
                 "cpf_responsavel": "cpf_responsavel"}
-        mud = {mapa[k]: str(v).strip() for k, v in e.items() if k in mapa and str(v or "").strip()}
+        mud = {mapa[k]: str(v).strip() for k, v in e.items() if k in mapa and k != "id_paciente" and str(v or "").strip()}
         if str(e.get("cep") or "").strip():
             end = ctx.viacep(e["cep"])
             if not end:
@@ -192,7 +235,7 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
             raise ValueError("nenhum campo para atualizar")
         r = ctx.ts.atualizar_paciente(int(idp), mud)
         campos_conv = {"cadastro_atualizado_em": datetime.now(timezone.utc), "cadastro_campos_atualizados": sorted(mud)}
-        if "nome" in mud:
+        if "nome" in mud and int(idp) == int(ctx.conversa.get("id_paciente_tisaude") or 0):
             campos_conv["nome"] = mud["nome"]
         if "cpf" in mud and ctx.conversa.get("cadastro_generico"):
             campos_conv["cadastro_generico"] = False
@@ -209,8 +252,12 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
                  "como_conheceu": g.get("indicado", ""), "cep": g.get("cep", ""), "numero": g.get("numero", ""), "complemento": g.get("complemento", "")}
         elif not re.sub(r"\D", "", e.get("cpf") or ""):
             raise ValueError("CPF não informado: peça o CPF; só cadastre sem CPF com dados_genericos=true, depois de o lead recusar os dados após UMA insistência")
-        if ctx.conversa.get("id_paciente_tisaude") and (ctx.conversa.get("identidade_confirmada")
-                                                        or _mesma_pessoa(ctx.conversa.get("paciente_tisaude_nome") or "", e["nome"])):
+        # 27/10/2026: só reaproveita um cadastro se for da MESMA pessoa (pelo nome). Antes, "identidade confirmada" bastava,
+        # e o cadastro do filho podia cair no do pai que estava falando.
+        for p in cons.pacientes(ctx.conversa):
+            if p.get("nome") and _mesma_pessoa(p["nome"], e["nome"]):
+                return {"id": p["id"], "aviso": f"{p['nome']} já tem cadastro nesta conversa; use este id"}
+        if ctx.conversa.get("id_paciente_tisaude") and _mesma_pessoa(ctx.conversa.get("paciente_tisaude_nome") or "", e["nome"]):
             return {"id": ctx.conversa["id_paciente_tisaude"], "aviso": "paciente já existia; use este id"}
         end = ctx.viacep(e["cep"])
         if not end:
@@ -219,14 +266,20 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
             raise ValueError("menor de idade: colete nome, parentesco e CPF do responsável antes de cadastrar")
         existente = ctx.ts.buscar_paciente(cpf=e["cpf"]) if re.sub(r"\D", "", e.get("cpf") or "") else None   # CPF já cadastrado: adota em vez de duplicar
         if isinstance(existente, dict) and existente.get("id"):
-            ctx.atualizar({"id_paciente_tisaude": existente["id"], "paciente_tisaude_nome": existente.get("nome"), "identidade_confirmada": True})
+            _registrar_paciente(ctx, existente["id"], existente.get("nome"))
             return {"id": existente["id"], "aviso": f"este CPF já está cadastrado como {existente.get('nome')}; use este id para agendar (não criei cadastro novo)"}
         p = ctx.ts.criar_paciente({"nome": e["nome"], "cpf": e["cpf"], "nascimento": e["nascimento"], "sexo": e["sexo"],
                                    "celular": ctx.telefone, "email": e["email"], "indicado": e["como_conheceu"], "cep": e["cep"],
                                    "n": e["numero"], "apt": e.get("complemento", ""), **end,
                                    "responsavel": e.get("responsavel", ""), "parentesco_responsavel": e.get("parentesco_responsavel", ""),
                                    "cpf_responsavel": e.get("cpf_responsavel", "")})
-        ctx.atualizar({"id_paciente_tisaude": p["id"], "nome": e["nome"], "cadastro_generico": bool(e.get("dados_genericos"))})
+        era_o_primeiro = not cons.pacientes(ctx.conversa)
+        _registrar_paciente(ctx, p["id"], e["nome"])
+        extra: dict = {"cadastro_generico": bool(e.get("dados_genericos"))}
+        contato = cons.primeiro_nome(ctx.conversa.get("nome"))
+        if era_o_primeiro and (not contato or contato.lower() == cons.primeiro_nome(e["nome"]).lower()):
+            extra["nome"] = e["nome"]   # nome completo de quem fala; o cadastro de outra pessoa não troca o nome da conversa
+        _gravar(ctx, extra)
         if e.get("dados_genericos"):
             return {"id": p["id"], "aviso": "cadastro feito com dados genéricos e sem CPF; depois de agendar, avise o lead: " + str((config.parametros().get("cadastro_generico") or {}).get("aviso_ao_lead", ""))}
         return {"id": p["id"]}
@@ -252,37 +305,77 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         chave = f"{e['data']} {e['hora']}"
         if chave not in (ctx.conversa.get("horarios_oferecidos") or []):
             raise ValueError("horário não veio de buscar_horarios; chame buscar_horarios e ofereça só o que está livre")
+        idp = int(e["id_paciente"])
+        if idp not in _ids_pacientes(ctx.conversa):
+            raise ValueError("este id_paciente não é de um paciente desta conversa: identifique (buscar_paciente) ou cadastre (criar_paciente) a pessoa antes")
+        cs = cons.lista(ctx.conversa)
+        ja = [c for c in cons.ativas(cs) if int(c.get("id_paciente") or 0) == idp]
+        if ja:
+            raise ValueError(f"este paciente já tem consulta ativa ({cons.rotulo(ja[0])}, id_agendamento {ja[0]['id_agendamento']}); "
+                             "uma consulta por paciente: para mudar a data, use reagendar")
         obs = f"Agendado pela Celeste (IA) via WhatsApp | frente {ctx.conversa.get('frente')} | conversa {ctx.conversa.get('id')}"
-        a = ctx.ts.agendar_consulta(id_paciente=int(e["id_paciente"]), profissional_id=e["profissional"],
+        a = ctx.ts.agendar_consulta(id_paciente=idp, profissional_id=e["profissional"],
                                     data=date.fromisoformat(e["data"]), hora=e["hora"], observacoes=obs)
-        ctx.atualizar({"id_agendamento_tisaude": a["id"], "status": "Agendado", "agendado_em": datetime.now(timezone.utc),
-                       "agendamento": {"data": e["data"], "hora": e["hora"], "profissional": e["profissional"]}})
-        return {"id_agendamento": a["id"], "data": e["data"], "hora": e["hora"], "status": ts.STATUS.get(a.get("status"))}
+        agora = datetime.now(timezone.utc)
+        nova = {"id_agendamento": int(a["id"]), "id_paciente": idp,
+                "paciente_nome": cons.nome_do_paciente(ctx.conversa, idp) or ctx.conversa.get("paciente_tisaude_nome") or ctx.conversa.get("nome") or "",
+                "profissional": e["profissional"], "data": e["data"], "hora": e["hora"], "status": "Marcado", "agendado_em": agora, "rotinas": {}}
+        cs.append(nova)
+        restantes = [h for h in (ctx.conversa.get("horarios_oferecidos") or []) if h != chave]   # o mesmo horário não serve para a próxima pessoa
+        _gravar(ctx, {**cons.campos(cs), "status": "Agendado", "agendado_em": agora, "horarios_oferecidos": restantes})
+        return {"id_agendamento": a["id"], "paciente": nova["paciente_nome"], "data": e["data"], "hora": e["hora"], "status": ts.STATUS.get(a.get("status")),
+                "consultas_ativas_na_conversa": len(cons.ativas(cs))}
 
     if nome == "consultar_agendamento":
-        ida = ctx.conversa.get("id_agendamento_tisaude")
-        if not ida:
+        cs = cons.lista(ctx.conversa)
+        alvo = int(e.get("id_agendamento") or 0)
+        if not cs:
             return {"agendada": False, "aviso": "não há consulta agendada nesta conversa"}
-        d = ctx.ts.detalhe_agendamento(int(ida))
+        if alvo:
+            cs_alvo = [_consulta_da_conversa(ctx, alvo)[1]]
+        else:   # todas as que ainda podem estar ativas (as já desmarcadas não precisam de nova leitura)
+            cs_alvo = cons.ativas(cs) or cs[-1:]
         cal = {36: "dr_lucas", 1: "dra_luciana"}
-        prof_nome = {"dr_lucas": "Dr. Lucas Vieira", "dra_luciana": "Dra. Luciana Passoni"}
-        ag = dict(ctx.conversa.get("agendamento") or {})
-        prof = cal.get(d.get("idCalendario"), ag.get("profissional"))
-        status = "Desmarcado" if (d.get("deletado") or d.get("status") == -2) else ts.STATUS.get(d.get("status"), str(d.get("status")))
-        ag.update({"data": str(d.get("data") or ag.get("data") or "")[:10], "hora": str(d.get("hora") or ag.get("hora") or "")[:5], "profissional": prof, "status": status})
-        ctx.atualizar({"agendamento": ag})
-        return {"agendada": status not in ("Desmarcado",), "id_agendamento": int(ida), "data": ag["data"], "hora": ag["hora"],
-                "profissional": prof_nome.get(prof, prof), "status": status, "aviso": "responda ao lead com exatamente estes dados"}
+        saida = []
+        for c in cs_alvo:
+            d = ctx.ts.detalhe_agendamento(int(c["id_agendamento"]))
+            prof = cal.get(d.get("idCalendario"), c.get("profissional"))
+            status = "Desmarcado" if (d.get("deletado") or d.get("status") == -2) else ts.STATUS.get(d.get("status"), str(d.get("status")))
+            c = dict(c, data=str(d.get("data") or c.get("data") or "")[:10], hora=str(d.get("hora") or c.get("hora") or "")[:5], profissional=prof, status=status)
+            cs = cons.substituir(cs, c)
+            saida.append({"id_agendamento": int(c["id_agendamento"]), "paciente": c.get("paciente_nome") or "", "data": c["data"], "hora": c["hora"],
+                          "profissional": cons.PROFISSIONAL.get(prof, prof), "status": status, "agendada": status != "Desmarcado"})
+        _gravar(ctx, cons.campos(cs))
+        if len(saida) == 1:
+            return {**saida[0], "aviso": "responda ao lead com exatamente estes dados"}
+        return {"agendada": any(x["agendada"] for x in saida), "consultas": saida,
+                "aviso": f"há {len(saida)} consultas nesta conversa. Se o lead não disse de qual está falando, pergunte qual (pelo nome do paciente e a data) "
+                         "antes de confirmar, remarcar ou cancelar. Responda com exatamente estes dados."}
 
     if nome == "reagendar":
         chave = f"{e['data']} {e['hora']}"
         if chave not in (ctx.conversa.get("horarios_oferecidos") or []):
             raise ValueError("horário não veio de buscar_horarios")
+        cs, c = _consulta_da_conversa(ctx, int(e["id_agendamento"]))
+        if not cons.ativa(c):
+            raise ValueError("esta consulta já foi desmarcada; para uma nova data, use agendar_consulta")
         a = ctx.ts.reagendar(int(e["id_agendamento"]), date.fromisoformat(e["data"]), e["hora"])
-        ag = dict(ctx.conversa.get("agendamento") or {})   # 26/10/2026: mantém o profissional; nova data zera os lembretes (C48/C24/CHOJ) e a confirmação
-        ag.update({"data": e["data"], "hora": e["hora"], "status": "Marcado"})
-        ctx.atualizar({"agendamento": ag, "status": "Agendado", "rotinas_consulta": {}, "reagendado_em": datetime.now(timezone.utc)})
-        return {"ok": True, "data": a.get("data"), "hora": a.get("hora")}
+        # mantém paciente e profissional; a nova data zera os lembretes (C48/C24/CHOJ) e a confirmação desta consulta
+        c = dict(c, data=e["data"], hora=e["hora"], status="Marcado", rotinas={}, reagendado_em=datetime.now(timezone.utc))
+        cs = cons.substituir(cs, c)
+        restantes = [h for h in (ctx.conversa.get("horarios_oferecidos") or []) if h != chave]
+        _gravar(ctx, {**cons.campos(cs), "status": "Agendado", "reagendado_em": datetime.now(timezone.utc), "horarios_oferecidos": restantes})
+        return {"ok": True, "paciente": c.get("paciente_nome") or "", "data": a.get("data") or e["data"], "hora": a.get("hora") or e["hora"]}
+
+    if nome == "confirmar_presenca":
+        cs, c = _consulta_da_conversa(ctx, int(e["id_agendamento"]))
+        if not cons.ativa(c):
+            raise ValueError("esta consulta foi desmarcada; não há o que confirmar")
+        ctx.ts.confirmar_presenca(int(e["id_agendamento"]))
+        rot = dict(c.get("rotinas") or {}); rot.update({"confirmado_em": datetime.now(timezone.utc), "confirmado_no_tisaude": True})
+        cs = cons.substituir(cs, dict(c, status="Confirmado", rotinas=rot))
+        _gravar(ctx, cons.campos(cs))
+        return {"ok": True, "paciente": c.get("paciente_nome") or "", "consulta": cons.rotulo(c), "aviso": "presença confirmada no sistema; agradeça e confirme ao lead em uma frase"}
 
     if nome == "cancelar":
         motivo = (e.get("motivo_do_lead") or "").strip() or "não informado"   # 26/10/2026: motivo é opcional; a alternativa e a confirmação não
@@ -291,10 +384,15 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
             raise ValueError("ainda não houve tentativa de solução: ofereça uma saída para o motivo (remarcar com horários de buscar_horarios, valor, dúvida) com escassez, e só cancele se o lead insistir")
         if not e.get("lead_confirmou_apos_solucao"):
             raise ValueError("o lead ainda não confirmou o cancelamento depois da solução oferecida; aguarde a resposta dele")
+        cs, c = _consulta_da_conversa(ctx, int(e["id_agendamento"]))
+        if not cons.ativa(c):
+            return {"ok": True, "aviso": "esta consulta já estava desmarcada"}
         ctx.ts.cancelar(int(e["id_agendamento"]), f"{motivo} | oferecido: {solucao}")
-        ctx.atualizar({"status": "Irá nos retornar", "id_agendamento_tisaude": None, "motivo_cancelamento": motivo, "solucao_oferecida": solucao,
-                       "horarios_oferecidos": []})
-        return {"ok": True}
+        cs = cons.substituir(cs, dict(c, status="Desmarcado", cancelado_em=datetime.now(timezone.utc), motivo_cancelamento=motivo))
+        restam = cons.ativas(cs)
+        _gravar(ctx, {**cons.campos(cs), "status": "Agendado" if restam else "Irá nos retornar", "motivo_cancelamento": motivo,
+                      "solucao_oferecida": solucao, "horarios_oferecidos": []})
+        return {"ok": True, "paciente": c.get("paciente_nome") or "", "consulta_cancelada": cons.rotulo(c), "consultas_ativas_restantes": len(restam)}
 
     if nome == "encaminhar_recepcao":
         ctx.avisar_recepcao(e["motivo"], e["resumo"])

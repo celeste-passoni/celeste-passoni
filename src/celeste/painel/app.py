@@ -309,6 +309,7 @@ def api_conversa(cid: str, _=Depends(autenticar)):
              "aberta": bool(c.get("aberta")), "origem": c.get("origem") or lead.get("origem"), "template_origem": c.get("template_origem"), "ciclo": c.get("ciclo"),
              "lead_created_at": _json_dt(lead.get("lead_created_at")), "status_clinica": lead.get("status_clinica"),
              "id_paciente_tisaude": c.get("id_paciente_tisaude"), "id_agendamento_tisaude": c.get("id_agendamento_tisaude"), "agendamento": c.get("agendamento"),
+             "consultas": [{k: x.get(k) for k in ("id_agendamento", "paciente_nome", "profissional", "data", "hora", "status")} for x in (c.get("consultas") or [])],
              "motivo_encaminhamento": c.get("motivo_encaminhamento"), "proximo_recontato_em": c.get("proximo_recontato_em"),
              "videos_enviados": c.get("videos_enviados") or [], "orientacoes_enviadas": c.get("orientacoes_enviadas") or 0,
              "orientado_recepcao_em": _json_dt(c.get("orientado_recepcao_em")), "janela_24h_ate": _json_dt(c.get("janela_24h_ate")),
