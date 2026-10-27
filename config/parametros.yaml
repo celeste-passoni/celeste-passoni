@@ -474,7 +474,7 @@ disparos:
     T2: "1 dia depois do T1, se não houve resposta (ou 1 dia depois de 'Agora não' sem motivo)."
     T3: "3 dias depois do T2, se não houve resposta."
     T4: "7 dias depois do T3, se não houve resposta. Depois: pausa de 15 dias e recomeça no T1 uma única vez."
-    TR: "Na data que o lead pediu para ser chamado ('me chama na segunda'), na primeira rodada do dia. A Celeste retoma a conversa de onde parou."
+    TR: "Na data e hora exatas que o lead pediu ('me chama na segunda às 11h30'), em qualquer dia e horário, pelo job de retornos (todo minuto). A Celeste retoma a conversa de onde parou."
 
   passos:                               # cadência medida na atendente de referência (medianas): 3 d, 3 d, 8 d, 3 d
     - { template: T1, apos_dias: 0,  ciclo: 1 }
@@ -487,7 +487,7 @@ disparos:
   template_por_status:                  # recontato de quem respondeu e parou (dias em leads_perdidos.recontato_por_status_ia)
     "Irá nos retornar": T2
     "Agora não": T2
-    "Vamos retornar na data solicitada": TR   # 25/10/2026: era T2
+    "Vamos retornar na data solicitada": TR   # 25/10/2026: era T2. 27/10: quem envia é o job celeste-retornos (todo minuto, hora exata, sem restrição de horário), não a esteira
     "Achou caro": T1
     "Quer pelo convênio": T1
     "Mora em outro Estado": T4

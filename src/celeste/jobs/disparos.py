@@ -52,6 +52,8 @@ def decidir(lead: dict, agora: datetime, tarde_livre_hoje: Optional[bool] = None
     ultimo_tpl = lead.get("ultimo_template_em")
 
     # 1) recontato de quem respondeu e parou
+    if status == "Vamos retornar na data solicitada":
+        return None   # 27/10/2026: hora exata pedida pelo lead é do job de retornos (celeste-retornos, a cada minuto), não da esteira
     if status in d["template_por_status"]:
         dias = p["leads_perdidos"]["recontato_por_status_ia"].get(status)
         quando = lead.get("proximo_recontato_em")

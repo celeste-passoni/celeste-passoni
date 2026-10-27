@@ -519,11 +519,13 @@ def funil(request: Request, _=Depends(autenticar)):
         if st not in tpl_status or l.get("opt_out"):
             continue
         dias = recontato.get(st)
+        hora = ""
         if dias == "na data":
             q = l.get("proximo_recontato_em")
             if not q:
                 continue
-            quando = (q if isinstance(q, datetime) else datetime.fromisoformat(str(q)[:10]).replace(tzinfo=FUSO)).astimezone(FUSO).date()
+            qdt = q if isinstance(q, datetime) else datetime.fromisoformat(str(q)[:16] if "T" in str(q) else str(q)[:10]).replace(tzinfo=FUSO)
+            quando = qdt.astimezone(FUSO).date(); hora = qdt.astimezone(FUSO).strftime(" %H:%M") if "T" in str(q) or isinstance(q, datetime) else ""
         elif isinstance(dias, (int, float)):
             base = l.get("ultima_msg_lead_em") or l.get("ultimo_template_em")
             if not base:
@@ -532,7 +534,7 @@ def funil(request: Request, _=Depends(autenticar)):
         else:
             continue
         retornos.append({"nome": l.get("nome") or "(sem nome)", "celular": l.get("celular"), "status": st, "conversa_id": l.get("conversa_id"), "teste": bool(l.get("teste")),
-                         "quando": quando.strftime("%d/%m/%Y"), "ordem": quando, "atrasado": quando < hoje, "hoje": quando == hoje,
+                         "quando": quando.strftime("%d/%m/%Y") + hora, "ordem": quando, "atrasado": quando < hoje, "hoje": quando == hoje,
                          "template": f"{tpl_status[st]} · {templates_texto_nome(tpl_status[st])}"})
     retornos.sort(key=lambda r: r["ordem"])
     hoje_doc = db.collection("disparos_diarios").document(hoje.isoformat()).get().to_dict() or {}

@@ -96,7 +96,7 @@ def test_recontato_por_objecao():
     caro["ultima_msg_lead_em"] = AGORA - timedelta(days=30)
     assert disparos.decidir(caro, AGORA).template == "T1"   # "Achou caro" → tempo é cabelo
     data = _lead(status_ia="Vamos retornar na data solicitada", passo=1, ultimo_template_em=AGORA - timedelta(days=10), proximo_recontato_em="2026-10-13")
-    assert disparos.decidir(data, AGORA).template == "TR"   # 25/10/2026: retorno combinado, não T2
+    assert disparos.decidir(data, AGORA) is None   # 27/10/2026: a esteira não trata mais esse status; é do job de retornos
     data["proximo_recontato_em"] = "2026-10-20"
     assert disparos.decidir(data, AGORA) is None
 
@@ -174,5 +174,13 @@ def test_dt_hora_sem_fuso_e_sao_paulo():
     d = disparos._dt("2026-10-27T11:30")
     assert d.hour == 11 and d.tzinfo == ZoneInfo("America/Sao_Paulo")
     lead = {"elegivel": True, "opt_out": False, "status_ia": "Vamos retornar na data solicitada", "proximo_recontato_em": "2026-10-27T11:30", "passo": 1}
-    assert disparos.decidir(lead, datetime(2026, 10, 27, 11, 0, tzinfo=ZoneInfo("America/Sao_Paulo"))) is None
-    assert disparos.decidir(lead, datetime(2026, 10, 27, 11, 31, tzinfo=ZoneInfo("America/Sao_Paulo"))).template == "TR"
+    from celeste.jobs import retornos
+    assert retornos.vencidos([("l1", lead)], datetime(2026, 10, 27, 11, 29, tzinfo=ZoneInfo("America/Sao_Paulo"))) == []
+    assert retornos.vencidos([("l1", lead)], datetime(2026, 10, 27, 11, 30, tzinfo=ZoneInfo("America/Sao_Paulo"))) == [("l1", lead)]
+    # domingo 22h também vale (decisão da clínica: sempre na hora pedida)
+    dom = dict(lead, proximo_recontato_em="2026-11-01T22:00")
+    assert retornos.vencidos([("l2", dom)], datetime(2026, 11, 1, 22, 0, tzinfo=ZoneInfo("America/Sao_Paulo"))) == [("l2", dom)]
+    # só data = a partir da meia-noite local; opt-out e outro status ficam de fora; ordem = mais antigo primeiro
+    so_data = dict(lead, proximo_recontato_em="2026-10-27")
+    fora = [("x", dict(lead, opt_out=True)), ("y", dict(lead, status_ia="Em conversa"))]
+    assert [i for i, _ in retornos.vencidos([("l3", so_data), ("l1", lead)] + fora, datetime(2026, 10, 27, 12, 0, tzinfo=ZoneInfo("America/Sao_Paulo")))] == ["l3", "l1"]
