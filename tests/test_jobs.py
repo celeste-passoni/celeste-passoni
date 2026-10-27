@@ -166,3 +166,13 @@ def test_agora_nao_recebe_t2_no_dia_seguinte():
     l["ultima_msg_lead_em"] = AGORA - timedelta(days=1, minutes=5)
     r = disparos.decidir(l, AGORA)
     assert r and r.template == "T2"
+
+
+
+def test_dt_hora_sem_fuso_e_sao_paulo():
+    from zoneinfo import ZoneInfo
+    d = disparos._dt("2026-10-27T11:30")
+    assert d.hour == 11 and d.tzinfo == ZoneInfo("America/Sao_Paulo")
+    lead = {"elegivel": True, "opt_out": False, "status_ia": "Vamos retornar na data solicitada", "proximo_recontato_em": "2026-10-27T11:30", "passo": 1}
+    assert disparos.decidir(lead, datetime(2026, 10, 27, 11, 0, tzinfo=ZoneInfo("America/Sao_Paulo"))) is None
+    assert disparos.decidir(lead, datetime(2026, 10, 27, 11, 31, tzinfo=ZoneInfo("America/Sao_Paulo"))).template == "TR"

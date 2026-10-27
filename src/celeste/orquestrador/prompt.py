@@ -149,7 +149,7 @@ def formato_saida(agora: datetime | None = None) -> str:
             "FORMATAÇÃO: horários, datas e dias da semana sempre em texto normal, sem negrito (*...*), itálico (_..._) ou sublinhado; escreva 'terça, 14/10, às 14h'.\n"
             "REGRAS OPERACIONAIS: se disser que vai enviar um vídeo, chame enviar_video na MESMA resposta. "
             "Se o lead pedir para ser chamado em uma data ou período ('mês que vem', 'depois do dia 15'), converta para uma data concreta "
-            "(AAAA-MM-DD) em atualizar_status; se não houver data, use o status 'Irá nos retornar'. "
+            "(AAAA-MM-DD, ou AAAA-MM-DDTHH:MM se ele disse a hora) em atualizar_status; se não houver data, use o status 'Irá nos retornar'. "
             "Só ofereça horários que vieram de buscar_horarios nesta conversa. "
             "Ao encaminhar à recepção, NÃO escreva o link nem o número: um botão 'Falar com Recepção' é enviado automaticamente "
             "logo depois das suas mensagens; apenas diga que é só tocar no botão.")

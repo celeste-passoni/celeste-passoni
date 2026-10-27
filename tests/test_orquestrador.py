@@ -935,3 +935,19 @@ def test_portao_contexto_ignora_reprovacao_anterior():
             {"role": "user", "content": "[sistema] O revisor interno reprovou a sua resposta: promete condições especiais. Reescreva."}]
     ctx = portao.contexto_recente(msgs)
     assert ctx == "LEAD: tem desconto?" and "[sistema]" not in ctx and "condições especiais" not in ctx
+
+
+
+def test_espelhar_lead_cria_fila_para_numero_de_teste(monkeypatch):
+    from celeste.orquestrador import app as oapp
+    monkeypatch.setattr(oapp, "_cfg_atendimento", lambda: {"modo": "teste", "numeros_teste": ["5511900000001"]})
+    ref = MagicMock(); ref.get.return_value.exists = False
+    db = MagicMock(); db.collection.return_value.document.return_value = ref
+    monkeypatch.setattr(oapp, "db", db)
+    oapp._espelhar_lead({"id": "c1", "contato": "5511900000001", "nome": "Ana Souza", "status": "Vamos retornar na data solicitada", "proximo_recontato_em": "2026-10-27T11:30"})
+    dados = ref.set.call_args.args[0]
+    assert dados["teste"] and dados["elegivel"] and dados["passo"] == 1 and dados["primeiro_nome"] == "Ana"
+    assert dados["status_ia"] == "Vamos retornar na data solicitada" and dados["proximo_recontato_em"] == "2026-10-27T11:30"
+    ref.get.return_value.exists = True; ref.set.reset_mock()
+    oapp._espelhar_lead({"id": "c1", "contato": "5511900000001", "status": "Em conversa"})
+    assert "teste" not in ref.set.call_args.args[0]   # lead existente: só atualiza

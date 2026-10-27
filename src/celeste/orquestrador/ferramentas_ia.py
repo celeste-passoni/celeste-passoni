@@ -100,7 +100,7 @@ FERRAMENTAS: list[dict] = [
      "strict": True, "input_schema": {"type": "object", "properties": {
          "status": {"type": "string", "enum": ["Irá nos retornar", "Vamos retornar na data solicitada", "Achou caro", "Quer pelo convênio",
                                                 "Mora em outro Estado", "Mora em outro País", "Está em outra clínica", "Receiteiro"]},
-         "data_retorno": {"type": "string", "description": "AAAA-MM-DD se o lead pediu uma data; senão vazio"}},
+         "data_retorno": {"type": "string", "description": "AAAA-MM-DD se o lead pediu uma data; AAAA-MM-DDTHH:MM (hora de São Paulo) se ele pediu uma hora ('me chama às 11h30'); senão vazio"}},
          "required": ["status", "data_retorno"], "additionalProperties": False}},
 ]
 

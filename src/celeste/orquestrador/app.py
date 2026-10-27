@@ -735,6 +735,14 @@ def _espelhar_lead(conv: dict) -> None:
     ref = db.collection("leads").document(conv["contato"])
     if ref.get().exists:
         ref.set(campos, merge=True)
+    elif conv.get("teste") or _e_numero_teste(conv.get("contato", "")):
+        # 27/10/2026: número de teste da clínica entra na fila como lead já contatado (passo 1), para o retorno combinado
+        # e os demais recontatos poderem ser testados de verdade. `teste: true` o mantém fora da Gestão/Funil e da carga das 6h.
+        nome = (conv.get("nome") or "").strip()
+        agora = datetime.now(timezone.utc)
+        ref.set({"celular": conv["contato"], "nome": nome, "primeiro_nome": (nome.split() or [""])[0].title(), "frente": "leads_perdidos",
+                 "origem": "teste", "teste": True, "elegivel": True, "opt_out": False, "na_janela": False, "passo": 1, "ciclos": 1, "ciclo": 1,
+                 "lead_created_at": agora, "carregado_em": agora, "disponibilizado_em": agora, **campos}, merge=True)
 
 
 # ----------------------------------------------------------------- custo e métricas

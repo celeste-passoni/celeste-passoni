@@ -101,7 +101,7 @@ def _dt(v) -> datetime:
     s = str(v)
     if "T" in s or " " in s:
         dt = datetime.fromisoformat(s)
-        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        return dt if dt.tzinfo else dt.replace(tzinfo=FUSO)   # 27/10/2026: "2026-10-27T11:30" gravado pela Celeste é hora de São Paulo
     return datetime.fromisoformat(s).replace(tzinfo=FUSO)
 
 
