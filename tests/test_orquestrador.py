@@ -63,7 +63,7 @@ def test_buscar_horarios_e_agendar_ok():
     ts = MagicMock()
     ts.buscar_horarios.return_value = [{"data": "2026-10-13", "hora": "10:00"}]
     ts.agendar_consulta.return_value = {"id": 42, "status": 0}
-    conv = {"id": "c1", "frente": "leads_perdidos", "id_paciente_tisaude": 1, "identidade_confirmada": True}   # 27/10: só agenda paciente da conversa
+    conv = {"id": "c1", "frente": "leads_perdidos"}
     ctx = _ctx(conv, ts)
     ctx.atualizar = lambda campos: conv.update(campos)
     ferramentas_ia.executar("buscar_horarios", {"profissional": "dr_lucas", "a_partir_de": "", "dias": 14}, ctx)
@@ -303,7 +303,7 @@ def test_contexto_numero_de_outra_pessoa():
 
 
 def test_cancelar_exige_motivo_solucao_e_confirmacao():
-    ts = MagicMock(); conv = {"id": "c1", "id_agendamento_tisaude": 1, "agendamento": {"data": "2026-11-03", "hora": "17:00", "profissional": "dr_lucas"}}
+    ts = MagicMock(); conv = {"id": "c1"}
     ctx = _ctx(conv, ts); ctx.atualizar = lambda campos: conv.update(campos)
     base = {"id_agendamento": 1, "motivo_do_lead": "", "solucao_oferecida": "", "lead_confirmou_apos_solucao": False}
     s, erro = ferramentas_ia.executar("cancelar", dict(base), ctx); assert erro and "solução" in s and not ts.cancelar.called   # 26/10: motivo opcional
@@ -866,7 +866,7 @@ def test_confirmar_presenca_simulado_envia_texto_e_video(monkeypatch):
     assert "Presença confirmada" in texto and "quinta-feira, 29/10" in texto and "14h" in texto and texto.startswith("Perfeito, Ana!")
     assert "confirmou_dra_luciana" in mt.enviar_video_link.call_args.args[1]
     campos = ref.set.call_args.args[0]
-    assert campos["agendamento"]["status"] == "Confirmado" and campos["consultas"][0]["rotinas"]["confirmado_no_tisaude"] and not campos.get("revisar")
+    assert campos["agendamento"]["status"] == "Confirmado" and campos["rotinas_consulta"]["confirmado_no_tisaude"] and not campos.get("revisar")
 
 
 
@@ -951,102 +951,3 @@ def test_espelhar_lead_cria_fila_para_numero_de_teste(monkeypatch):
     ref.get.return_value.exists = True; ref.set.reset_mock()
     oapp._espelhar_lead({"id": "c1", "contato": "5511900000001", "status": "Em conversa"})
     assert "teste" not in ref.set.call_args.args[0]   # lead existente: só atualiza
-
-
-
-# ------------------------------------------------------------------ várias pessoas na mesma conversa (27/10/2026)
-_DADOS = {"cpf": "", "nascimento": "01/01/1980", "sexo": "Masculino", "email": "a@b", "como_conheceu": "GOOGLE", "cep": "01001000", "numero": "1",
-          "complemento": "", "responsavel": "", "parentesco_responsavel": "", "cpf_responsavel": "", "dados_genericos": False}
-
-
-def _conversa_pai_e_filho():
-    ts = MagicMock(); ts.buscar_paciente.return_value = None
-    ts.criar_paciente.return_value = {"id": 202}
-    ts.agendar_consulta.side_effect = [{"id": 47000001, "status": 0}, {"id": 47000002, "status": 0}]
-    conv = {"id": "c1", "nome": "Curti", "frente": "leads_perdidos", "id_paciente_tisaude": 101, "paciente_tisaude_nome": "CURTI LOPES",
-            "identidade_confirmada": True, "horarios_oferecidos": ["2026-10-29 14:00", "2026-10-30 10:00"]}
-    ctx = _ctx(conv, ts); ctx.atualizar = lambda campos: conv.update(campos)
-    return conv, ctx, ts
-
-
-def test_filho_tem_cadastro_proprio_e_nao_troca_o_lead():
-    conv, ctx, ts = _conversa_pai_e_filho()
-    saida, erro = ferramentas_ia.executar("criar_paciente", {**_DADOS, "cpf": "39053344705", "nome": "Pedro Lopes",
-                                                             "nascimento": "01/01/2015", "responsavel": "Curti Lopes", "parentesco_responsavel": "Pai",
-                                                             "cpf_responsavel": "69800545034"}, ctx)
-    assert not erro and '"id": 202' in saida and ts.criar_paciente.called               # cadastro novo, não o do pai
-    assert conv["id_paciente_tisaude"] == 101 and conv["nome"] == "Curti"                 # o lead continua sendo o Curti
-    assert {p["id"] for p in conv["pacientes"]} == {101, 202}
-    # pedir de novo o cadastro do Pedro reaproveita o dele (um cadastro por paciente)
-    ts.criar_paciente.reset_mock()
-    saida, erro = ferramentas_ia.executar("criar_paciente", {**_DADOS, "cpf": "39053344705", "nome": "Pedro Lopes", "nascimento": "01/01/2015",
-                                                             "responsavel": "Curti Lopes", "parentesco_responsavel": "Pai", "cpf_responsavel": "69800545034"}, ctx)
-    assert '"id": 202' in saida and not ts.criar_paciente.called
-
-
-def test_duas_consultas_cada_uma_com_o_seu_paciente():
-    conv, ctx, ts = _conversa_pai_e_filho()
-    ferramentas_ia.executar("criar_paciente", {**_DADOS, "cpf": "39053344705", "nome": "Pedro Lopes", "nascimento": "01/01/2015",
-                                               "responsavel": "Curti Lopes", "parentesco_responsavel": "Pai", "cpf_responsavel": "69800545034"}, ctx)
-    s1, e1 = ferramentas_ia.executar("agendar_consulta", {"id_paciente": 101, "profissional": "dr_lucas", "data": "2026-10-29", "hora": "14:00"}, ctx)
-    s2, e2 = ferramentas_ia.executar("agendar_consulta", {"id_paciente": 202, "profissional": "dr_lucas", "data": "2026-10-30", "hora": "10:00"}, ctx)
-    assert not e1 and not e2 and len(conv["consultas"]) == 2 and conv["status"] == "Agendado"
-    assert {c["paciente_nome"] for c in conv["consultas"]} == {"CURTI LOPES", "Pedro Lopes"}
-    assert conv["id_agendamento_tisaude"] == 47000001                                   # campos antigos = próxima consulta
-    assert conv["horarios_oferecidos"] == []                                            # horário usado não serve para a próxima pessoa
-    # segunda consulta ativa para o mesmo paciente é recusada
-    conv["horarios_oferecidos"] = ["2026-11-05 10:00"]
-    s3, e3 = ferramentas_ia.executar("agendar_consulta", {"id_paciente": 101, "profissional": "dr_lucas", "data": "2026-11-05", "hora": "10:00"}, ctx)
-    assert e3 and "reagendar" in s3
-    # paciente que não é da conversa é recusado
-    s4, e4 = ferramentas_ia.executar("agendar_consulta", {"id_paciente": 999, "profissional": "dr_lucas", "data": "2026-11-05", "hora": "10:00"}, ctx)
-    assert e4 and "não é de um paciente desta conversa" in s4
-    # consultar sem dizer qual devolve as duas e manda perguntar
-    ts.detalhe_agendamento.side_effect = lambda i: {"id": i, "data": "2026-10-29" if i == 47000001 else "2026-10-30",
-                                                    "hora": "14:00:00" if i == 47000001 else "10:00:00", "status": 0, "idCalendario": 36}
-    s5, e5 = ferramentas_ia.executar("consultar_agendamento", {"id_agendamento": 0}, ctx)
-    assert not e5 and "pergunte qual" in s5 and "Pedro Lopes" in s5 and "CURTI LOPES" in s5
-    # contexto do lead mostra as duas e manda perguntar qual
-    c = prompt.contexto_lead(conv)
-    assert "HÁ 2 CONSULTAS ATIVAS" in c and "47000001" in c and "47000002" in c and "Paciente: Pedro Lopes" in c and "PACIENTES desta conversa" in c
-
-
-def test_remarcar_confirmar_e_cancelar_uma_consulta_especifica():
-    conv, ctx, ts = _conversa_pai_e_filho()
-    ferramentas_ia.executar("criar_paciente", {**_DADOS, "cpf": "39053344705", "nome": "Pedro Lopes", "nascimento": "01/01/2015",
-                                               "responsavel": "Curti Lopes", "parentesco_responsavel": "Pai", "cpf_responsavel": "69800545034"}, ctx)
-    ferramentas_ia.executar("agendar_consulta", {"id_paciente": 101, "profissional": "dr_lucas", "data": "2026-10-29", "hora": "14:00"}, ctx)
-    ferramentas_ia.executar("agendar_consulta", {"id_paciente": 202, "profissional": "dr_lucas", "data": "2026-10-30", "hora": "10:00"}, ctx)
-    # id que não é da conversa
-    s, e = ferramentas_ia.executar("confirmar_presenca", {"id_agendamento": 123}, ctx)
-    assert e and "não é de uma consulta desta conversa" in s
-    # confirma só a do Pedro
-    s, e = ferramentas_ia.executar("confirmar_presenca", {"id_agendamento": 47000002}, ctx)
-    assert not e and ts.confirmar_presenca.call_args.args == (47000002,)
-    st = {c["id_agendamento"]: c["status"] for c in conv["consultas"]}
-    assert st == {47000001: "Marcado", 47000002: "Confirmado"}
-    # remarca só a do Pedro: lembretes e confirmação dela zeram, a do pai fica igual
-    conv["horarios_oferecidos"] = ["2026-11-06 11:00"]
-    ts.reagendar.return_value = {"data": "2026-11-06", "hora": "11:00"}
-    s, e = ferramentas_ia.executar("reagendar", {"id_agendamento": 47000002, "data": "2026-11-06", "hora": "11:00"}, ctx)
-    pedro = [c for c in conv["consultas"] if c["id_agendamento"] == 47000002][0]
-    assert not e and pedro["data"] == "2026-11-06" and pedro["status"] == "Marcado" and pedro["rotinas"] == {} and pedro["profissional"] == "dr_lucas"
-    # cancela a do pai: a conversa continua Agendado porque a do Pedro segue ativa
-    s, e = ferramentas_ia.executar("cancelar", {"id_agendamento": 47000001, "motivo_do_lead": "", "solucao_oferecida": "remarcar para outro dia",
-                                                "lead_confirmou_apos_solucao": True}, ctx)
-    assert not e and conv["status"] == "Agendado" and conv["id_agendamento_tisaude"] == 47000002
-    s, e = ferramentas_ia.executar("cancelar", {"id_agendamento": 47000002, "motivo_do_lead": "", "solucao_oferecida": "remarcar para outro dia",
-                                                "lead_confirmou_apos_solucao": True}, ctx)
-    assert not e and conv["status"] == "Irá nos retornar" and conv["id_agendamento_tisaude"] is None
-
-
-def test_botao_confirmar_escolhe_a_consulta_certa():
-    from celeste.orquestrador import app as oapp
-    conv = {"consultas": [
-        {"id_agendamento": 1, "paciente_nome": "Curti", "data": "2026-10-29", "hora": "14:00", "status": "Marcado", "rotinas": {}},
-        {"id_agendamento": 2, "paciente_nome": "Pedro", "data": "2026-10-30", "hora": "10:00", "status": "Marcado", "rotinas": {}}]}
-    assert oapp._consulta_do_botao(conv, 2) == 2                 # botão respondendo ao lembrete do Pedro
-    assert oapp._consulta_do_botao(conv, None) is None           # duas e sem saber qual: a Celeste pergunta
-    conv["consultas"][0]["rotinas"] = {"confirmado_em": 1}
-    assert oapp._consulta_do_botao(conv, None) == 2              # só uma falta confirmar
-    assert oapp._consulta_do_botao({"consultas": [conv["consultas"][0]]}, None) == 1

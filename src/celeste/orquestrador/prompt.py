@@ -85,9 +85,7 @@ def contexto_lead(conversa: dict) -> str:
         nome_lead = (conversa.get("nome") or "").strip()
         bate = bool(nome_ts and nome_lead) and nome_lead.split()[0].lower() in nome_ts.lower()
         if bate or not nome_ts or conversa.get("identidade_confirmada"):
-            linhas.append(f"- TI Saúde: JÁ É PACIENTE cadastrado (id {conversa['id_paciente_tisaude']}" + (f", nome {nome_ts}" if nome_ts else "") + "). "
-                          "Para a consulta DELE(A), não chame buscar_paciente nem criar_paciente; use este id. Se a consulta for para OUTRA pessoa "
-                          "(filho, cônjuge), ela precisa do cadastro próprio: buscar_paciente com o CPF dela ou, se não existir, os dados dela e criar_paciente.")
+            linhas.append(f"- TI Saúde: JÁ É PACIENTE cadastrado (id {conversa['id_paciente_tisaude']}" + (f", nome {nome_ts}" if nome_ts else "") + "). Não chame buscar_paciente nem criar_paciente; use este id para agendar.")
         else:
             linhas.append(f"- TI Saúde: este NÚMERO está no cadastro de outra pessoa: {nome_ts} (id {conversa['id_paciente_tisaude']}). "
                           f"ANTES de agendar, confirme com naturalidade se a consulta é para {nome_ts.split()[0].title()} ou para quem está falando "
@@ -101,29 +99,17 @@ def contexto_lead(conversa: dict) -> str:
                       "Nunca diga que o CPF 'está vinculado a outra pessoa' sem o resultado de buscar_paciente. Só se o CPF não existir, faça o pré-cadastro e use criar_paciente.")
     elif conversa.get("paciente_tisaude_ausente"):
         linhas.append("- TI Saúde: número NÃO cadastrado (já verificado pelo sistema). Não chame buscar_paciente; faça o pré-cadastro antes de agendar.")
-    # 27/10/2026: um lead pode agendar para mais de uma pessoa; cada uma tem cadastro e consulta próprios
-    from celeste.comum import consultas as cons
-    ps = cons.pacientes(conversa)
-    if conversa.get("pacientes") and len(ps) > 1:
-        linhas.append("- PACIENTES desta conversa (um cadastro por pessoa; para agendar, use o id de quem vai à consulta): "
-                      + "; ".join(f"{p.get('nome') or '?'} (id {p['id']})" for p in ps))
-    ativas = cons.ativas(conversa)
-    for c in ativas:
-        ida = int(c["id_agendamento"])
-        prof = cons.PROFISSIONAL.get(c.get("profissional"), c.get("profissional") or "")
-        quando = f"{_br(c.get('data'))} às {str(c.get('hora') or '')[:5]}" if c.get("data") else "data não registrada"
-        pac = f" Paciente: {c['paciente_nome']}." if c.get("paciente_nome") and (len(ps) > 1 or len(ativas) > 1 or cons.de_outra_pessoa(conversa, c)) else ""
-        conf = " Presença já confirmada." if (c.get("rotinas") or {}).get("confirmado_em") or c.get("status") == "Confirmado" else ""
-        if 900000 <= ida <= 999999:   # ids simulados (TiSaudeSimulado); os reais têm 8 dígitos
-            linhas.append(f"- CONSULTA (SIMULAÇÃO DE TESTE, id {ida}): {quando} com {prof}.{pac} Este agendamento NÃO existe no TI Saúde real; foi só simulado.")
+    ag = conversa.get("agendamento") or {}
+    if conversa.get("id_agendamento_tisaude"):
+        ida = conversa["id_agendamento_tisaude"]
+        prof = {"dra_luciana": "Dra. Luciana Passoni", "dr_lucas": "Dr. Lucas Vieira"}.get(ag.get("profissional"), ag.get("profissional") or "")
+        quando = f"{_br(ag.get('data'))} às {str(ag.get('hora') or '')[:5]}" if ag.get("data") else "data não registrada"
+        if 900000 <= int(ida) <= 999999:   # ids simulados (TiSaudeSimulado); os reais têm 8 dígitos
+            linhas.append(f"- CONSULTA (SIMULAÇÃO DE TESTE, id {ida}): {quando} com {prof}. Este agendamento NÃO existe no TI Saúde real; foi só simulado.")
         else:
-            linhas.append(f"- CONSULTA AGENDADA (TI Saúde id {ida}), último registro conhecido: {quando} com {prof}.{pac}{conf}")
-    if ativas:
-        linhas.append("- Se o lead falar de consulta (quando é, confirmar, trocar, desmarcar), chame consultar_agendamento ANTES de responder e use o que o sistema devolver. "
-                      "NUNCA deduza que um agendamento falhou ou mudou a partir de buscar_horarios: o horário do lead nunca aparece como livre justamente porque está reservado para ele.")
-    if len(ativas) > 1:
-        linhas.append(f"- HÁ {len(ativas)} CONSULTAS ATIVAS nesta conversa. Sempre que o lead pedir para confirmar, remarcar, cancelar ou saber da consulta "
-                      "sem deixar claro qual, PERGUNTE qual (pelo nome do paciente e a data) antes de chamar qualquer ferramenta com id_agendamento.")
+            linhas.append(f"- CONSULTA AGENDADA (TI Saúde id {ida}), último registro conhecido: {quando} com {prof}. "
+                          "Se o lead falar da consulta (quando é, confirmar, trocar, desmarcar), chame consultar_agendamento ANTES de responder e use o que o sistema devolver. "
+                          "NUNCA deduza que um agendamento falhou ou mudou a partir de buscar_horarios: o horário do lead nunca aparece como livre justamente porque está reservado para ele.")
     if conversa.get("origem") == "espontaneo":
         linhas.append("- Origem: espontâneo (o lead escreveu primeiro; nenhum template foi enviado a ele)")
     for rotulo, chave in (("Nome", "nome"), ("Telefone", "contato"), ("Frente", "frente"), ("Origem", "origem") if conversa.get("origem") != "espontaneo" else ("", ""),

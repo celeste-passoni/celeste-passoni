@@ -22,7 +22,6 @@ from google.cloud import firestore, storage
 from pydantic import BaseModel
 
 from celeste.comum import config
-from celeste.comum import consultas as cons
 from celeste.ferramentas import meta, tisaude, transcricao
 from celeste.ferramentas.tisaude_simulado import TiSaudeSimulado
 from celeste.orquestrador import abertura, ferramentas_ia, lembretes_texto, motor, referencias
@@ -101,12 +100,8 @@ def responder(p: Pedido):
     if acao in ("sair", "encerrar"):
         return _responder_sair(ref, conv, mt, acao)
 
-    acao_c, ida_botao = _acao_botao_consulta(ref, ultimo_wamid)
-    if acao_c == "confirmar_presenca":   # 26/10/2026: botão do lembrete da consulta, sem modelo
-        alvo = _consulta_do_botao(conv, ida_botao)
-        if alvo:
-            return _responder_confirmar_presenca(ref, conv, mt, alvo)
-        # 27/10/2026: mais de uma consulta e o botão não diz de qual: segue para a Celeste, que pergunta e usa confirmar_presenca
+    if _acao_botao_consulta(ref, ultimo_wamid) == "confirmar_presenca":   # 26/10/2026: botão do lembrete da consulta, sem modelo
+        return _responder_confirmar_presenca(ref, conv, mt)
 
     # abertura sem modelo (15/10/2026): conversa nova, não vinda de template, cuja 1ª mensagem é só um cumprimento
     conteudo = historico[-1]["content"]   # string (só texto) ou lista de blocos (com mídia)
@@ -457,33 +452,12 @@ def _responder_agora_nao(ref, conv: dict, mt: meta.Meta) -> dict:
     return {"ok": True, "enviado": 1, "fluxo": "t1_agora_nao"}
 
 
-def _acao_botao_consulta(ref, ultimo_wamid: str | None) -> tuple[str | None, int | None]:
-    """Se a última mensagem do lead foi o botão 'Confirmar presença' dos lembretes, devolve ('confirmar_presenca', id_agendamento
-    do lembrete respondido, quando o WhatsApp informa a mensagem de origem). Senão (None, None)."""
+def _acao_botao_consulta(ref, ultimo_wamid: str | None) -> str | None:
+    """Se a última mensagem do lead foi o botão 'Confirmar presença' dos lembretes da consulta, devolve 'confirmar_presenca'."""
     if not ultimo_wamid:
-        return None, None
+        return None
     m = ref.collection("mensagens").document(ultimo_wamid).get().to_dict() or {}
-    acao = classificar_botao_consulta(m.get("botao"), m.get("texto"))
-    if not acao:
-        return None, None
-    ida = None
-    if m.get("contexto_wamid"):
-        origem = ref.collection("mensagens").document(m["contexto_wamid"]).get().to_dict() or {}
-        ida = origem.get("id_agendamento")
-    return acao, (int(ida) if ida else None)
-
-
-def _consulta_do_botao(conv: dict, ida: int | None) -> int | None:
-    """Consulta a confirmar: a do lembrete respondido; sem essa informação, a única ativa ainda não confirmada (ou a única ativa)."""
-    ativas = cons.ativas(conv)
-    if ida and cons.achar(ativas, ida):
-        return int(ida)
-    sem_conf = [c for c in ativas if not (c.get("rotinas") or {}).get("confirmado_em")]
-    if len(sem_conf) == 1:
-        return int(sem_conf[0]["id_agendamento"])
-    if len(ativas) == 1:
-        return int(ativas[0]["id_agendamento"])
-    return None
+    return classificar_botao_consulta(m.get("botao"), m.get("texto"))
 
 
 def classificar_botao_consulta(botao: str | None, texto: str | None) -> str | None:
@@ -494,18 +468,14 @@ def classificar_botao_consulta(botao: str | None, texto: str | None) -> str | No
     return None   # "Preciso remarcar" vai para o modelo: a Celeste consulta o agendamento e reagenda pela conversa
 
 
-def _responder_confirmar_presenca(ref, conv: dict, mt: meta.Meta, ida: int | None = None) -> dict:
+def _responder_confirmar_presenca(ref, conv: dict, mt: meta.Meta) -> dict:
     """Lead tocou 'Confirmar presença' (C48/C24): status Confirmado no TI Saúde, agradecimento fixo e vídeo do profissional. Sem modelo.
     Aprovado pela clínica em 26/10/2026."""
     from celeste.jobs.rotinas_consulta import formatar_dia, formatar_hora
     p = config.parametros()
     b = p["consulta_botoes"]
-    cs = cons.lista(conv)
-    ida = ida or _consulta_do_botao(conv, None)
-    c = cons.achar(cs, ida) if ida else None
-    if not c:
-        return {"ok": False, "ignorado": "nenhuma consulta para confirmar"}
-    ag = dict(c)
+    ag = dict(conv.get("agendamento") or {})
+    ida = conv.get("id_agendamento_tisaude")
     simulado = bool(conv.get("teste") or _e_numero_teste(conv.get("contato", ""))) and not _escreve_no_tisaude(conv.get("contato", ""))
     ts = TiSaudeSimulado() if simulado else _svc()[2]
     gravou = False
@@ -520,8 +490,6 @@ def _responder_confirmar_presenca(ref, conv: dict, mt: meta.Meta, ida: int | Non
         dia = formatar_dia(date.fromisoformat(str(ag.get("data"))[:10]))
     except (TypeError, ValueError):
         dia = "o dia marcado"
-    if cons.de_outra_pessoa(conv, c):   # consulta do filho etc.: o nome do paciente vai junto
-        dia = f"{dia} ({cons.primeiro_nome(c.get('paciente_nome'))})"
     texto = b["confirmado_texto"].replace("{nome}", nome or "tudo bem").replace("{dia}", dia).replace("{hora}", formatar_hora(ag.get("hora", "")))
     agora = datetime.now(timezone.utc)
     wamid = mt.enviar_texto(conv["contato"], texto)
@@ -540,9 +508,9 @@ def _responder_confirmar_presenca(ref, conv: dict, mt: meta.Meta, ida: int | Non
             enviados += 1
         except Exception as e:   # noqa: BLE001
             log.warning("vídeo de confirmação não enviado (conversa %s): %s", conv.get("id"), e)
-    rot = dict(c.get("rotinas") or {}); rot.update({"confirmado_em": agora, "confirmado_no_tisaude": gravou})
-    cs = cons.substituir(cs, dict(c, rotinas=rot, status="Confirmado" if gravou else c.get("status")))
-    campos = {**cons.campos(cs), "pendente_resposta": False,
+    rot = dict(conv.get("rotinas_consulta") or {}); rot.update({"confirmado_em": agora, "confirmado_no_tisaude": gravou})
+    ag["status"] = "Confirmado" if gravou else ag.get("status")
+    campos = {"rotinas_consulta": rot, "agendamento": ag, "pendente_resposta": False,
               "ultima": {"texto": texto[:160], "direcao": "celeste", "tipo": "text", "em": agora}, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP}
     if ida and not gravou:
         campos.update({"revisar": True, "revisar_motivo": "confirmação de presença não gravou no TI Saúde"})
@@ -616,16 +584,11 @@ def _historico(ref, mt: meta.Meta) -> tuple[list[dict], str | None]:
     """Converte as mensagens do Firestore em turnos user/assistant, agrupando balões consecutivos."""
     turnos: list[dict] = []
     ultimo_wamid = None
-    lembretes: dict[str, str] = {}   # wamid do lembrete da consulta → "id X: Pedro, quinta-feira, 29/10, às 14h, com o Dr. Lucas"
     for doc in ref.collection("mensagens").order_by("recebido_em").stream():
         m = doc.to_dict()
-        if m.get("direcao") == "template" and m.get("id_agendamento"):
-            lembretes[doc.id] = f"id_agendamento {m['id_agendamento']}: {m.get('consulta_rotulo') or ''}"
         if m.get("direcao") == "lead":
             ultimo_wamid = doc.id
             blocos = _blocos_lead(doc, m, mt)
-            if m.get("tipo") in ("button", "interactive") and m.get("contexto_wamid") in lembretes and blocos and blocos[0].get("type") == "text":
-                blocos[0] = {"type": "text", "text": blocos[0]["text"].rstrip("]") + f" — resposta ao lembrete da consulta {lembretes[m['contexto_wamid']]}]"}
             if turnos and turnos[-1]["role"] == "user":
                 turnos[-1]["content"].extend(blocos)
             else:

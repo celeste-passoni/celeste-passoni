@@ -96,9 +96,7 @@ async function abrir(id, manterScroll) {
       ${f.modo === 'humano' ? `<div style="margin-top:8px"><textarea id="txt" placeholder="Escreva como equipe da Passoni Clinic… (Enter envia, Shift+Enter quebra linha)"></textarea>
         <div style="display:flex;justify-content:space-between;align-items:center"><span class="muted" style="font-size:11px">${f.janela_24h_ate && new Date(f.janela_24h_ate) > new Date() ? 'janela do WhatsApp aberta até ' + hora(f.janela_24h_ate) : 'fora da janela de 24 h: só é possível enviar depois que a pessoa escrever'}</span><button onclick="enviar()">Enviar</button></div></div>` : ''}
     </div>`;
-  const consultas = f.consultas || [];
-  const ag = consultas.length ? consultas.map(x => `${x.paciente_nome || '—'} · ${x.data} ${x.hora} · ${x.profissional || ''} · ${x.status || ''}`).join(' | ')
-           : (f.agendamento ? `${f.agendamento.data} ${f.agendamento.hora} · ${f.agendamento.profissional || ''}` : '—');
+  const ag = f.agendamento ? `${f.agendamento.data} ${f.agendamento.hora} · ${f.agendamento.profissional || ''}` : '—';
   $('#ficha').innerHTML = `
     <h4>Ficha</h4>
     <p><b>WhatsApp:</b> <a href="https://wa.me/${f.contato}" target="_blank">${f.contato}</a></p>
