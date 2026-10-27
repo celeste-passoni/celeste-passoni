@@ -5,6 +5,18 @@ DECLARE INICIO_CELESTE DATE DEFAULT DATE '2026-10-28';   -- 26/10/2026: início 
 -- marcação, agendamento, comparecimento, venda). Antes disso o histórico fica como está (métricas das atendentes não mudam).
 DECLARE NUMEROS_TESTE ARRAY<STRING> DEFAULT ['5511999405671', '5511980567117', '5511954884444', '5511916099009'];
 
+
+-- ============================================================
+-- PASSO 0-IA (27/10/2026): nada da Celeste antes de INICIO_CELESTE. Apaga só as linhas da frente 'Perdidos IA'
+-- anteriores a 28/10 (listas de teste de 22 a 27/10) nas duas tabelas de leads. Não toca nas outras frentes.
+-- A partir de 28/10 esta limpeza não encontra mais nada.
+-- ============================================================
+DELETE FROM `vertical-theory-489419-a7.automacoes.resgate_leads_diario`
+WHERE frente = 'Perdidos IA' AND data_execucao < INICIO_CELESTE;
+
+DELETE FROM `vertical-theory-489419-a7.automacoes.leads_disponibilizados_diario`
+WHERE frente = 'Perdidos IA' AND data_disponibilizacao < INICIO_CELESTE;
+
 -- ============================================================
 -- PASSO 1: atualiza resgate_leads_diario com quem é elegível hoje.
 -- ============================================================
