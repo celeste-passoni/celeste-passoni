@@ -1,17 +1,9 @@
 -- NOVO (22/10/2026): frente 'Perdidos IA' = Celeste (IA). NOME_CELESTE é o nome do usuário no TI Saúde (marcadopor) E o rótulo da coluna colaborador (26/10/2026).
 DECLARE NOME_CELESTE STRING DEFAULT 'Celeste Maria';   -- 22/10/2026: nome do usuário da Celeste no TI Saúde (marcadopor)
 DECLARE INICIO_CELESTE DATE DEFAULT DATE '2026-10-28';   -- 26/10/2026: início dos testes; antes disso a frente 'Perdidos IA' não existe no funil
-
--- ============================================================
--- PASSO 0-IA (26/10/2026): a frente 'Perdidos IA' só conta a partir de INICIO_CELESTE. Linhas criadas antes
--- (período de preparação, 22 a 27/10) saem das duas tabelas de leads; depois do início esta limpeza não encontra nada.
--- ============================================================
-DELETE FROM `vertical-theory-489419-a7.automacoes.resgate_leads_diario`
-WHERE frente = 'Perdidos IA' AND data_execucao < INICIO_CELESTE;
-
-DELETE FROM `vertical-theory-489419-a7.automacoes.leads_disponibilizados_diario`
-WHERE frente = 'Perdidos IA' AND data_disponibilizacao < INICIO_CELESTE;
-
+-- NOVO (27/10/2026): números internos de teste. A partir de INICIO_CELESTE não entram em nenhuma métrica (lista, conversa,
+-- marcação, agendamento, comparecimento, venda). Antes disso o histórico fica como está (métricas das atendentes não mudam).
+DECLARE NUMEROS_TESTE ARRAY<STRING> DEFAULT ['5511999405671', '5511980567117', '5511954884444', '5511916099009'];
 
 -- ============================================================
 -- PASSO 1: atualiza resgate_leads_diario com quem é elegível hoje.
@@ -165,11 +157,14 @@ USING (
     QUALIFY ROW_NUMBER() OVER (PARTITION BY t.celular_sem_ddd ORDER BY t.created_at DESC) = 1
   )
 
-  SELECT * FROM orcamento
-  -- UNION ALL SELECT * FROM inativos   -- DESATIVADO (07/10/2026)
-  UNION ALL SELECT * FROM canceladas
-  UNION ALL SELECT * FROM perdidos
-  UNION ALL SELECT * FROM perdidos_ia   -- NOVO (22/10/2026)
+  SELECT * FROM (
+    SELECT * FROM orcamento
+    -- UNION ALL SELECT * FROM inativos   -- DESATIVADO (07/10/2026)
+    UNION ALL SELECT * FROM canceladas
+    UNION ALL SELECT * FROM perdidos
+    UNION ALL SELECT * FROM perdidos_ia   -- NOVO (22/10/2026)
+  )
+  WHERE COALESCE(contato, '') NOT IN UNNEST(NUMEROS_TESTE)   -- NOVO (27/10/2026): números de teste fora das listas
 ) S
 ON T.frente = S.frente
   AND T.chave = S.chave
@@ -314,7 +309,9 @@ com_frente AS (
 final AS (
   SELECT *
   FROM com_frente
-  WHERE NOT (
+  -- NOVO (27/10/2026): números de teste fora a partir de INICIO_CELESTE (antes disso, histórico intacto)
+  WHERE NOT (COALESCE(celular, '') IN UNNEST(NUMEROS_TESTE) AND DATE(created_at) >= INICIO_CELESTE)
+  AND NOT (
     colaborador = 'Maria Fernanda Oliveira Martins'
     AND (
       (DATE(created_at) < '2026-09-01' AND frente IN ('Orcamento', 'Perdidos'))
@@ -451,6 +448,8 @@ USING (
     FROM `vertical-theory-489419-a7.automacoes.resgate_leads_diario` r
     CROSS JOIN ultima_execucao_anterior u
     WHERE r.data_execucao = u.data_anterior
+      -- NOVO (27/10/2026): linhas da IA de antes do início não contam; em 28/10 todos os leads da janela entram como disponibilizados
+      AND NOT (r.frente = 'Perdidos IA' AND r.data_execucao < INICIO_CELESTE)
   )
 
   SELECT
@@ -518,7 +517,7 @@ SET
         (T.frente NOT IN ('Perdidos', 'Perdidos IA') AND CAST(a.cpf AS STRING) = T.chave)
       )
       AND (
-        (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+        (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE) AND DATE(a.marcacao) >= INICIO_CELESTE)   -- ALTERADO (22/10/2026): IA só pela Celeste
         OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
             OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
       )
@@ -536,7 +535,7 @@ SET
       (T.frente NOT IN ('Perdidos', 'Perdidos IA') AND CAST(a.cpf AS STRING) = T.chave)
     )
     AND (
-      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE) AND DATE(a.marcacao) >= INICIO_CELESTE)   -- ALTERADO (22/10/2026): IA só pela Celeste
       OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
           OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
     )
@@ -552,7 +551,7 @@ SET
       (T.frente NOT IN ('Perdidos', 'Perdidos IA') AND CAST(a.cpf AS STRING) = T.chave)
     )
     AND (
-      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE) AND DATE(a.marcacao) >= INICIO_CELESTE)   -- ALTERADO (22/10/2026): IA só pela Celeste
       OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
           OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
     )
@@ -568,7 +567,7 @@ SET
       (T.frente NOT IN ('Perdidos', 'Perdidos IA') AND CAST(a.cpf AS STRING) = T.chave)
     )
     AND (
-      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE) AND DATE(a.marcacao) >= INICIO_CELESTE)   -- ALTERADO (22/10/2026): IA só pela Celeste
       OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
           OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
     )
@@ -595,7 +594,7 @@ SET
     AND DATE_TRUNC(DATE(v.data_venda), MONTH) = T.mes_ref
     AND DATE(v.data_venda) >= DATE('2026-08-18')
     AND (
-      (T.frente = 'Perdidos IA' AND UPPER(v.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      (T.frente = 'Perdidos IA' AND UPPER(v.marcadopor) = UPPER(NOME_CELESTE) AND DATE(v.data_venda) >= INICIO_CELESTE)   -- ALTERADO (22/10/2026): IA só pela Celeste
       OR (T.frente != 'Perdidos IA' AND (UPPER(v.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
           OR UPPER(v.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
       -- NOVO (18/09/2026): da Gisela só entra venda classificada como RESGATE
@@ -614,7 +613,7 @@ SET
     AND DATE_TRUNC(DATE(v.data_venda), MONTH) = T.mes_ref
     AND DATE(v.data_venda) >= DATE('2026-08-18')
     AND (
-      (T.frente = 'Perdidos IA' AND UPPER(v.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      (T.frente = 'Perdidos IA' AND UPPER(v.marcadopor) = UPPER(NOME_CELESTE) AND DATE(v.data_venda) >= INICIO_CELESTE)   -- ALTERADO (22/10/2026): IA só pela Celeste
       OR (T.frente != 'Perdidos IA' AND (UPPER(v.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
           OR UPPER(v.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
       -- NOVO (18/09/2026): da Gisela só entra venda classificada como RESGATE
@@ -633,7 +632,7 @@ SET
     AND DATE_TRUNC(DATE(v.data_venda), MONTH) = T.mes_ref
     AND DATE(v.data_venda) >= DATE('2026-08-18')
     AND (
-      (T.frente = 'Perdidos IA' AND UPPER(v.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      (T.frente = 'Perdidos IA' AND UPPER(v.marcadopor) = UPPER(NOME_CELESTE) AND DATE(v.data_venda) >= INICIO_CELESTE)   -- ALTERADO (22/10/2026): IA só pela Celeste
       OR (T.frente != 'Perdidos IA' AND (UPPER(v.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
           OR UPPER(v.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
       -- NOVO (18/09/2026): da Gisela só entra venda classificada como RESGATE
@@ -652,7 +651,7 @@ SET
     AND DATE_TRUNC(DATE(v.data_venda), MONTH) = T.mes_ref
     AND DATE(v.data_venda) >= DATE('2026-08-18')
     AND (
-      (T.frente = 'Perdidos IA' AND UPPER(v.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      (T.frente = 'Perdidos IA' AND UPPER(v.marcadopor) = UPPER(NOME_CELESTE) AND DATE(v.data_venda) >= INICIO_CELESTE)   -- ALTERADO (22/10/2026): IA só pela Celeste
       OR (T.frente != 'Perdidos IA' AND (UPPER(v.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
           OR UPPER(v.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
       -- NOVO (18/09/2026): da Gisela só entra venda classificada como RESGATE
@@ -679,7 +678,7 @@ SET
     )
     AND a.status IN (2, 5)
     AND (
-      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE) AND DATE(a.marcacao) >= INICIO_CELESTE)   -- ALTERADO (22/10/2026): IA só pela Celeste
       OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
           OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
     )
@@ -696,7 +695,7 @@ SET
     )
     AND a.status IN (2, 5)
     AND (
-      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+      (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE) AND DATE(a.marcacao) >= INICIO_CELESTE)   -- ALTERADO (22/10/2026): IA só pela Celeste
       OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
           OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
     )
@@ -716,7 +715,7 @@ SET
         )
         AND a.status IN (2, 5)
         AND (
-          (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+          (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE) AND DATE(a.marcacao) >= INICIO_CELESTE)   -- ALTERADO (22/10/2026): IA só pela Celeste
           OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
               OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
         )
@@ -739,7 +738,7 @@ SET
         )
         AND a.status IN (2, 5)
         AND (
-          (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+          (T.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE) AND DATE(a.marcacao) >= INICIO_CELESTE)   -- ALTERADO (22/10/2026): IA só pela Celeste
           OR (T.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
               OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
         )
@@ -791,7 +790,7 @@ USING (
       ON (base.frente IN ('Perdidos', 'Perdidos IA') AND a.celular_sem_ddd = SUBSTR(base.contato, 3))
       OR (base.frente NOT IN ('Perdidos', 'Perdidos IA') AND CAST(a.cpf AS STRING) = base.chave)
     WHERE (
-        (base.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE))   -- ALTERADO (22/10/2026): IA só pela Celeste
+        (base.frente = 'Perdidos IA' AND UPPER(a.marcadopor) = UPPER(NOME_CELESTE) AND DATE(a.marcacao) >= INICIO_CELESTE)   -- ALTERADO (22/10/2026): IA só pela Celeste
         OR (base.frente != 'Perdidos IA' AND (UPPER(a.marcadopor) LIKE '%MARIA FERNANDA OLIVEIRA MARTINS%'
             OR UPPER(a.marcadopor) LIKE '%RAIANE SANTANA SOUZA SANTOS%'))
       )
@@ -867,6 +866,8 @@ WITH mensagens_resgate AS (
 base AS (
   SELECT colaborador, celular, mensagem_id, DATE(created_at) AS data
   FROM mensagens_resgate WHERE celular IS NOT NULL
+    -- NOVO (27/10/2026): números de teste fora a partir de INICIO_CELESTE
+    AND NOT (celular IN UNNEST(NUMEROS_TESTE) AND DATE(created_at) >= INICIO_CELESTE)
 ),
 
 primeiro_contato AS (
@@ -955,6 +956,11 @@ atend_raw AS (
     AND DATE_TRUNC(DATE(a.data), MONTH) = fcd.mes
   WHERE a.marcadopor IN ('Raiane Santana Souza Santos', 'Maria Fernanda Oliveira Martins', NOME_CELESTE)   -- ALTERADO (22/10/2026)
     AND a.tipo_procedimento != 'PC - AVALIAÇÃO'
+    -- NOVO (27/10/2026): marcações da Celeste só de INICIO_CELESTE em diante (as de antes foram testes)
+    AND NOT (a.marcadopor = NOME_CELESTE AND DATE(a.marcacao) < INICIO_CELESTE)
+    -- NOVO (27/10/2026): números de teste fora a partir de INICIO_CELESTE (marcação ou consulta dali em diante)
+    AND NOT (CONCAT('55', REGEXP_REPLACE(COALESCE(CAST(a.celular_sem_ddd AS STRING), ''), r'[^0-9]', '')) IN UNNEST(NUMEROS_TESTE)
+             AND (DATE(a.marcacao) >= INICIO_CELESTE OR DATE(a.data) >= INICIO_CELESTE))
 ),
 
 atend AS (
@@ -1023,6 +1029,10 @@ vend_raw AS (
     )
     -- ALTERADO (16/10/2026): removido o corte das vendas da Gisela a partir de 10/10;
     -- as vendas RESGATE dela voltam a contar (só vendas, sem o resto do funil).
+    -- NOVO (27/10/2026): vendas da Celeste só de INICIO_CELESTE em diante; números de teste fora a partir daí
+    AND NOT (v.marcadopor = NOME_CELESTE AND DATE(v.data_venda) < INICIO_CELESTE)
+    AND NOT (CONCAT('55', REGEXP_REPLACE(COALESCE(CAST(v.celular AS STRING), ''), r'[^0-9]', '')) IN UNNEST(NUMEROS_TESTE)
+             AND DATE(v.data_venda) >= INICIO_CELESTE)
 ),
 
 vend AS (
