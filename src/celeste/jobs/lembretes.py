@@ -16,6 +16,7 @@ from google.cloud import firestore
 from google.oauth2 import id_token
 
 from celeste.comum import config
+from celeste.jobs import disparos
 
 log = logging.getLogger(__name__)
 FUSO = ZoneInfo(config.FUSO)
@@ -81,8 +82,12 @@ def rodar(url_orquestrador: str, forcar_horario: bool = False, dry_run: bool = F
     db = firestore.Client(project=config.PROJETO_GCP)
     agora = datetime.now(timezone.utc)
     tok = None if dry_run else id_token.fetch_id_token(GRequest(), url_orquestrador)
+    teste = disparos.numeros_teste(db)
     for doc in db.collection("conversas").where("aberta", "==", True).stream():
         conv = doc.to_dict()
+        if disparos.e_teste(conv, teste):   # 27/10/2026: número de teste não recebe lembrete
+            resumo["pulados"] += 1
+            continue
         ok, motivo = elegivel(conv, agora)
         if not ok:
             resumo["pulados"] += 1

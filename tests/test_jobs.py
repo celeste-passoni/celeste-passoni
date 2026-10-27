@@ -184,3 +184,13 @@ def test_dt_hora_sem_fuso_e_sao_paulo():
     so_data = dict(lead, proximo_recontato_em="2026-10-27")
     fora = [("x", dict(lead, opt_out=True)), ("y", dict(lead, status_ia="Em conversa"))]
     assert [i for i, _ in retornos.vencidos([("l3", so_data), ("l1", lead)] + fora, datetime(2026, 10, 27, 12, 0, tzinfo=ZoneInfo("America/Sao_Paulo")))] == ["l3", "l1"]
+
+
+def test_numero_de_teste_fora_de_todas_as_filas():
+    # 27/10/2026: números de teste não participam de nenhuma fila nem esteira
+    numeros = {"5511954884444"}
+    assert disparos.e_teste({"celular": "5511954884444"}, numeros)            # lead pelo número
+    assert disparos.e_teste({"contato": "5511954884444"}, numeros)            # conversa pelo número
+    assert disparos.e_teste({"celular": "5511900000000", "teste": True}, numeros)
+    assert not disparos.e_teste({"celular": "5511900000000"}, numeros)
+    assert not disparos.e_teste({"contato": "5511900000000", "teste": False}, numeros)

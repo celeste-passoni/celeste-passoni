@@ -46,7 +46,9 @@ def rodar(dry_run: bool = False, limite: Optional[int] = None) -> dict:
     d.update(db.collection("config").document("disparos").get().to_dict() or {})
     agora = datetime.now(timezone.utc)
     consulta = db.collection("leads").where("status_ia", "==", STATUS).where("elegivel", "==", True)
+    teste = disparos.numeros_teste(db)
     leads = [(doc.id, doc.to_dict()) for doc in consulta.stream()]
+    leads = [(i, l) for i, l in leads if not disparos.e_teste(l, teste)]   # 27/10/2026: número de teste não recebe retorno
     fila = vencidos(leads, agora)
     if limite:
         fila = fila[:limite]

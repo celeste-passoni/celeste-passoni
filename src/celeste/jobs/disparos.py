@@ -107,6 +107,18 @@ def _dt(v) -> datetime:
     return datetime.fromisoformat(s).replace(tzinfo=FUSO)
 
 
+def numeros_teste(db) -> set:
+    """Números internos de teste (lista do painel, config/atendimento)."""
+    cfg = db.collection("config").document("atendimento").get().to_dict() or {}
+    return {str(n) for n in (cfg.get("numeros_teste") or [])}
+
+
+def e_teste(doc: dict, numeros: set) -> bool:
+    """27/10/2026 (decisão da clínica): números de teste não participam de nenhuma fila nem esteira, não recebem nenhum disparo.
+    Vale para lead (`celular`) e conversa (`contato`), marcados como teste ou com número da lista do painel."""
+    return bool(doc.get("teste")) or str(doc.get("celular") or doc.get("contato") or "") in numeros
+
+
 def _enviados_hoje(db) -> int:
     hoje = datetime.now(FUSO).strftime("%Y-%m-%d")
     doc = db.collection("disparos_diarios").document(hoje).get().to_dict() or {}
@@ -169,11 +181,15 @@ def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[
     mt = None if dry_run else meta.Meta()
     ordem = firestore.Query.DESCENDING if d.get("priorizar", "mais_recentes") == "mais_recentes" else firestore.Query.ASCENDING
     consulta = db.collection("leads").where("elegivel", "==", True).where("opt_out", "==", False).order_by("lead_created_at", direction=ordem)
+    teste = numeros_teste(db)
 
     for doc in consulta.stream():
         if resumo["enviados"] >= cota:
             break
         lead = doc.to_dict()
+        if e_teste(lead, teste):   # 27/10/2026: número de teste não entra na esteira
+            resumo["pulados"] += 1
+            continue
         dec = decidir(lead, agora, tarde)
         if not dec:
             resumo["pulados"] += 1

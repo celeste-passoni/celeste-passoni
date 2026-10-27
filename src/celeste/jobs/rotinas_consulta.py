@@ -19,6 +19,7 @@ from google.cloud import firestore
 
 from celeste.comum import config
 from celeste.ferramentas import meta, tisaude
+from celeste.jobs import disparos
 
 log = logging.getLogger(__name__)
 FUSO = ZoneInfo(config.FUSO)
@@ -136,8 +137,12 @@ def rodar(dry_run: bool = False, forcar_horario: bool = False) -> dict:
     agora = datetime.now(timezone.utc)
     mt = None if dry_run else meta.Meta()
     ts = None
+    teste = disparos.numeros_teste(db)
     for doc in db.collection("conversas").where("status", "==", "Agendado").stream():
         conv = doc.to_dict()
+        if disparos.e_teste(conv, teste):   # 27/10/2026: número de teste não recebe lembrete de consulta
+            resumo["pulados"] += 1
+            continue
         cod = decidir(conv, agora)
         if not cod:
             resumo["pulados"] += 1
