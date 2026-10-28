@@ -7,7 +7,7 @@ e para o painel/relatórios mostrarem a mensagem. {1} = primeiro nome (só nos t
 
 Volumes e resposta em até 3 dias, medidos nos 2 meses (atendente de referência):
   T1 (antigo) revisando agenda          1.488 envios ·  5%   → substituído em 13/10/2026 por resgate_solicitacao_pendente (UTILITY)
-                                                              → e em 28/10/2026 por resgate_queda_3cm (MARKETING, com imagem)
+                                                              → e em 28/10/2026 por resgate_queda_3cm_v2 (MARKETING, com imagem)
   T2 (antigo) "me dá um oi"             4.576 envios ·  7%   → substituído em 13/10/2026 por resgate_solicitacao_segue_pendente (UTILITY)
   T3 (antigo) duas modalidades (frio)   3.874 envios · 10%   → substituído em 14/10/2026 por resgate_solicitacao_ainda_pendente (UTILITY)
   T4 (antigo) demonstrou interesse      2.090 envios ·  5%   → substituído em 14/10/2026 por resgate_solicitacao_encerramento (UTILITY)
@@ -17,10 +17,10 @@ from __future__ import annotations
 RODAPE = "Se preferir não receber mais mensagens, responda SAIR."   # rodapé do template na Meta (opt-out); o corpo é o da clínica
 
 TEMPLATES: dict[str, dict] = {
-    "T1": {   # 28/10/2026 (decisão da clínica): pergunta sobre os cabelos, com imagem da Dra. Luciana. MARKETING (Meta id 958115566957712). {1} = primeiro nome
-        "nome": "resgate_queda_3cm",   # antes: resgate_solicitacao_pendente(_v2), "sua solicitação de consulta, feita em {2}, ficou pendente"
+    "T1": {   # 28/10/2026 (decisão da clínica): pergunta sobre os cabelos, com imagem da Dra. Luciana. MARKETING (Meta id 1827070681628958). {1} = primeiro nome
+        "nome": "resgate_queda_3cm_v2",   # 28/10: a pergunta final virou convite ("Quer que a gente avalie…?") para casar com os botões; v1 = 958115566957712
         "corpo": ("Oi, {1}! Você sabia que um fio saudável cresce cerca de 3 cm em 3 meses? 🌱\n"
-                  "Já faz uns 3 meses desde que conversamos. Como estão seus cabelos hoje?"),
+                  "Já faz uns 3 meses desde que conversamos, e muita coisa pode ter mudado nos seus fios. Quer que a gente avalie como eles estão hoje?"),
         "botoes": ["Quero uma avaliação", "Tenho uma dúvida", "Não quero receber"],   # quick replies (payload = texto); fluxo em ia/t1_botoes do YAML
         "imagem": "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/templates/t1_queda_3cm.jpg",   # cópia em midia/templates/
         "imagem_descricao": "foto da Dra. Luciana Passoni com o texto \"Você sabia? Um fio saudável cresce 3 cm em 3 meses.\", uma régua de hoje a 3 meses e \"Como estão seus cabelos hoje?\"",

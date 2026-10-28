@@ -461,7 +461,7 @@ disparos:
   priorizar: "mais_recentes"            # mais_recentes | mais_antigos
   # Os MESMOS templates que a clínica usa hoje no MarketZap (decisão de 09/10/2026); textos em src/celeste/jobs/templates_texto.py
   templates:                            # nome na Meta (idioma pt_BR); {{1}} = primeiro nome
-    T1: resgate_queda_3cm      # 28/10/2026 (decisão da clínica): "Você sabia que um fio saudável cresce cerca de 3 cm em 3 meses?", imagem da Dra., botões Quero uma avaliação · Tenho uma dúvida · Não quero receber (MARKETING, Meta id 958115566957712). Antes: resgate_solicitacao_pendente_v2
+    T1: resgate_queda_3cm_v2   # 28/10/2026 (decisão da clínica): "Você sabia que um fio saudável cresce cerca de 3 cm em 3 meses? … Quer que a gente avalie como eles estão hoje?", imagem da Dra., botões Quero uma avaliação · Tenho uma dúvida · Não quero receber (MARKETING, Meta id 1827070681628958; a v1 958115566957712 terminava em "Como estão seus cabelos hoje?"). Antes: resgate_solicitacao_pendente_v2
     T2: resgate_solicitacao_segue_pendente   # "sua solicitação segue pendente" (UTILITY, aprovado pela clínica em 13/10)
     T3: resgate_solicitacao_ainda_pendente   # "ainda está pendente" (UTILITY, aprovado pela clínica em 14/10)
     T4: resgate_solicitacao_encerramento     # "vamos encerrar a sua solicitação" (UTILITY, aprovado pela clínica em 14/10)
