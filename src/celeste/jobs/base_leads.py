@@ -3,6 +3,7 @@
 
 Regras:
   • a query é a da clínica (gold.leads + gold.sistemaweb_perdidos; janela de 3 a 4 meses; exclui 'Não quer'; 1 por celular);
+  • 28/10/2026: 'Não quer' das atendentes (sistemaweb_perdidos) também sai da frente 'Perdidos IA', aplicado aqui pelo celular;
   • a IA só LÊ as tabelas da clínica; o estado dela vive em `leads/{celular}` no Firestore;
   • a janela de data vale na ENTRADA: quem já recebeu template (passo > 0) fica elegível até o fim do ciclo,
     a menos que tenha agendado / 'Não quer' / participado de outra ação (query sem janela);
@@ -90,6 +91,17 @@ LEFT JOIN cpfs c ON c.contato = b.contato
 """
 
 
+def sql_excluidos_pela_clinica(p: dict) -> str:
+    """28/10/2026 (decisão da clínica): quem as atendentes marcaram como 'Não quer' no sistemaweb fica fora da Celeste.
+    A frente 'Perdidos IA' do funil só exclui o opt-out da própria Celeste; o filtro é aplicado aqui, pelo celular."""
+    excluidos = ", ".join(f"'{s}'" for s in p["status_da_clinica_excluidos"])
+    return f"""
+SELECT DISTINCT CAST(s.contato AS STRING) AS contato, s.status AS status
+FROM `{p['fonte']['tabela_status']}` s
+WHERE s.status IN ({excluidos})
+"""
+
+
 def carregar(dry_run: bool = False) -> dict:
     p = config.parametros()["leads_perdidos"]
     bq = bigquery.Client(project=config.PROJETO_GCP)
@@ -123,6 +135,12 @@ def carregar(dry_run: bool = False) -> dict:
             if cel in em_esteira and cel not in na_janela:
                 ainda_validos[cel] = dict(r)
 
+    # (C) 'Não quer' da clínica sai da base, mesmo quem já está na esteira
+    nao_quer = {cel for r in bq.query(sql_excluidos_pela_clinica(p)).result() if (cel := normalizar_celular(r["contato"]))}
+    excluidos_clinica = sorted((set(na_janela) | set(ainda_validos)) & nao_quer)
+    for cel in excluidos_clinica:
+        na_janela.pop(cel, None); ainda_validos.pop(cel, None)
+
     novos = atualizados = 0
     lote, n = db.batch(), 0
     for cel, r in list(na_janela.items()) + list(ainda_validos.items()):
@@ -154,7 +172,10 @@ def carregar(dry_run: bool = False) -> dict:
     sairam = [cid for cid, d in existentes.items() if d.get("elegivel") and cid not in validos and not d.get("teste")]
     if not dry_run:
         for cid in sairam:
-            lote.set(db.collection("leads").document(cid), {"elegivel": False, "saiu_da_base_em": agora}, merge=True)
+            saida = {"elegivel": False, "saiu_da_base_em": agora}
+            if cid in nao_quer:
+                saida["motivo_saida"] = "Não quer (status da clínica)"
+            lote.set(db.collection("leads").document(cid), saida, merge=True)
             n += 1
             if n >= 400:
                 lote.commit(); lote, n = db.batch(), 0
@@ -162,7 +183,7 @@ def carregar(dry_run: bool = False) -> dict:
             lote.commit()
     resumo = {"na_janela": len(na_janela), "mantidos_em_esteira": len(ainda_validos), "elegiveis": len(validos),
               "novos": novos, "atualizados": atualizados, "invalidos_ou_duplicados": invalidos,
-              "sairam_da_base": len(sairam), "dry_run": dry_run}
+              "sairam_da_base": len(sairam), "excluidos_nao_quer_clinica": len(excluidos_clinica), "dry_run": dry_run}
     log.info("carga da base: %s", resumo)
     return resumo
 

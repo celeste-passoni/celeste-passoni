@@ -33,6 +33,8 @@ def test_sql_usa_filtros_do_yaml():
     sql = base_leads.sql_base(config.parametros()["leads_perdidos"])
     assert "'Não quer'" in sql and "INTERVAL 4 MONTH" in sql and "INTERVAL 3 MONTH" in sql and "QUALIFY ROW_NUMBER()" in sql
     assert "INTERVAL" not in base_leads.sql_base(config.parametros()["leads_perdidos"], com_janela=False)
+    ex = base_leads.sql_excluidos_pela_clinica(config.parametros()["leads_perdidos"])
+    assert "sistemaweb_perdidos" in ex and "'Não quer'" in ex
 
 
 def _lead(**k):
