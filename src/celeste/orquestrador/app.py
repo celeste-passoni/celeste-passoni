@@ -426,7 +426,7 @@ def _acao_botao_t1(ref, ultimo_wamid: str | None) -> str | None:
 def classificar_botao_t1(botao: str | None, texto: str | None) -> str | None:
     b = config.parametros().get("t1_botoes") or {}
     cand = {str(x or "").strip().casefold() for x in (botao, texto)}
-    if cand & {b.get(k, "").casefold() for k in ("sair_id", "sair_rotulo", "nao_quero_receber") if b.get(k)}:
+    if cand & {x.casefold() for x in [b.get("sair_id"), b.get("sair_rotulo"), *(b.get("sair_outros_rotulos") or [])] if x}:
         return "sair"
     if b.get("encerrar_rotulo", "").casefold() in cand:
         return "encerrar"

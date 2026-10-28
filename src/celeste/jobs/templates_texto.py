@@ -21,7 +21,7 @@ TEMPLATES: dict[str, dict] = {
         "nome": "resgate_queda_3cm_v2",   # 28/10: a pergunta final virou convite ("Quer que a gente avalie…?") para casar com os botões; v1 = 958115566957712
         "corpo": ("Oi, {1}! Você sabia que um fio saudável cresce cerca de 3 cm em 3 meses? 🌱\n"
                   "Já faz uns 3 meses desde que conversamos, e muita coisa pode ter mudado nos seus fios. Quer que a gente avalie como eles estão hoje?"),
-        "botoes": ["Quero uma avaliação", "Tenho uma dúvida", "Não quero receber"],   # quick replies (payload = texto); fluxo em ia/t1_botoes do YAML
+        "botoes": ["Quero agendar uma consulta", "Não tenho interesse"],   # 28/10 (clínica editou na Meta); quick replies (payload = texto); fluxo em ia/t1_botoes do YAML
         "imagem": "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/templates/t1_queda_3cm.jpg",   # cópia em midia/templates/
         "imagem_descricao": "foto da Dra. Luciana Passoni com o texto \"Você sabia? Um fio saudável cresce 3 cm em 3 meses.\", uma régua de hoje a 3 meses e \"Como estão seus cabelos hoje?\"",
         "sem_rodape": True,
