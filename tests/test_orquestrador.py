@@ -998,3 +998,17 @@ def test_midia_so_marcada_depois_do_envio_real():
     assert gravados == [{"status": "Em conversa"}]       # mas nada de mídia vai ao Firestore antes do envio
     oapp._atualizar_conversa(ref, conv, {"fotos_enviadas": ["x.jpg"]})
     assert gravados == [{"status": "Em conversa"}]
+
+
+def test_nome_informado_pelo_lead_vale_nas_mensagens_fixas(monkeypatch):
+    # 28/10/2026: cadastro "ECOLIFE INTERNATIONAL"; o lead disse "Valter" e a mensagem do "Agora não" saiu "Entendo, Ecolife!"
+    from google.cloud import firestore
+    monkeypatch.setattr(firestore, "Client", MagicMock())
+    from celeste.orquestrador import app as oapp
+    ctx = _ctx({"id": "c1", "frente": "leads_perdidos", "nome": "ECOLIFE INTERNATIONAL"})
+    ctx.atualizar = ctx.conversa.update
+    saida, erro = ferramentas_ia.executar("registrar_nome", {"nome": "  Valter "}, ctx)
+    assert not erro and ctx.conversa["nome_tratamento"] == "Valter"
+    assert oapp.primeiro_nome_conversa(ctx.conversa) == "Valter"
+    assert oapp.primeiro_nome_conversa({"nome": "ana souza"}) == "Ana" and oapp.primeiro_nome_conversa({}) == ""
+    assert "Como chamar o lead: Valter" in prompt.contexto_lead(ctx.conversa)

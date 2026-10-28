@@ -80,6 +80,8 @@ def camadas_estaveis(frente: str) -> str:
 def contexto_lead(conversa: dict) -> str:
     """Bloco volátil com o que se sabe do lead (vai na primeira mensagem do usuário)."""
     linhas = ["[CONTEXTO DO LEAD — não repita isto para o lead]"]
+    if conversa.get("nome_tratamento"):
+        linhas.append(f"- Como chamar o lead: {conversa['nome_tratamento']} (ele disse; o nome do cadastro é outro).")
     if conversa.get("id_paciente_tisaude"):
         nome_ts = (conversa.get("paciente_tisaude_nome") or "").strip()
         nome_lead = (conversa.get("nome") or "").strip()

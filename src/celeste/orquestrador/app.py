@@ -413,6 +413,11 @@ def _orientar_recepcao(ref, conv: dict, forcar: bool = False) -> dict:
     return {"ok": True, "enviado": 1, "orientado_recepcao": True}
 
 
+def primeiro_nome_conversa(conv: dict, padrao: str = "") -> str:
+    """Nome usado nas mensagens fixas: o que o lead disse (registrar_nome) ou o 1º do cadastro."""
+    return ((conv.get("nome_tratamento") or conv.get("nome") or "").strip().split() or [padrao])[0].title()
+
+
 def _acao_botao_t1(ref, ultimo_wamid: str | None) -> str | None:
     """Se a última mensagem do lead foi um botão do fluxo do T1, devolve a ação determinística ('agora_nao' | 'sair'); senão None."""
     if not ultimo_wamid:
@@ -436,7 +441,7 @@ def classificar_botao_t1(botao: str | None, texto: str | None) -> str | None:
 def _responder_agora_nao(ref, conv: dict, mt: meta.Meta) -> dict:
     """Lead tocou 'Agora não': pergunta o motivo com um botão de saída; status 'Irá nos retornar'. Sem modelo."""
     b = config.parametros()["t1_botoes"]
-    nome = ((conv.get("nome") or "").strip().split() or [""])[0].title()
+    nome = primeiro_nome_conversa(conv)
     texto = b["agora_nao_texto"].replace("{nome}", nome).replace("Entendo, !", "Entendo!")
     wamid = mt.enviar_botoes_resposta(conv["contato"], texto, [(b["sair_id"], b["sair_rotulo"])])
     agora = datetime.now(timezone.utc)
@@ -483,7 +488,7 @@ def _responder_confirmar_presenca(ref, conv: dict, mt: meta.Meta) -> dict:
             gravou = True
         except Exception as e:   # noqa: BLE001
             log.warning("confirmar presença no TI Saúde falhou (conversa %s, agendamento %s): %s", conv.get("id"), ida, e)
-    nome = ((conv.get("nome") or "").strip().split() or [""])[0].title()
+    nome = primeiro_nome_conversa(conv)
     try:
         dia = formatar_dia(date.fromisoformat(str(ag.get("data"))[:10]))
     except (TypeError, ValueError):
@@ -519,7 +524,7 @@ def _responder_confirmar_presenca(ref, conv: dict, mt: meta.Meta) -> dict:
 def _responder_sair(ref, conv: dict, mt: meta.Meta, acao: str = "sair") -> dict:
     """Lead tocou 'Não quero continuar' (T1–T3) ou 'Pode encerrar' (T4): despedida, opt-out, sai da esteira. Sem modelo."""
     b = config.parametros()["t1_botoes"]
-    nome = ((conv.get("nome") or "").strip().split() or [""])[0].title()
+    nome = primeiro_nome_conversa(conv)
     texto = (b["encerrar_texto"] if acao == "encerrar" else b["sair_texto"]).replace("{nome}", nome).replace("Tudo bem, .", "Tudo bem.")
     wamid = mt.enviar_texto(conv["contato"], texto)
     agora = datetime.now(timezone.utc)

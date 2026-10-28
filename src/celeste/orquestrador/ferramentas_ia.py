@@ -96,6 +96,9 @@ FERRAMENTAS: list[dict] = [
     {"name": "sinalizar_revisao", "description": "Marca a conversa para a equipe revisar quando o lead perguntou algo que NÃO está na base de conhecimento (você não inventa a resposta). Registre a dúvida exata.",
      "strict": True, "input_schema": {"type": "object", "properties": {"duvida": {"type": "string", "description": "a pergunta do lead que ficou sem resposta na base"}},
                                       "required": ["duvida"], "additionalProperties": False}},
+    {"name": "registrar_nome", "description": "Registra como o lead se chama quando o nome do cadastro não é o dele (nome de empresa, de outra pessoa) e ele disse o próprio nome ('Valter', 'pode me chamar de Ju'). As mensagens automáticas do sistema passam a usar esse nome. Uma vez, assim que ele disser; não use para o nome que já está no cadastro.",
+     "strict": True, "input_schema": {"type": "object", "properties": {"nome": {"type": "string", "description": "primeiro nome, como o lead quer ser chamado"}},
+                                      "required": ["nome"], "additionalProperties": False}},
     {"name": "atualizar_status", "description": "Registra o resultado da conversa quando ela chega a um desfecho sem agendamento (ex.: Irá nos retornar, Achou caro).",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "status": {"type": "string", "enum": ["Irá nos retornar", "Vamos retornar na data solicitada", "Achou caro", "Quer pelo convênio",
@@ -364,6 +367,10 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         pend = list(ctx.conversa.get("duvidas_pendentes") or []) + [e["duvida"][:300]]
         ctx.atualizar({"revisar": True, "revisar_motivo": "dúvida fora da base de conhecimento", "duvidas_pendentes": pend})
         return {"ok": True, "aviso": "equipe avisada; diga ao lead que vai confirmar e retornar"}
+
+    if nome == "registrar_nome":   # 28/10/2026: cadastro com nome de empresa; a mensagem fixa do "Agora não" saiu "Entendo, Ecolife!"
+        ctx.atualizar({"nome_tratamento": " ".join(e["nome"].split())[:40]})
+        return {"ok": True}
 
     if nome == "atualizar_status":
         status = e["status"]

@@ -97,7 +97,7 @@ def decidir(conv: dict, agora: datetime) -> Optional[str]:
 
 def parametros(codigo: str, conv: dict) -> list[str]:
     ag = conv.get("agendamento") or {}
-    nome = ((conv.get("nome") or "").strip().split() or ["tudo bem"])[0].title()
+    nome = ((conv.get("nome_tratamento") or conv.get("nome") or "").strip().split() or ["tudo bem"])[0].title()   # 28/10: nome dito pelo lead tem prioridade
     data = _data_consulta(conv)
     hora = formatar_hora(ag.get("hora", ""))
     if codigo == "CHOJ":
