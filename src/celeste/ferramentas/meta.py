@@ -50,8 +50,11 @@ class Meta:
                                                 "text": {"preview_url": "http" in texto, "body": texto}})
         return d["messages"][0]["id"]
 
-    def enviar_template(self, para: str, nome: str, parametros_corpo: list[str], idioma: str = "pt_BR") -> str:
+    def enviar_template(self, para: str, nome: str, parametros_corpo: list[str], idioma: str = "pt_BR",
+                        imagem_cabecalho: Optional[str] = None) -> str:
         comp = []
+        if imagem_cabecalho:   # template com header de imagem (T1 de 28/10/2026): a imagem vai em cada envio, por link público
+            comp.append({"type": "header", "parameters": [{"type": "image", "image": {"link": imagem_cabecalho}}]})
         if parametros_corpo:
             comp.append({"type": "body", "parameters": [{"type": "text", "text": p} for p in parametros_corpo]})
         d = self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "to": para, "type": "template",

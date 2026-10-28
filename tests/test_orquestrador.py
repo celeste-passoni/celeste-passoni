@@ -668,6 +668,9 @@ def test_classificar_botao_t1():
     assert oapp.classificar_botao_t1(None, "Não quero continuar") == "sair"
     assert oapp.classificar_botao_t1("Pode encerrar", "Pode encerrar") == "encerrar"
     assert oapp.classificar_botao_t1("Quero continuar", "Quero continuar") is None
+    assert oapp.classificar_botao_t1("Não quero receber", "Não quero receber") == "sair"   # T1 de 28/10/2026
+    assert oapp.classificar_botao_t1("Quero uma avaliação", "Quero uma avaliação") is None
+    assert oapp.classificar_botao_t1("Tenho uma dúvida", "Tenho uma dúvida") is None
     assert oapp.classificar_botao_t1(None, "oi") is None
 
 
@@ -682,7 +685,8 @@ def test_botoes_resposta_payload():
 
 def test_t1_tem_botoes_e_textos_do_fluxo():
     from celeste.jobs import templates_texto as tt
-    assert tt.TEMPLATES["T1"]["botoes"] == ["Quero continuar", "Agora não"]
+    assert tt.TEMPLATES["T1"]["botoes"] == ["Quero uma avaliação", "Tenho uma dúvida", "Não quero receber"]
+    assert all(len(x) <= 25 for x in tt.TEMPLATES["T1"]["botoes"])
     b = config.parametros()["t1_botoes"]
     assert len(b["sair_rotulo"]) <= 20 and "{nome}" in b["agora_nao_texto"] and "{nome}" in b["sair_texto"]
 

@@ -71,16 +71,27 @@ def test_templates_sao_os_da_clinica():
     from celeste.jobs import templates_texto as tt
     assert set(tt.TEMPLATES) == {"T1", "T2", "T3", "T4", "TR"}
     assert tt.TEMPLATES["TR"]["nome"] == "retorno_combinado" and tt.parametros("TR", "Ana") == ["Ana"] and "[botões" not in tt.renderizar("TR", "Ana")
-    assert "solicitação de consulta, feita em {2}" in tt.TEMPLATES["T1"]["corpo"] and "segue pendente" in tt.TEMPLATES["T2"]["corpo"]
+    assert "cresce cerca de 3 cm em 3 meses" in tt.TEMPLATES["T1"]["corpo"] and "segue pendente" in tt.TEMPLATES["T2"]["corpo"]
     assert tt.TEMPLATES["T2"]["botoes"] == ["Quero continuar", "Agora não"] and "SAIR" not in tt.renderizar("T2", "Ana")
     assert "ainda está pendente" in tt.TEMPLATES["T3"]["corpo"] and "vamos encerrar" in tt.TEMPLATES["T4"]["corpo"]
     assert tt.TEMPLATES["T4"]["botoes"] == ["Quero continuar", "Pode encerrar"] and tt.parametros("T4", "Ana") == ["Ana"]
-    assert tt.parametros("T1", "Ana", mes="junho") == ["Ana", "junho"] and tt.parametros("T2", "Ana") == ["Ana"] and tt.parametros("T3", "Ana") == ["Ana"]
-    assert "SAIR" not in tt.renderizar("T1", "Ana", mes="junho") and "feita em junho" in tt.renderizar("T1", "Ana", mes="junho")
-    from celeste.jobs import disparos
-    from datetime import datetime as _dt
-    assert disparos._extras_template("T1", False, {"lead_created_at": _dt(2026, 6, 15)}) == {"mes": "junho"}
+    assert tt.parametros("T1", "Ana") == ["Ana"] and tt.parametros("T2", "Ana") == ["Ana"] and tt.parametros("T3", "Ana") == ["Ana"]
+    t1 = tt.renderizar("T1", "Ana")   # 28/10/2026: o histórico mostra a imagem e o texto como o lead viu
+    assert t1.startswith("[imagem: foto da Dra. Luciana") and "Oi, Ana! Você sabia" in t1 and "SAIR" not in t1
+    assert tt.TEMPLATES["T1"]["imagem"].startswith("https://storage.googleapis.com/") and "imagem" not in tt.TEMPLATES["T2"]
     assert tt.renderizar("T4", "Ana").startswith("Olá, Ana. Como não tivemos")
+
+
+def test_template_com_imagem_no_cabecalho():
+    from celeste.ferramentas import meta as m
+    cli = m.Meta.__new__(m.Meta); enviados = {}
+    cli._post = lambda caminho, corpo: (enviados.update(corpo) or {"messages": [{"id": "wamid-t"}]})
+    assert cli.enviar_template("5511", "resgate_queda_3cm", ["Ana"], imagem_cabecalho="https://x/t1.jpg") == "wamid-t"
+    comp = enviados["template"]["components"]
+    assert comp[0] == {"type": "header", "parameters": [{"type": "image", "image": {"link": "https://x/t1.jpg"}}]}
+    assert comp[1]["parameters"] == [{"type": "text", "text": "Ana"}]
+    cli.enviar_template("5511", "resgate_solicitacao_segue_pendente", ["Ana"])
+    assert [c["type"] for c in enviados["template"]["components"]] == ["body"]
 
 
 def test_quem_respondeu_sai_da_esteira():
