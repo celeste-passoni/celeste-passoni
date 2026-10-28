@@ -564,7 +564,7 @@ def test_video_e_adiado_para_depois_dos_baloes():
     # 15/10/2026: 1º balão → mídia → resto do texto; no máximo 3 envios contando a mídia
     assert "videos_pendentes" in src and src.index("_balao(baloes[0], False)") < src.index("\n    _midia()\n") < src.index("for texto in baloes[1:]")
     assert "max_texto = max(1, 3 - n_midia)" in src
-    assert "ArrayRemove(videos_pendentes)" in src
+    assert 'ArrayUnion([v])' in src and "ArrayRemove" not in src   # 28/10/2026: marca a mídia só depois do envio real
 
 
 def test_contexto_mostra_consulta_agendada_e_simulada():
@@ -985,3 +985,16 @@ def test_historico_conversa_que_comeca_com_template(monkeypatch):
     turnos, ultimo = orq._historico(ref, MagicMock())
     assert [t["role"] for t in turnos] == ["user", "assistant", "user"]
     assert isinstance(turnos[0]["content"], str) and "Quero continuar" in turnos[2]["content"] and ultimo == "w2"
+
+
+def test_midia_so_marcada_depois_do_envio_real():
+    # 28/10/2026: resposta descartada (lead mandou outra mensagem) deixava o vídeo marcado como enviado sem ter saído
+    from celeste.orquestrador import app as oapp
+    gravados = []
+    ref = SimpleNamespace(set=lambda campos, merge=False: gravados.append(campos))
+    conv = {"videos_enviados": []}
+    oapp._atualizar_conversa(ref, conv, {"videos_enviados": ["tecnologias"], "status": "Em conversa"})
+    assert conv["videos_enviados"] == ["tecnologias"]   # a mesma resposta não manda duas vezes
+    assert gravados == [{"status": "Em conversa"}]       # mas nada de mídia vai ao Firestore antes do envio
+    oapp._atualizar_conversa(ref, conv, {"fotos_enviadas": ["x.jpg"]})
+    assert gravados == [{"status": "Em conversa"}]

@@ -130,7 +130,7 @@ def responder(p: Pedido):
         enviar_video=lambda v: (videos_pendentes.append(v), "adiado-para-depois-dos-baloes")[1],
         enviar_imagem=lambda d: (imagens_pendentes.append(d), "adiado-para-depois-dos-baloes")[1],
         avisar_recepcao=lambda motivo, resumo: _avisar_recepcao(mt, conv, motivo, resumo),
-        atualizar=lambda campos: (conv.update(campos), ref.set(campos, merge=True)),
+        atualizar=lambda campos: _atualizar_conversa(ref, conv, campos),
     )
     frente = conv.get("frente") or "leads_perdidos"
     if frente not in ("leads_perdidos",):
@@ -150,11 +150,7 @@ def responder(p: Pedido):
         time.sleep(max(0.0, motor.delay_humano(fora_horario=not _horario_comercial()) - (time.time() - inicio)))
     if ref.get().to_dict().get("debounce_versao") != p.versao:
         log.info("mensagem nova chegou durante a geração; resposta descartada (conversa %s)", p.conversa_id)
-        if videos_pendentes:   # o vídeo não foi enviado: desfaz a marcação para a próxima resposta poder mandá-lo
-            ref.set({"videos_enviados": firestore.ArrayRemove(videos_pendentes)}, merge=True)
-        if imagens_pendentes:
-            ref.set({"fotos_enviadas": firestore.ArrayRemove([d.split(":", 2)[2] for d in imagens_pendentes])}, merge=True)
-        return {"ok": True, "ignorado": "regerar"}
+        return {"ok": True, "ignorado": "regerar"}   # mídia só é marcada como enviada depois do envio real (_atualizar_conversa)
 
     # Regra da clínica (15/10/2026): no máximo 3 envios seguidos, contando fotos e vídeos. Com mídia, a ordem é
     # 1º balão (anuncia) → mídia → resto do texto. Sem mídia: até 3 balões.
@@ -183,6 +179,7 @@ def responder(p: Pedido):
                 time.sleep(2.0)
             try:
                 _enviar_video(mt, ref, conv, v); enviados += 1
+                ref.set({"videos_enviados": firestore.ArrayUnion([v])}, merge=True)
             except Exception as e:
                 log.warning("vídeo %s não enviado: %s", v, e)
         for d in imagens_pendentes:
@@ -191,6 +188,7 @@ def responder(p: Pedido):
             try:
                 grupo, slug, arquivo = d.split(":", 2)
                 enviados += _enviar_foto(mt, ref, conv, grupo, slug, arquivo)
+                ref.set({"fotos_enviadas": firestore.ArrayUnion([arquivo])}, merge=True)
             except Exception as e:
                 log.warning("antes e depois %s não enviado: %s", d, e)
 
@@ -657,6 +655,19 @@ def _guardar_midia(doc, conteudo: bytes, mime: str) -> None:
 
 
 # ----------------------------------------------------------------- ações laterais
+MIDIA_SO_APOS_ENVIO = ("videos_enviados", "fotos_enviadas")
+
+
+def _atualizar_conversa(ref, conv: dict, campos: dict) -> None:
+    """Grava o que as ferramentas mudam. Vídeos e fotos ficam marcados só nesta resposta (em memória) e vão ao Firestore
+    depois do envio real, em _midia: 28/10/2026, o lead pediu o vídeo e mandou outra mensagem; a resposta foi descartada,
+    mas a seguinte já leu o vídeo como enviado e disse que ele estava "logo acima", sem nenhum dos dois o mandar."""
+    conv.update(campos)
+    gravar = {k: v for k, v in campos.items() if k not in MIDIA_SO_APOS_ENVIO}
+    if gravar:
+        ref.set(gravar, merge=True)
+
+
 def _enviar_video(mt: meta.Meta, ref, conv: dict, chave: str) -> str:
     v = config.parametros()["videos"][chave]
     wamid = mt.enviar_video_link(conv["contato"], v["url"])
