@@ -71,10 +71,10 @@ def test_pausa_e_reinicio_da_esteira():
 
 def test_templates_sao_os_da_clinica():
     from celeste.jobs import templates_texto as tt
-    assert set(tt.TEMPLATES) == {"T1", "T2", "T3", "T4", "TR"}
+    assert set(tt.TEMPLATES) == {"T1", "T2", "T2r", "T3", "T4", "TR"}
     assert tt.TEMPLATES["TR"]["nome"] == "retorno_combinado" and tt.parametros("TR", "Ana") == ["Ana"] and "[botões" not in tt.renderizar("TR", "Ana")
-    assert "cresce cerca de 3 cm em 3 meses" in tt.TEMPLATES["T1"]["corpo"] and "segue pendente" in tt.TEMPLATES["T2"]["corpo"]
-    assert tt.TEMPLATES["T2"]["botoes"] == ["Quero continuar", "Agora não"] and "SAIR" not in tt.renderizar("T2", "Ana")
+    assert "cresce cerca de 3 cm em 3 meses" in tt.TEMPLATES["T1"]["corpo"] and "segue pendente" in tt.TEMPLATES["T2r"]["corpo"]
+    assert tt.TEMPLATES["T2r"]["botoes"] == ["Quero continuar", "Agora não"] and "SAIR" not in tt.renderizar("T2", "Ana")
     assert "ainda está pendente" in tt.TEMPLATES["T3"]["corpo"] and "vamos encerrar" in tt.TEMPLATES["T4"]["corpo"]
     assert tt.TEMPLATES["T4"]["botoes"] == ["Quero continuar", "Pode encerrar"] and tt.parametros("T4", "Ana") == ["Ana"]
     assert tt.parametros("T1", "Ana") == ["Ana"] and tt.parametros("T2", "Ana") == ["Ana"] and tt.parametros("T3", "Ana") == ["Ana"]
@@ -94,6 +94,40 @@ def test_template_com_imagem_no_cabecalho():
     assert comp[1]["parameters"] == [{"type": "text", "text": "Ana"}]
     cli.enviar_template("5511", "resgate_solicitacao_segue_pendente", ["Ana"])
     assert [c["type"] for c in enviados["template"]["components"]] == ["body"]
+
+
+def test_t2_so_para_quem_nao_respondeu_o_t1():
+    from celeste.jobs import templates_texto as tt
+    # 29/10/2026 (decisão da clínica): T2 = vídeo, só para quem não escreveu nada; status pode continuar "Template enviado (1°)"
+    base = dict(status_ia="Template enviado (1°)", passo=1, ultimo_template_em=AGORA - timedelta(days=1))
+    assert disparos.decidir(_lead(**base), AGORA).template == "T2"
+    assert disparos.config.parametros()["disparos"]["templates"]["T2"] == "resgate_video_solicitacao_pendente"
+    assert disparos.decidir(_lead(**base, respondeu_em=AGORA - timedelta(hours=5)), AGORA) is None        # resposta automática conta
+    assert disparos.decidir(_lead(**base, ultima_msg_lead_em=AGORA - timedelta(hours=5)), AGORA) is None
+    assert disparos.decidir(_lead(**base, falha_entrega=131050), AGORA) is None    # parou de receber marketing
+    assert disparos.decidir(_lead(**base, falha_entrega=131026), AGORA) is None    # número não recebe
+    assert disparos.decidir(_lead(**base, falha_entrega=130472), AGORA).template == "T2"   # experimento da Meta: nunca viu o T1
+    # quem respondeu e parou volta pelo T2 antigo (T2r), não pelo vídeo
+    agora_nao = _lead(status_ia="Agora não", passo=1, ultimo_template_em=AGORA - timedelta(days=2), ultima_msg_lead_em=AGORA - timedelta(days=2))
+    assert disparos.decidir(agora_nao, AGORA).template == "T2r"
+    assert tt.renderizar("T2", "Ana").startswith("Olá, Ana. Sua solicitação de consulta na Passoni Clinic ainda está pendente.")
+    assert "[botões: Quero ver o vídeo · Agora não]" in tt.renderizar("T2", "Ana")
+    assert tt.TEMPLATES["T2"]["video_botao"] == "dra_luciana" and tt.parametros("T2", "Ana") == ["Ana"]
+
+
+def test_completar_resposta_e_entrega():
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock
+    db = MagicMock()
+    docs = {"conversas/c1": {"primeira_msg_lead_em": AGORA}, "status_entrega/w1": {"status": "failed", "erros": [{"code": 131050}]}}
+    db.collection.side_effect = lambda col: SimpleNamespace(document=lambda i: SimpleNamespace(
+        get=lambda: SimpleNamespace(to_dict=lambda: docs.get(f"{col}/{i}"))))
+    lead = {"passo": 1, "status_ia": "Template enviado (1°)", "conversa_id": "c1", "templates_enviados": [{"wamid": "w1"}]}
+    disparos._completar_resposta_e_entrega(db, lead)
+    assert lead["respondeu_em"] == AGORA and lead["falha_entrega"] == 131050
+    novo = {"passo": 0, "status_ia": "Não contatado"}
+    disparos._completar_resposta_e_entrega(db, novo)
+    assert "respondeu_em" not in novo
 
 
 def test_quem_respondeu_sai_da_esteira():
@@ -173,12 +207,12 @@ def test_lembretes_elegibilidade():
 
 
 def test_agora_nao_recebe_t2_no_dia_seguinte():
-    # tocou "Agora não" no T1 (status "Agora não") e não escreveu nada → T2 1 dia depois
+    # tocou "Agora não" no T1 (status "Agora não") e não escreveu nada → T2r 1 dia depois
     l = _lead(status_ia="Agora não", passo=1, ultimo_template_em=AGORA - timedelta(days=1, hours=1), ultima_msg_lead_em=AGORA - timedelta(hours=20))
     assert disparos.decidir(l, AGORA) is None                                  # ainda não passou 1 dia da última msg do lead
     l["ultima_msg_lead_em"] = AGORA - timedelta(days=1, minutes=5)
     r = disparos.decidir(l, AGORA)
-    assert r and r.template == "T2"
+    assert r and r.template == "T2r"   # 29/10/2026: o T2 da esteira (vídeo) é só para quem não respondeu
 
 
 

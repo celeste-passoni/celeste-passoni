@@ -9,6 +9,7 @@ Volumes e resposta em até 3 dias, medidos nos 2 meses (atendente de referência
   T1 (antigo) revisando agenda          1.488 envios ·  5%   → substituído em 13/10/2026 por resgate_solicitacao_pendente (UTILITY)
                                                               → e em 28/10/2026 por resgate_queda_3cm_v2 (MARKETING, com imagem)
   T2 (antigo) "me dá um oi"             4.576 envios ·  7%   → substituído em 13/10/2026 por resgate_solicitacao_segue_pendente (UTILITY)
+                                                              → e em 29/10/2026 por resgate_video_solicitacao_pendente (oferece o vídeo; a antiga virou T2r)
   T3 (antigo) duas modalidades (frio)   3.874 envios · 10%   → substituído em 14/10/2026 por resgate_solicitacao_ainda_pendente (UTILITY)
   T4 (antigo) demonstrou interesse      2.090 envios ·  5%   → substituído em 14/10/2026 por resgate_solicitacao_encerramento (UTILITY)
 """
@@ -26,7 +27,15 @@ TEMPLATES: dict[str, dict] = {
         "imagem_descricao": "foto da Dra. Luciana Passoni com o texto \"Você sabia? Um fio saudável cresce 3 cm em 3 meses.\", uma régua de hoje a 3 meses e \"Como estão seus cabelos hoje?\"",
         "sem_rodape": True,
     },
-    "T2": {   # aprovado pela clínica em 13/10/2026 (UTILITY). 1 dia após o T1, para quem não respondeu e para quem tocou "Agora não" e sumiu
+    "T2": {   # 29/10/2026 (decisão da clínica): 1 dia após o T1, SÓ para quem não respondeu nada. UTILITY (Meta, aprovado em 26/10/2026)
+        "nome": "resgate_video_solicitacao_pendente",
+        "corpo": ("Olá, {1}. Sua solicitação de consulta na Passoni Clinic ainda está pendente. "
+                  "Antes de seguir, a Dra. Luciana Passoni gravou um vídeo curto sobre queda de cabelo que pode te ajudar. Quer receber?"),
+        "botoes": ["Quero ver o vídeo", "Agora não"],
+        "video_botao": "dra_luciana",   # "Quero ver o vídeo" → este vídeo, sem passar pelo modelo (orquestrador/_responder_quero_video)
+        "sem_rodape": True,
+    },
+    "T2r": {   # o T2 de 13/10/2026; desde 29/10 só no recontato de quem respondeu e parou ("Irá nos retornar", "Agora não")
         "nome": "resgate_solicitacao_segue_pendente",
         "corpo": ("Olá, {1}. Sua solicitação de consulta na Passoni Clinic segue pendente. "
                   "Caso ainda queira concluir o agendamento, responda esta mensagem."),

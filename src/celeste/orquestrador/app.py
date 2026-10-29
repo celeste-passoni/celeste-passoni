@@ -99,6 +99,8 @@ def responder(p: Pedido):
         return _responder_agora_nao(ref, conv, mt)
     if acao in ("sair", "encerrar"):
         return _responder_sair(ref, conv, mt, acao)
+    if acao == "quero_video":
+        return _responder_quero_video(ref, conv, mt)
 
     if _acao_botao_consulta(ref, ultimo_wamid) == "confirmar_presenca":   # 26/10/2026: botão do lembrete da consulta, sem modelo
         return _responder_confirmar_presenca(ref, conv, mt)
@@ -435,6 +437,8 @@ def classificar_botao_t1(botao: str | None, texto: str | None) -> str | None:
         return "encerrar"
     if b.get("agora_nao", "").casefold() in cand:
         return "agora_nao"
+    if b.get("quero_video", "").casefold() in cand:
+        return "quero_video"
     return None
 
 
@@ -453,6 +457,42 @@ def _responder_agora_nao(ref, conv: dict, mt: meta.Meta) -> dict:
     conv.update(campos); ref.set(campos, merge=True)
     _espelhar_lead(conv)
     return {"ok": True, "enviado": 1, "fluxo": "t1_agora_nao"}
+
+
+def video_do_template(ref) -> str:
+    """Vídeo prometido pelo último template da conversa (templates_texto: `video_botao`); padrão: dra_luciana."""
+    from celeste.jobs import templates_texto
+    tpls = [m.to_dict() or {} for m in ref.collection("mensagens").where("direcao", "==", "template").stream()]
+    tpls.sort(key=lambda m: m.get("recebido_em") or datetime.min.replace(tzinfo=timezone.utc))
+    codigo = tpls[-1].get("codigo") if tpls else None
+    return (templates_texto.TEMPLATES.get(codigo) or {}).get("video_botao") or "dra_luciana"
+
+
+def _responder_quero_video(ref, conv: dict, mt: meta.Meta) -> dict:
+    """Lead tocou 'Quero ver o vídeo' (T2, 29/10/2026): o vídeo do template e um texto fixo. Sem modelo."""
+    b = config.parametros()["t1_botoes"]
+    chave = video_do_template(ref)
+    enviados = 0
+    try:
+        _enviar_video(mt, ref, conv, chave); enviados += 1
+        ref.set({"videos_enviados": firestore.ArrayUnion([chave])}, merge=True)
+    except Exception as e:   # noqa: BLE001
+        log.warning("vídeo %s do botão não enviado (conversa %s): %s", chave, conv.get("id"), e)
+        ref.set({"revisar": True, "revisar_motivo": f"lead pediu o vídeo {chave} e o envio falhou"}, merge=True)
+    if SIMULAR_DELAY:
+        time.sleep(4.0)   # o vídeo chega antes do texto
+    texto = b["quero_video_texto"]
+    wamid = mt.enviar_texto(conv["contato"], texto)
+    agora = datetime.now(timezone.utc)
+    ref.collection("mensagens").document(wamid).set({
+        "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": "fluxo T2",
+        "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
+    enviados += 1
+    campos = {"status": "Em conversa", "pendente_resposta": False,
+              "ultima": {"texto": texto[:160], "direcao": "celeste", "tipo": "text", "em": agora}, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP}
+    conv.update(campos); ref.set(campos, merge=True)
+    _espelhar_lead(conv)
+    return {"ok": True, "enviado": enviados, "fluxo": "t2_quero_video", "video": chave}
 
 
 def _acao_botao_consulta(ref, ultimo_wamid: str | None) -> str | None:

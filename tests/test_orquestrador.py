@@ -673,6 +673,27 @@ def test_classificar_botao_t1():
     assert oapp.classificar_botao_t1("Quero agendar uma consulta", "Quero agendar uma consulta") is None
     assert oapp.classificar_botao_t1(None, "não tenho interesse em nada disso") is None   # texto escrito vai para a Celeste
     assert oapp.classificar_botao_t1(None, "oi") is None
+    assert oapp.classificar_botao_t1("Quero ver o vídeo", "Quero ver o vídeo") == "quero_video"   # T2 de 29/10/2026
+
+
+def test_botao_quero_video_manda_o_video_do_template(monkeypatch):
+    from datetime import datetime, timezone
+    from google.cloud import firestore
+    monkeypatch.setattr(firestore, "Client", MagicMock())
+    from celeste.orquestrador import app as oapp
+    monkeypatch.setattr(oapp, "SIMULAR_DELAY", False)
+    monkeypatch.setattr(oapp, "_espelhar_lead", lambda conv: None)
+    tpl = SimpleNamespace(to_dict=lambda: {"direcao": "template", "codigo": "T2", "recebido_em": datetime(2026, 10, 29, tzinfo=timezone.utc)})
+    msgs = MagicMock(); msgs.where.return_value.stream.return_value = [tpl]
+    ref = MagicMock(); ref.collection.return_value = msgs
+    assert oapp.video_do_template(ref) == "dra_luciana"
+    mt = MagicMock(); mt.enviar_video_link.return_value = "wv"; mt.enviar_texto.return_value = "wt"
+    conv = {"id": "c1", "contato": "5511", "status": "Template enviado (2°)"}
+    r = oapp._responder_quero_video(ref, conv, mt)
+    assert r["fluxo"] == "t2_quero_video" and r["enviado"] == 2 and r["video"] == "dra_luciana"
+    assert mt.enviar_video_link.call_args[0][1].endswith("/dra_luciana.mp4")
+    assert mt.enviar_texto.call_args[0][1] == "Assista com calma e depois me conta o que achou! 😊"
+    assert conv["status"] == "Em conversa"
 
 
 def test_botoes_resposta_payload():

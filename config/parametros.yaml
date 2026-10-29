@@ -331,6 +331,8 @@ t1_botoes:                               # fluxograma do T1 (aprovado pela clín
   sair_outros_rotulos: ["Não tenho interesse", "Não quero receber"]   # botões do T1 de 28/10/2026 (o 2º é da 1ª versão): mesmo efeito do "Não quero continuar" (despedida + opt-out)
   sair_texto: "Tudo bem, {nome}. Ficamos à disposição se mudar de ideia 💛"
   encerrar_rotulo: "Pode encerrar"        # botão do T4; mesmo efeito do "Não quero continuar" (sai da esteira), com despedida própria
+  quero_video: "Quero ver o vídeo"        # botão do T2 (29/10/2026): envia o vídeo do template (templates_texto: video_botao) + o texto abaixo, sem o modelo
+  quero_video_texto: "Assista com calma e depois me conta o que achou! 😊"
   encerrar_texto: "Tudo bem, {nome}. Solicitação encerrada. Se mudar de ideia, é só nos chamar por aqui 💛"
 cadastro_generico:                      # lead que, depois de UMA insistência, não quer passar os dados (decisão da clínica, 12–13/10/2026)
   nascimento: "01/01/2001"
@@ -462,17 +464,18 @@ disparos:
   # Os MESMOS templates que a clínica usa hoje no MarketZap (decisão de 09/10/2026); textos em src/celeste/jobs/templates_texto.py
   templates:                            # nome na Meta (idioma pt_BR); {{1}} = primeiro nome
     T1: resgate_queda_3cm_v2   # 28/10/2026 (decisão da clínica): "Você sabia que um fio saudável cresce cerca de 3 cm em 3 meses? … Quer que a gente avalie como eles estão hoje?", imagem da Dra., botões Quero agendar uma consulta · Não tenho interesse (MARKETING, Meta id 1827070681628958; a v1 958115566957712 terminava em "Como estão seus cabelos hoje?"). Antes: resgate_solicitacao_pendente_v2
-    T2: resgate_solicitacao_segue_pendente   # "sua solicitação segue pendente" (UTILITY, aprovado pela clínica em 13/10)
+    T2: resgate_video_solicitacao_pendente   # 29/10/2026 (decisão da clínica): "ainda está pendente… a Dra. gravou um vídeo… Quer receber?" (UTILITY); botões Quero ver o vídeo · Agora não. Só para quem não respondeu o T1
+    T2r: resgate_solicitacao_segue_pendente  # o T2 de 13/10 ("sua solicitação segue pendente"); desde 29/10 só no recontato de "Irá nos retornar" e "Agora não"
     T3: resgate_solicitacao_ainda_pendente   # "ainda está pendente" (UTILITY, aprovado pela clínica em 14/10)
     T4: resgate_solicitacao_encerramento     # "vamos encerrar a sua solicitação" (UTILITY, aprovado pela clínica em 14/10)
     TR: retorno_combinado                    # "como combinamos, estou retomando a nossa conversa" (UTILITY; decisão da clínica em 25/10: substitui o T2 no retorno em data pedida)
   templates_alternativos:               # versões com gancho de vídeo, cadastradas em 15/10/2026 (aprovadas pela clínica); entram na esteira só depois da aprovação da Meta e do fluxo dos botões
-    T3v: { nome: resgate_video_solicitacao_pendente,  quando: "Alternativa ao T3 (3 dias depois do T2): oferece o vídeo da Dra. sobre queda de cabelo (UTILITY, cadastrado em 26/10/2026 no lugar de resgate_video_dra_luciana, que a Meta aprovou como MARKETING). 'Quero ver o vídeo' → vídeo dra_luciana + Celeste.", video: dra_luciana }
     T4v: { nome: resgate_video_encerramento, quando: "Alternativa ao T4 (7 dias depois do T3): antes de encerrar, oferece um vídeo. 'Quero ver o vídeo' → vídeo casos_sucesso + Celeste; 'Pode encerrar' → opt-out.", video: casos_sucesso }
-  status_apos_template: { T1: "Template enviado (1°)", T2: "Template enviado (2°)", T3: "Template enviado (2°)", T4: "Template enviado (1°)", TR: "Template enviado (2°)" }
+  status_apos_template: { T1: "Template enviado (1°)", T2: "Template enviado (2°)", T2r: "Template enviado (2°)", T3: "Template enviado (2°)", T4: "Template enviado (1°)", TR: "Template enviado (2°)" }
   quando:                               # descrição para o painel (página Templates)
     T1: "Dia 0. Primeiro toque a quem está na base de Leads Perdidos e nunca respondeu."
-    T2: "1 dia depois do T1, se não houve resposta (ou 1 dia depois de 'Agora não' sem motivo)."
+    T2: "1 dia depois do T1, só se o lead não respondeu nada (nem resposta automática) e a entrega do T1 não falhou de vez. 'Quero ver o vídeo' → vídeo da Dra. Luciana sobre queda de cabelo, na hora."
+    T2r: "Recontato de quem respondeu e parou: 7 dias depois de 'Irá nos retornar' ou 1 dia depois de 'Agora não' sem motivo."
     T3: "3 dias depois do T2, se não houve resposta."
     T4: "7 dias depois do T3, se não houve resposta. Depois: pausa de 15 dias e recomeça no T1 uma única vez."
     TR: "Na data e hora exatas que o lead pediu ('me chama na segunda às 11h30'), em qualquer dia e horário, pelo job de retornos (todo minuto). A Celeste retoma a conversa de onde parou."
@@ -485,9 +488,12 @@ disparos:
   reiniciar_no_passo: 0                 # após o último passo, pausa e recomeça no T1
   pausa_apos_ultimo_passo_dias: 15      # decisão da clínica, 14/10/2026
   max_ciclos: 2                         # depois do 2º ciclo completo sem resposta: status "Sem resposta (esteira encerrada)", não aborda mais
+  # 29/10/2026 (decisão da clínica): a esteira (T2 em diante) só segue para quem NUNCA respondeu. Qualquer mensagem do lead
+  # (normal, resposta automática, "não quero") tira da esteira. Falhas de entrega definitivas do último template também param:
+  falhas_que_param_esteira: [131050, 131026]   # 131050 = parou de receber marketing; 131026 = número não recebe. (130472, experimento da Meta, segue)
   template_por_status:                  # recontato de quem respondeu e parou (dias em leads_perdidos.recontato_por_status_ia)
-    "Irá nos retornar": T2
-    "Agora não": T2
+    "Irá nos retornar": T2r                   # 29/10/2026: o T2 da esteira (vídeo) é só para quem não respondeu; o recontato usa o T2 antigo
+    "Agora não": T2r
     "Vamos retornar na data solicitada": TR   # 25/10/2026: era T2. 27/10: quem envia é o job celeste-retornos (todo minuto, hora exata, sem restrição de horário), não a esteira
     "Achou caro": T1
     "Quer pelo convênio": T1

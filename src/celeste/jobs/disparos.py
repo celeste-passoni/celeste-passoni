@@ -77,6 +77,12 @@ def decidir(lead: dict, agora: datetime, tarde_livre_hoje: Optional[bool] = None
     passos = d["passos"]
     passo = int(lead.get("passo") or 0)
     ciclo = int(lead.get("ciclos") or 1)
+    # 29/10/2026 (decisão da clínica): qualquer resposta (normal, automática, "não quero") tira da esteira, mesmo com o status
+    # ainda em "Template enviado"; falha de entrega definitiva do último template também (`respondeu_em`/`falha_entrega`: rodar)
+    if passo > 0 and (ultimo_lead or lead.get("respondeu_em")):
+        return None
+    if lead.get("falha_entrega") in set(d.get("falhas_que_param_esteira") or []):
+        return None
     if passo >= len(passos):
         # fim da esteira: pausa e recomeça; depois de `max_ciclos` ciclos completos sem resposta, encerra para este lead
         if ultimo_tpl and _dt(ultimo_tpl) + timedelta(days=int(d["pausa_apos_ultimo_passo_dias"])) > agora:
@@ -117,6 +123,21 @@ def e_teste(doc: dict, numeros: set) -> bool:
     """27/10/2026 (decisão da clínica): números de teste não participam de nenhuma fila nem esteira, não recebem nenhum disparo.
     Vale para lead (`celular`) e conversa (`contato`), marcados como teste ou com número da lista do painel."""
     return bool(doc.get("teste")) or str(doc.get("celular") or doc.get("contato") or "") in numeros
+
+
+def _completar_resposta_e_entrega(db, lead: dict) -> None:
+    """Lead já abordado e ainda na esteira: traz da conversa se ele escreveu algo (o gateway grava `primeira_msg_lead_em` em
+    qualquer mensagem, inclusive resposta automática) e o código de erro da entrega do último template (`status_entrega`)."""
+    if int(lead.get("passo") or 0) <= 0 or lead.get("status_ia") not in ("Template enviado (1°)", "Template enviado (2°)"):
+        return
+    if lead.get("conversa_id"):
+        conv = db.collection("conversas").document(lead["conversa_id"]).get().to_dict() or {}
+        lead["respondeu_em"] = conv.get("primeira_msg_lead_em") or conv.get("ultima_msg_lead_em")
+    wamid = ((lead.get("templates_enviados") or [{}])[-1] or {}).get("wamid")
+    if wamid:
+        st = db.collection("status_entrega").document(wamid).get().to_dict() or {}
+        if st.get("status") == "failed":
+            lead["falha_entrega"] = next((e.get("code") for e in (st.get("erros") or []) if isinstance(e, dict)), None)
 
 
 def _enviados_hoje(db) -> int:
@@ -187,6 +208,7 @@ def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[
         if e_teste(lead, teste):   # 27/10/2026: número de teste não entra na esteira
             resumo["pulados"] += 1
             continue
+        _completar_resposta_e_entrega(db, lead)
         dec = decidir(lead, agora, tarde)
         if not dec:
             resumo["pulados"] += 1
