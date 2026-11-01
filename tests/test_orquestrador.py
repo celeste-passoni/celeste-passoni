@@ -592,12 +592,15 @@ def test_consultar_agendamento_le_o_tisaude():
 
 def test_buscar_horarios_so_depende_da_agenda():
     from celeste.ferramentas import tisaude
-    from datetime import date
+    from datetime import date, timedelta
     ts = tisaude.TiSaude.__new__(tisaude.TiSaude)
     ts._ocupados = lambda prof, de, ate: set()
-    ts._grade_livre = lambda prof, dia: ["11:00:00"]       # a grade devolve horário até em sábado e feriado: a agenda manda
-    livres = ts.buscar_horarios("dr_lucas", dias=3, a_partir_de=date(2026, 10, 31))   # sábado, domingo, feriado (2/11) no futuro
-    assert {l["data"] for l in livres} >= {"2026-10-31", "2026-11-01", "2026-11-02"}
+    ts._grade_livre = lambda prof, dia: ["11:00:00"]       # a grade devolve horário até em sábado e domingo: a agenda manda
+    sabado = date.today() + timedelta(days=1)              # próximo sábado no futuro (01/11/2026: datas fixas ficaram no passado e o teste quebrou)
+    while sabado.weekday() != 5:
+        sabado += timedelta(days=1)
+    livres = ts.buscar_horarios("dr_lucas", dias=3, a_partir_de=sabado)   # sábado, domingo, segunda
+    assert {l["data"] for l in livres} >= {(sabado + timedelta(days=i)).isoformat() for i in range(3)}
     assert "feriados" not in config.parametros()
 
 
