@@ -443,7 +443,7 @@ modelos:
     claude-sonnet-5:   { entrada: 2.0,  saida: 10.0, cache_leitura: 0.2,  cache_escrita: 4.0 }
     claude-haiku-4-5:  { entrada: 1.0,  saida: 5.0,  cache_leitura: 0.1,  cache_escrita: 2.0 }
   cap_diario_usd: 15.0                 # ao estourar, conversas ficam pausadas com alerta
-  aquecer_cache: true                  # job a cada 50 min reenvia o prompt fixo com max_tokens=0: mantém o cache de 1 h vivo (custa só uma leitura, ~US$ 0,004)
+  aquecer_cache: true                  # job a cada 50 min, 24 h, reenvia o prompt fixo com max_tokens=0: mantém o cache de 1 h vivo (leitura ~US$ 0,026 com ~115k tokens; regravar custa ~US$ 0,92)
 
 portao:                                # 26/10/2026 (aprovado pela clínica): revisor antes do envio, só em respostas de risco (valor, data, hora, doença, tratamento, política)
   ativo: false                          # DESLIGADO em 26/10/2026 a pedido da clínica (muitas respostas de fallback nos testes)
