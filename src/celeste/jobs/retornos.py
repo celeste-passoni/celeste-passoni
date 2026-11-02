@@ -2,7 +2,7 @@
 """Retornos combinados na hora exata (decisão da clínica, 27/10/2026).
 
 Quando o lead pede "me chama às 11h30", a Celeste grava status "Vamos retornar na data solicitada" e `proximo_recontato_em`
-(data, ou data e hora de São Paulo). Este job roda TODO MINUTO (Cloud Scheduler celeste-retornos), em qualquer dia e hora:
+(data, ou data e hora de São Paulo). Este job roda A CADA 5 MINUTOS (Cloud Scheduler celeste-retornos; até 02/11/2026 era todo minuto), em qualquer dia e hora:
 a clínica decidiu que o horário pedido pelo lead vale sempre, inclusive fora do horário comercial, fim de semana e feriado.
 Lê só os leads nesse status e envia o template de retorno (TR) a quem já passou da hora. O envio muda o status do lead,
 então nunca repete. Não tem limite diário: é uma promessa feita ao lead. O job de disparos (esteira) não trata mais esse status.

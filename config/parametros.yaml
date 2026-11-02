@@ -479,7 +479,7 @@ disparos:
     T2r: "Recontato de quem respondeu e parou: 7 dias depois de 'Irá nos retornar' ou 1 dia depois de 'Agora não' sem motivo."
     T3: "3 dias depois do T2, se não houve resposta."
     T4: "7 dias depois do T3, se não houve resposta. Depois: pausa de 15 dias e recomeça no T1 uma única vez."
-    TR: "Na data e hora exatas que o lead pediu ('me chama na segunda às 11h30'), em qualquer dia e horário, pelo job de retornos (todo minuto). A Celeste retoma a conversa de onde parou."
+    TR: "Na data e hora exatas que o lead pediu ('me chama na segunda às 11h30'), em qualquer dia e horário, pelo job de retornos (a cada 5 min). A Celeste retoma a conversa de onde parou."
 
   passos:                               # cadência medida na atendente de referência (medianas): 3 d, 3 d, 8 d, 3 d
     - { template: T1, apos_dias: 0,  ciclo: 1 }
