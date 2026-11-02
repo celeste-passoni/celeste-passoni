@@ -227,10 +227,16 @@ def test_dt_hora_sem_fuso_e_sao_paulo():
     # domingo 22h também vale (decisão da clínica: sempre na hora pedida)
     dom = dict(lead, proximo_recontato_em="2026-11-01T22:00")
     assert retornos.vencidos([("l2", dom)], datetime(2026, 11, 1, 22, 0, tzinfo=ZoneInfo("America/Sao_Paulo"))) == [("l2", dom)]
-    # só data = a partir da meia-noite local; opt-out e outro status ficam de fora; ordem = mais antigo primeiro
+    # só data = às 10h local (02/11/2026; antes meia-noite); opt-out e outro status ficam de fora; ordem = mais antigo primeiro
     so_data = dict(lead, proximo_recontato_em="2026-10-27")
+    assert disparos._dt_retorno("2026-10-27").hour == 10 and disparos._dt_retorno("2026-10-27T11:30").hour == 11
+    assert retornos.vencidos([("l3", so_data)], datetime(2026, 10, 27, 9, 59, tzinfo=ZoneInfo("America/Sao_Paulo"))) == []
     fora = [("x", dict(lead, opt_out=True)), ("y", dict(lead, status_ia="Em conversa"))]
     assert [i for i, _ in retornos.vencidos([("l3", so_data), ("l1", lead)] + fora, datetime(2026, 10, 27, 12, 0, tzinfo=ZoneInfo("America/Sao_Paulo")))] == ["l3", "l1"]
+    # número de teste recebe retorno combinado (02/11/2026): `vencidos` não filtra teste e `rodar` não usa mais e_teste
+    import inspect
+    assert retornos.vencidos([("t", dict(lead, teste=True))], datetime(2026, 10, 27, 12, 0, tzinfo=ZoneInfo("America/Sao_Paulo")))
+    assert "e_teste" not in inspect.getsource(retornos.rodar)
 
 
 def test_numero_de_teste_fora_de_todas_as_filas():

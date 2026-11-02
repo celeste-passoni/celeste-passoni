@@ -6,6 +6,9 @@ Quando o lead pede "me chama às 11h30", a Celeste grava status "Vamos retornar 
 a clínica decidiu que o horário pedido pelo lead vale sempre, inclusive fora do horário comercial, fim de semana e feriado.
 Lê só os leads nesse status e envia o template de retorno (TR) a quem já passou da hora. O envio muda o status do lead,
 então nunca repete. Não tem limite diário: é uma promessa feita ao lead. O job de disparos (esteira) não trata mais esse status.
+02/11/2026 (clínica): só data = 10h (`disparos.retorno_hora_padrao`), não meia-noite; números de teste TAMBÉM recebem o retorno
+(é como a clínica testa o fluxo; a esteira de templates continua fechada para eles). Se o lead voltar a falar antes da hora,
+o orquestrador cancela o retorno (status "Em conversa").
 """
 from __future__ import annotations
 
@@ -31,11 +34,11 @@ def vencidos(leads: list[tuple[str, dict]], agora: datetime) -> list[tuple[str, 
         if not quando or not lead.get("elegivel") or lead.get("opt_out") or lead.get("status_ia") != STATUS:
             continue
         try:
-            if disparos._dt(quando) <= agora:
+            if disparos._dt_retorno(quando) <= agora:
                 saida.append((lead_id, lead))
         except (TypeError, ValueError):
             log.warning("retornos: data inválida no lead %s: %r", lead_id[-4:], quando)
-    return sorted(saida, key=lambda x: disparos._dt(x[1]["proximo_recontato_em"]))
+    return sorted(saida, key=lambda x: disparos._dt_retorno(x[1]["proximo_recontato_em"]))
 
 
 def rodar(dry_run: bool = False, limite: Optional[int] = None) -> dict:
@@ -46,9 +49,7 @@ def rodar(dry_run: bool = False, limite: Optional[int] = None) -> dict:
     d.update(db.collection("config").document("disparos").get().to_dict() or {})
     agora = datetime.now(timezone.utc)
     consulta = db.collection("leads").where("status_ia", "==", STATUS).where("elegivel", "==", True)
-    teste = disparos.numeros_teste(db)
-    leads = [(doc.id, doc.to_dict()) for doc in consulta.stream()]
-    leads = [(i, l) for i, l in leads if not disparos.e_teste(l, teste)]   # 27/10/2026: número de teste não recebe retorno
+    leads = [(doc.id, doc.to_dict()) for doc in consulta.stream()]   # 02/11/2026: números de teste entram (antes eram pulados)
     fila = vencidos(leads, agora)
     if limite:
         fila = fila[:limite]

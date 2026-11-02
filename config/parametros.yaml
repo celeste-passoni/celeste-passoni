@@ -459,6 +459,7 @@ disparos:
   limite_diario: 100                    # templates por dia (todas as frentes)
   limite_por_execucao: 25               # por rodada do job (roda de hora em hora no horário permitido; 25/10/2026: era a cada 30 min)
   horario: { dias_uteis: true, inicio: 9, fim: 18 }   # hora local (America/Sao_Paulo)
+  retorno_hora_padrao: 10               # 02/11/2026: retorno combinado pedido só com a data ("me chama na terça") sai às 10h (antes: meia-noite)
   intervalo_entre_envios_segundos: [4, 12]            # ritmo humano entre um lead e outro
   priorizar: "mais_recentes"            # mais_recentes | mais_antigos
   # Os MESMOS templates que a clínica usa hoje no MarketZap (decisão de 09/10/2026); textos em src/celeste/jobs/templates_texto.py

@@ -113,6 +113,17 @@ def _dt(v) -> datetime:
     return datetime.fromisoformat(s).replace(tzinfo=FUSO)
 
 
+def _dt_retorno(v) -> datetime:
+    """Hora do retorno combinado. Só data ("me chama na terça") = às `disparos.retorno_hora_padrao` (10h) daquele dia, hora local;
+    antes (até 02/11/2026) caía à meia-noite. Data com hora segue como está."""
+    dt = _dt(v)
+    so_data = isinstance(v, date) and not isinstance(v, datetime) or (isinstance(v, str) and "T" not in v and " " not in v)
+    if so_data:
+        hora = int(config.parametros()["disparos"].get("retorno_hora_padrao", 10))
+        dt = dt.replace(hour=hora, minute=0)
+    return dt
+
+
 def numeros_teste(db) -> set:
     """Números internos de teste (lista do painel, config/atendimento)."""
     cfg = db.collection("config").document("atendimento").get().to_dict() or {}
