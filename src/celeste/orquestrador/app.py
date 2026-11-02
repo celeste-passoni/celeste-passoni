@@ -88,6 +88,7 @@ def responder(p: Pedido):
     historico, ultimo_wamid = _historico(ref, mt)
     if not historico or historico[-1]["role"] != "user":
         return {"ok": True, "ignorado": "nada novo do lead"}
+    _cancelar_retorno_se_lead_voltou(ref, conv)
     if ultimo_wamid:
         try:
             mt.marcar_lida(ultimo_wamid)
@@ -777,6 +778,20 @@ def _avisar_recepcao(mt: meta.Meta, conv: dict, motivo: str, resumo: str) -> Non
                                              f"Motivo: {motivo.replace('_', ' ')}\nResumo: {resumo}")
         except Exception as e2:
             log.error("aviso à recepção não entregue: %s", e2)
+
+
+def _cancelar_retorno_se_lead_voltou(ref, conv: dict) -> bool:
+    """O lead pediu 'me chama na terça' e voltou a falar antes: o retorno combinado deixa de fazer sentido (02/11/2026, incidente Juninho:
+    o status ficou parado em 'Vamos retornar…' enquanto a conversa seguia, e o lead continuou na fila do job de retornos).
+    Status volta a 'Em conversa' e `proximo_recontato_em` é apagado na conversa e no lead; se ele pedir de novo, a Celeste regrava."""
+    if conv.get("status") != "Vamos retornar na data solicitada":
+        return False
+    campos = {"status": "Em conversa", "proximo_recontato_em": None, "retorno_cancelado_em": datetime.now(timezone.utc)}
+    conv.update(campos)
+    ref.set(campos, merge=True)
+    _espelhar_lead(conv)
+    log.info("retorno combinado cancelado: o lead voltou a falar (conversa %s)", conv.get("id"))
+    return True
 
 
 def _espelhar_lead(conv: dict) -> None:

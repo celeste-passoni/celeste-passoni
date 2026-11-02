@@ -699,6 +699,24 @@ def test_botao_quero_video_manda_o_video_do_template(monkeypatch):
     assert conv["status"] == "Em conversa"
 
 
+def test_lead_que_volta_a_falar_cancela_o_retorno_combinado(monkeypatch):
+    from google.cloud import firestore
+    monkeypatch.setattr(firestore, "Client", MagicMock())
+    from celeste.orquestrador import app as oapp
+    espelhados = []
+    monkeypatch.setattr(oapp, "_espelhar_lead", lambda conv: espelhados.append(dict(conv)))
+    ref = MagicMock()
+    conv = {"id": "c1", "contato": "5511", "status": "Vamos retornar na data solicitada", "proximo_recontato_em": "2026-11-02T08:30"}
+    assert oapp._cancelar_retorno_se_lead_voltou(ref, conv) is True
+    assert conv["status"] == "Em conversa" and conv["proximo_recontato_em"] is None and conv["retorno_cancelado_em"]
+    gravado = ref.set.call_args[0][0]
+    assert gravado["status"] == "Em conversa" and gravado["proximo_recontato_em"] is None
+    assert espelhados and espelhados[0]["proximo_recontato_em"] is None   # o lead sai da fila do job de retornos
+    # qualquer outro status não é tocado
+    outra = {"id": "c2", "contato": "5522", "status": "Em conversa"}
+    assert oapp._cancelar_retorno_se_lead_voltou(ref, outra) is False and ref.set.call_count == 1
+
+
 def test_botoes_resposta_payload():
     from celeste.ferramentas import meta as m
     cli = m.Meta.__new__(m.Meta); enviados = {}
