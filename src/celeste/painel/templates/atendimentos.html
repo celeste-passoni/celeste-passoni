@@ -40,6 +40,7 @@
       <select id="f_status"><option value="">Todos os status</option>{% for s in statuses %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select>
       <input id="f_busca" type="text" placeholder="nome ou telefone" style="flex:1;min-width:120px">
       <label style="font-size:12px"><input id="f_abertas" type="checkbox"> só abertas</label>
+      <label style="font-size:12px" title="só conversas em que o lead escreveu ou tocou um botão"><input id="f_interacao" type="checkbox"> só com interação</label>
       <button type="button" class="leve" style="font-size:11px;padding:4px 8px" onclick="carregarLista(); if (atual) abrir(atual, true);">Atualizar</button>
       <span id="f_total" class="muted" style="font-size:11px;width:100%"></span>
     </div>
@@ -61,7 +62,7 @@ const hora = iso => { if (!iso) return ''; const d = new Date(iso), h = new Date
 const tagFrente = (f, rot) => `<span class="tag mini ${f === 'leads_perdidos' ? 'lp' : f === 'campanha' ? 'alerta' : f ? 'nl' : ''}">${esc(rot)}</span>`;
 
 async function carregarLista() {
-  const q = new URLSearchParams({frente: $('#f_frente').value, status: $('#f_status').value, busca: $('#f_busca').value, abertas: $('#f_abertas').checked ? '1' : ''});
+  const q = new URLSearchParams({frente: $('#f_frente').value, status: $('#f_status').value, busca: $('#f_busca').value, abertas: $('#f_abertas').checked ? '1' : '', interacao: $('#f_interacao').checked ? '1' : ''});
   const r = await fetch('/api/conversas?' + q); const j = await r.json(); cacheLista = j.itens;
   $('#f_total').textContent = j.total + ' conversa(s)';
   $('#itens').innerHTML = j.itens.map(c => `
@@ -134,7 +135,7 @@ async function enviar() {
   t.value = ''; await abrir(atual, true); await carregarLista();
 }
 
-['f_frente', 'f_status', 'f_abertas'].forEach(i => $('#' + i).addEventListener('change', carregarLista));
+['f_frente', 'f_status', 'f_abertas', 'f_interacao'].forEach(i => $('#' + i).addEventListener('change', carregarLista));
 $('#f_busca').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(carregarLista, 300); });
 carregarLista().then(() => { if (atual) abrir(atual); });
 // sem atualização automática: a tela só recarrega quando a página é atualizada ou pelo botão "Atualizar"

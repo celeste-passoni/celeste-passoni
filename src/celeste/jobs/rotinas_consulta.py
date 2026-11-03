@@ -160,7 +160,7 @@ def rodar(dry_run: bool = False, forcar_horario: bool = False) -> dict:
             resumo["enviados"] += 1
             continue
         try:
-            wamid = mt.enviar_template(conv["contato"], nomes[cod], parametros(cod, conv))
+            wamid = mt.enviar_template(conv.get("wa_id") or conv["contato"], nomes[cod], parametros(cod, conv))
         except Exception as e:   # noqa: BLE001
             resumo["erros"] += 1
             log.warning("rotinas: falha ao enviar %s para a conversa %s: %s", cod, doc.id, e)

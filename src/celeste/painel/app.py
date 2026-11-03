@@ -257,8 +257,13 @@ def atendimentos(request: Request, c: str = "", _=Depends(autenticar)):
     return tpl.TemplateResponse(request, "atendimentos.html", {"inicial": c, "statuses": statuses, "campanhas_lista": campanhas_lista})
 
 
+def com_interacao(c: dict) -> bool:
+    """O lead participou: escreveu, mandou áudio/imagem ou tocou um botão (o gateway grava primeira_msg_lead_em na 1ª vez)."""
+    return bool(c.get("primeira_msg_lead_em") or c.get("ultima_msg_lead_em"))
+
+
 @app.get("/api/conversas")
-def api_conversas(frente: str = "", status: str = "", busca: str = "", abertas: str = "", _=Depends(autenticar)):
+def api_conversas(frente: str = "", status: str = "", busca: str = "", abertas: str = "", interacao: str = "", _=Depends(autenticar)):
     docs = [dict(c.to_dict(), id=c.id) for c in db.collection("conversas").stream()]
     numeros = _numeros_teste()
     for c in docs:
@@ -273,6 +278,8 @@ def api_conversas(frente: str = "", status: str = "", busca: str = "", abertas: 
         docs = [c for c in docs if c.get("status") == status]
     if abertas:
         docs = [c for c in docs if c.get("aberta")]
+    if interacao:   # 03/11/2026 (clínica): só conversas em que o lead escreveu ou tocou um botão
+        docs = [c for c in docs if com_interacao(c)]
     if busca:
         b = busca.lower()
         docs = [c for c in docs if b in (c.get("nome") or "").lower() or b in (c.get("contato") or "")]
@@ -371,7 +378,7 @@ def conversas_redirect(frente: str = "", _=Depends(autenticar)):
 
 
 @app.get("/conversas-tabela", response_class=HTMLResponse)
-def conversas(request: Request, frente: str = "", status: str = "", abertas: str = "", busca: str = "", _=Depends(autenticar)):
+def conversas(request: Request, frente: str = "", status: str = "", abertas: str = "", busca: str = "", interacao: str = "", _=Depends(autenticar)):
     docs = [dict(c.to_dict(), id=c.id) for c in db.collection("conversas").stream()]
     if frente == "sem_frente":
         docs = [c for c in docs if not c.get("frente")]
@@ -383,6 +390,8 @@ def conversas(request: Request, frente: str = "", status: str = "", abertas: str
         docs = [c for c in docs if c.get("status") == status]
     if abertas:
         docs = [c for c in docs if c.get("aberta")]
+    if interacao:   # 03/11/2026 (clínica): só conversas em que o lead escreveu ou tocou um botão
+        docs = [c for c in docs if com_interacao(c)]
     if busca:
         b = busca.lower()
         docs = [c for c in docs if b in (c.get("nome") or "").lower() or b in (c.get("contato") or "")]
@@ -390,7 +399,7 @@ def conversas(request: Request, frente: str = "", status: str = "", abertas: str
     statuses = sorted({c.get("status") for c in db.collection("conversas").select(["status"]).stream() for c in [c.to_dict()] if c.get("status")})
     campanhas_lista = sorted({x.get("campanha") for x in (c.to_dict() for c in db.collection("conversas").select(["campanha"]).stream()) if x.get("campanha")})
     return tpl.TemplateResponse(request, "conversas.html", {"conversas": docs[:300], "total": len(docs), "frente": frente, "status": status,
-                                                            "abertas": abertas, "busca": busca, "statuses": statuses, "campanhas_lista": campanhas_lista})
+                                                            "abertas": abertas, "interacao": interacao, "busca": busca, "statuses": statuses, "campanhas_lista": campanhas_lista})
 
 
 @app.get("/conversas/{cid}")

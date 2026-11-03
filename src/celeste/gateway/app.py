@@ -15,7 +15,7 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from google.cloud import firestore, tasks_v2
 from google.protobuf import timestamp_pb2
 
-from celeste.comum import config
+from celeste.comum import config, telefones
 from celeste.ferramentas import meta
 
 logging.basicConfig(level=logging.INFO)
@@ -97,30 +97,46 @@ def _antiga(timestamp: int) -> bool:
 
 
 def _conversa_aberta(telefone: str, nome: str | None):
-    abertas = db.collection("conversas").where("contato", "==", telefone).where("aberta", "==", True).limit(1).stream()
-    for c in abertas:
-        return c.reference
+    """Conversa aberta do número, pelas duas grafias brasileiras (com e sem o 9º dígito; 03/11/2026, casos Adryano e Steffany).
+    `contato` é o número da base da clínica (chave de leads/ e contatos/); `wa_id` é o que a Meta usa quando difere."""
+    numeros = telefones.variantes(telefone)
+    for n in numeros:
+        for c in db.collection("conversas").where("contato", "==", n).where("aberta", "==", True).limit(1).stream():
+            if n != telefone and (c.to_dict() or {}).get("wa_id") != telefone:
+                c.reference.set({"wa_id": telefone}, merge=True)   # a resposta da Celeste vai para o número que a Meta usa
+            return c.reference
     # frente: lead da base que JÁ recebeu template da Celeste (passo > 0) é Leads Perdidos; quem não está, ou ainda não foi
     # disparado, fica SEM frente (25/10/2026, decisão da clínica: a IA só atende quem ela mesma abordou)
     frente, campanha, teste = None, None, False
     cfg = db.collection("config").document("atendimento").get().to_dict() or {}
-    lead = db.collection("leads").document(telefone).get()
-    if telefone in {str(n) for n in (cfg.get("numeros_teste") or [])}:
+    contato_base, lead = telefone, None
+    for n in numeros:
+        doc = db.collection("leads").document(n).get()
+        if doc.exists:
+            contato_base, lead = n, doc
+            break
+    testes = {str(x) for x in (cfg.get("numeros_teste") or [])}
+    if set(numeros) & testes:
         frente, teste = "leads_perdidos", True            # número de teste da clínica: Celeste atende como lead novo, TI Saúde simulado
-    elif lead.exists and int((lead.to_dict() or {}).get("passo") or 0) > 0:
+        contato_base = next(n for n in numeros if n in testes)
+    elif lead is not None and int((lead.to_dict() or {}).get("passo") or 0) > 0:
         frente = "leads_perdidos"
     else:
-        cc = db.collection("campanha_contatos").document(telefone).get()
-        if cc.exists:  # recebeu disparo dos fluxos da clínica (Inativos/Retorno/Geral): a IA não atende
-            frente, campanha = "campanha", cc.to_dict().get("campanha")
-            nome = nome or cc.to_dict().get("nome")
-    contato = db.collection("contatos").document(telefone)
+        for n in numeros:
+            cc = db.collection("campanha_contatos").document(n).get()
+            if cc.exists:  # recebeu disparo dos fluxos da clínica (Inativos/Retorno/Geral): a IA não atende
+                frente, campanha = "campanha", cc.to_dict().get("campanha")
+                nome = nome or cc.to_dict().get("nome")
+                contato_base = n
+                break
+    contato = db.collection("contatos").document(contato_base)
     if not contato.get().exists:
-        contato.set({"telefone": telefone, "nome": nome, "criado_em": firestore.SERVER_TIMESTAMP, "opt_out": False,
+        contato.set({"telefone": contato_base, "nome": nome, "criado_em": firestore.SERVER_TIMESTAMP, "opt_out": False,
                      "origem": frente or "espontaneo"}, merge=True)
     ref = db.collection("conversas").document()
-    ref.set({"contato": telefone, "nome": nome, "frente": frente, "campanha": campanha, "modo": "ia", "status": "Em conversa",
-             "aberta": True, "criado_em": firestore.SERVER_TIMESTAMP, "origem": "espontaneo", "teste": teste})
+    ref.set({"contato": contato_base, "wa_id": telefone if telefone != contato_base else None, "nome": nome, "frente": frente,
+             "campanha": campanha, "modo": "ia", "status": "Em conversa", "aberta": True, "criado_em": firestore.SERVER_TIMESTAMP,
+             "origem": "espontaneo", "teste": teste})
     return ref
 
 

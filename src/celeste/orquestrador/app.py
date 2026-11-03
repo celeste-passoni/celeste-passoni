@@ -169,7 +169,7 @@ def responder(p: Pedido):
         nonlocal enviados
         if pausa and SIMULAR_DELAY:
             time.sleep(min(2.0, 0.5 + len(texto) / 100))  # "digitando" proporcional ao tamanho (teto 2 s)
-        wamid = mt.enviar_texto(conv["contato"], texto)
+        wamid = mt.enviar_texto(destino(conv), texto)
         ref.collection("mensagens").document(wamid).set({
             "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": res.modelo,
             "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
@@ -203,7 +203,7 @@ def responder(p: Pedido):
     if conv.get("status") == "Encaminhado à recepção" and ctx.encerrar:
         rec = config.parametros()["ia"]["recepcao"]
         try:
-            wamid = mt.enviar_botao_url(conv["contato"], rec["botao_texto"], rec["botao_rotulo"], rec["link_wa"])
+            wamid = mt.enviar_botao_url(destino(conv), rec["botao_texto"], rec["botao_rotulo"], rec["link_wa"])
             ref.collection("mensagens").document(wamid).set({
                 "direcao": "celeste", "tipo": "interactive", "texto": f"{rec['botao_texto']}\n[botão: {rec['botao_rotulo']} → {rec['link_wa']}]",
                 "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
@@ -293,7 +293,7 @@ def enviar_humano(p: PedidoEnviar):
         raise HTTPException(400, "libere a conversa para humano antes de enviar")
     _, mt, _ = _svc()
     try:
-        wamid = mt.enviar_texto(conv["contato"], texto)
+        wamid = mt.enviar_texto(destino(conv), texto)
     except Exception as e:
         fora = "131047" in str(e)
         raise HTTPException(400, "fora da janela de 24 h: a pessoa precisa escrever de novo antes" if fora else f"falha ao enviar: {str(e)[:160]}")
@@ -327,7 +327,7 @@ def lembrete(p: PedidoLembrete):
     n = int(conv.get("lembretes_enviados") or 0) + 1
     texto = lembretes_texto.texto_lembrete(conv, n)
     _, mt, _ = _svc()
-    wamid = mt.enviar_texto(conv["contato"], texto)
+    wamid = mt.enviar_texto(destino(conv), texto)
     agora = datetime.now(timezone.utc)
     ref.collection("mensagens").document(wamid).set({
         "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": "script", "lembrete": n,
@@ -353,7 +353,7 @@ def aviso_recebimento(p: PedidoAviso):
     texto = config.parametros()["ia"]["recepcao"]["aviso_recebimento_texto"]
     _, mt, _ = _svc()
     try:
-        wamid = mt.enviar_texto(conv["contato"], texto)
+        wamid = mt.enviar_texto(destino(conv), texto)
     except Exception as e:
         fora = "131047" in str(e)
         raise HTTPException(400, "fora da janela de 24 h: a pessoa precisa escrever de novo antes" if fora else f"falha ao enviar: {str(e)[:160]}")
@@ -399,7 +399,7 @@ def _orientar_recepcao(ref, conv: dict, forcar: bool = False) -> dict:
         return {"ok": True, "ignorado": "sem frente; já orientado nas últimas horas"}
     _, mt, _ = _svc()
     try:
-        wamid = mt.enviar_botao_url(conv["contato"], rec["orientacao_texto"], rec["botao_rotulo"], rec["link_wa"])
+        wamid = mt.enviar_botao_url(destino(conv), rec["orientacao_texto"], rec["botao_rotulo"], rec["link_wa"])
     except Exception as e:
         log.warning("orientação à recepção não enviada (%s): %s", conv.get("id"), e)
         ref.set({"pendente_resposta": False}, merge=True)
@@ -448,7 +448,7 @@ def _responder_agora_nao(ref, conv: dict, mt: meta.Meta) -> dict:
     b = config.parametros()["t1_botoes"]
     nome = primeiro_nome_conversa(conv)
     texto = b["agora_nao_texto"].replace("{nome}", nome).replace("Entendo, !", "Entendo!")
-    wamid = mt.enviar_botoes_resposta(conv["contato"], texto, [(b["sair_id"], b["sair_rotulo"])])
+    wamid = mt.enviar_botoes_resposta(destino(conv), texto, [(b["sair_id"], b["sair_rotulo"])])
     agora = datetime.now(timezone.utc)
     ref.collection("mensagens").document(wamid).set({
         "direcao": "celeste", "tipo": "interactive", "texto": f"{texto}\n[botão: {b['sair_rotulo']}]", "modelo": "fluxo T1",
@@ -483,7 +483,7 @@ def _responder_quero_video(ref, conv: dict, mt: meta.Meta) -> dict:
     if SIMULAR_DELAY:
         time.sleep(4.0)   # o vídeo chega antes do texto
     texto = b["quero_video_texto"]
-    wamid = mt.enviar_texto(conv["contato"], texto)
+    wamid = mt.enviar_texto(destino(conv), texto)
     agora = datetime.now(timezone.utc)
     ref.collection("mensagens").document(wamid).set({
         "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": "fluxo T2",
@@ -536,7 +536,7 @@ def _responder_confirmar_presenca(ref, conv: dict, mt: meta.Meta) -> dict:
         dia = "o dia marcado"
     texto = b["confirmado_texto"].replace("{nome}", nome or "tudo bem").replace("{dia}", dia).replace("{hora}", formatar_hora(ag.get("hora", "")))
     agora = datetime.now(timezone.utc)
-    wamid = mt.enviar_texto(conv["contato"], texto)
+    wamid = mt.enviar_texto(destino(conv), texto)
     ref.collection("mensagens").document(wamid).set({
         "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": "fluxo consulta",
         "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
@@ -545,7 +545,7 @@ def _responder_confirmar_presenca(ref, conv: dict, mt: meta.Meta) -> dict:
     v = (p.get("videos_rotinas") or {}).get(chave)
     if v:
         try:
-            wv = mt.enviar_video_link(conv["contato"], v["url"])
+            wv = mt.enviar_video_link(destino(conv), v["url"])
             ref.collection("mensagens").document(wv).set({
                 "direcao": "celeste", "tipo": "video", "texto": f"[vídeo: {chave} — {v['descricao']}]", "video": chave, "modelo": "fluxo consulta",
                 "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
@@ -567,7 +567,7 @@ def _responder_sair(ref, conv: dict, mt: meta.Meta, acao: str = "sair") -> dict:
     b = config.parametros()["t1_botoes"]
     nome = primeiro_nome_conversa(conv)
     texto = (b["encerrar_texto"] if acao == "encerrar" else b["sair_texto"]).replace("{nome}", nome).replace("Tudo bem, .", "Tudo bem.")
-    wamid = mt.enviar_texto(conv["contato"], texto)
+    wamid = mt.enviar_texto(destino(conv), texto)
     agora = datetime.now(timezone.utc)
     ref.collection("mensagens").document(wamid).set({
         "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": "fluxo T1",
@@ -716,7 +716,7 @@ def _atualizar_conversa(ref, conv: dict, campos: dict) -> None:
 
 def _enviar_video(mt: meta.Meta, ref, conv: dict, chave: str) -> str:
     v = config.parametros()["videos"][chave]
-    wamid = mt.enviar_video_link(conv["contato"], v["url"])
+    wamid = mt.enviar_video_link(destino(conv), v["url"])
     ref.collection("mensagens").document(wamid).set({
         "direcao": "celeste", "tipo": "video", "texto": f"[vídeo: {chave} — {v['descricao']}; quem aparece: {v.get('quem_aparece', 'a confirmar pela clínica')}]", "video": chave,
         "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
@@ -732,7 +732,7 @@ def _enviar_foto(mt: meta.Meta, ref, conv: dict, grupo: str, slug: str, arquivo:
     else:
         cfg, item = p["antes_e_depois_tratamentos"], p["antes_e_depois_tratamentos"]["tratamentos"][slug]
         legenda, rotulo, caminho = cfg["legenda"].format(tratamento=item["nome"]), f"antes e depois do tratamento: {item['nome']}", "tratamentos/" + arquivo
-    wamid = mt.enviar_imagem_link(conv["contato"], cfg["base_url"] + arquivo, legenda)
+    wamid = mt.enviar_imagem_link(destino(conv), cfg["base_url"] + arquivo, legenda)
     ref.collection("mensagens").document(wamid).set({
         "direcao": "celeste", "tipo": "image", "texto": f"[{rotulo} — {arquivo}] {legenda}", "imagem": caminho,
         "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
@@ -747,7 +747,7 @@ def _responder_abertura(ref, conv: dict, mt: meta.Meta, texto_lead: str) -> dict
     for i, texto in enumerate(baloes):
         if i and SIMULAR_DELAY:
             time.sleep(1.2)
-        wamid = mt.enviar_texto(conv["contato"], texto)
+        wamid = mt.enviar_texto(destino(conv), texto)
         ref.collection("mensagens").document(wamid).set({
             "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": "fixo-abertura",
             "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
@@ -778,6 +778,11 @@ def _avisar_recepcao(mt: meta.Meta, conv: dict, motivo: str, resumo: str) -> Non
                                              f"Motivo: {motivo.replace('_', ' ')}\nResumo: {resumo}")
         except Exception as e2:
             log.error("aviso à recepção não entregue: %s", e2)
+
+
+def destino(conv: dict) -> str:
+    """Número para onde a Celeste responde: o que a Meta usa (`wa_id`, sem o 9 em alguns DDDs) ou o da base (03/11/2026)."""
+    return conv.get("wa_id") or conv["contato"]
 
 
 def _cancelar_retorno_se_lead_voltou(ref, conv: dict) -> bool:

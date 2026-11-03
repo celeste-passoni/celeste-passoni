@@ -1056,3 +1056,10 @@ def test_nome_informado_pelo_lead_vale_nas_mensagens_fixas(monkeypatch):
     assert oapp.primeiro_nome_conversa(ctx.conversa) == "Valter"
     assert oapp.primeiro_nome_conversa({"nome": "ana souza"}) == "Ana" and oapp.primeiro_nome_conversa({}) == ""
     assert "Como chamar o lead: Valter" in prompt.contexto_lead(ctx.conversa)
+
+
+def test_celeste_responde_para_o_numero_que_a_meta_usa():
+    from celeste.orquestrador import app as oapp
+    assert oapp.destino({"contato": "5562985767814", "wa_id": "556285767814"}) == "556285767814"   # Steffany (03/11/2026)
+    assert oapp.destino({"contato": "5562985767814", "wa_id": None}) == "5562985767814"
+    assert oapp.destino({"contato": "5511999990000"}) == "5511999990000"
