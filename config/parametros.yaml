@@ -327,7 +327,7 @@ t1_botoes:                               # fluxograma do T1 (aprovado pela clín
   agora_nao: "Agora não"                  # → mensagem fixa abaixo, com botão de saída; status "Irá nos retornar"; sem resposta → segue a esteira
   agora_nao_texto: "Entendo, {nome}! Só para eu te ajudar da melhor forma, me conta o que está dificultando agora? Pode escrever aqui embaixo.\n\nE se preferir não seguir por enquanto, é só tocar no botão."
   sair_id: "nao_quero_continuar"
-  sair_rotulo: "Não quero continuar"      # limite da Meta para botão de resposta rápida: 25 caracteres (03/11/2026: corrigido, antes dizia 20)
+  sair_rotulo: "Não quero continuar"      # a Meta documenta 25 caracteres por botão de resposta rápida (o T1 de 28/10 passou com 26); antes este comentário dizia 20
   sair_outros_rotulos: ["Não tenho interesse", "Não quero receber"]   # botões do T1 de 28/10/2026 (o 2º é da 1ª versão): mesmo efeito do "Não quero continuar" (despedida + opt-out)
   sair_texto: "Tudo bem, {nome}. Ficamos à disposição se mudar de ideia 💛"
   encerrar_rotulo: "Pode encerrar"        # botão do T4 de 14/10; mesmo efeito do "Não quero continuar" (sai da esteira), com despedida própria

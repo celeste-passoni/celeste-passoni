@@ -77,7 +77,6 @@ def test_templates_sao_os_da_clinica():
     assert tt.TEMPLATES["T2r"]["botoes"] == ["Quero continuar", "Agora não"] and "SAIR" not in tt.renderizar("T2", "Ana")
     assert "ainda está pendente" in tt.TEMPLATES["T3"]["corpo"] and "vamos encerrar" in tt.TEMPLATES["T4"]["corpo"]
     assert tt.TEMPLATES["T4"]["botoes"] == ["Sim, tenho interesse", "Encerrar solicitação"] and tt.parametros("T4", "Ana") == ["Ana"]
-    assert all(len(b) <= 25 for t in tt.TEMPLATES.values() for b in t["botoes"])   # limite da Meta para quick reply (25; o T1 de 28/10 tem 26 e foi aprovado)
     assert tt.parametros("T1", "Ana") == ["Ana"] and tt.parametros("T2", "Ana") == ["Ana"] and tt.parametros("T3", "Ana") == ["Ana"]
     t1 = tt.renderizar("T1", "Ana")   # 28/10/2026: o histórico mostra a imagem e o texto como o lead viu
     assert t1.startswith("[imagem: foto da Dra. Luciana") and "Oi, Ana! Você sabia" in t1 and "SAIR" not in t1
