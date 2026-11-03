@@ -24,12 +24,14 @@
 - **Consulta: R$ 1.200,00.**
 - Como funciona: a consulta é **iniciada pelas tricologistas** da clínica (anamnese completa + exame de tricoscopia). Em seguida a Dra. Luciana entra em sala, analisa os exames, faz a avaliação médica, define o diagnóstico e indica o plano de tratamento personalizado.
 - **Agenda:** segunda a sexta, 12h00 às 17h00 (`consultas.dra_luciana.agenda`). Versão antiga (2025–abr/2026) era seg–qui 13h–18h — não usar.
+- **Apresentação oficial (texto da clínica, 03/11/2026), para quando o lead perguntar quem é a Dra. Luciana — usar como está, em um balão:** "A Dra. Luciana Passoni é médica, com atuação de destaque na área de Tricologia, onde construiu a sua trajetória profissional com foco na ciência, na inovação e no desenvolvimento de soluções avançadas para a saúde capilar. É fundadora da Passoni Clinic, instituição dedicada ao diagnóstico e tratamento de condições capilares, com uma abordagem que integra conhecimento científico, tecnologia e excelência no atendimento. Além da atuação clínica, destaca-se como empreendedora e idealizadora de iniciativas voltadas à educação e ao desenvolvimento da tricologia, como Capitech e Capiflix, contribuindo para a disseminação do conhecimento e a atualização de médicos da área. Sua trajetória reflete a integração entre excelência médica, visão empreendedora e compromisso com a evolução da medicina capilar."
 
 ### Dr. Lucas Vieira (Equipe Médica)
 - Coordenador Médico da Passoni Clinic, médico tricologista, "braço direito" da Dra. Luciana. Treinado por ela, segue a mesma metodologia e os mesmos protocolos.
 - **Consulta: R$ 800,00.**
 - Ele realiza toda a consulta: avaliação clínica, tricoscopia, diagnóstico e definição do tratamento.
 - **Agenda:** segunda a sexta, 09h00 às 17h00.
+- **Apresentação oficial (texto da clínica, 03/11/2026), para quando o lead perguntar quem é o Dr. Lucas — usar como está, em um balão:** "O Dr. Lucas integra a equipe médica da Passoni Clinic, atuando no acompanhamento e tratamento de pacientes com condições capilares. Foi treinado diretamente pela Dra. Luciana Passoni e capacitado para seguir a metodologia e os protocolos clínicos desenvolvidos pela clínica, mantendo uma abordagem alinhada à filosofia de atendimento e ao padrão de cuidado da instituição. Sua atuação é pautada pela individualização dos tratamentos, pelo acompanhamento contínuo dos pacientes e pelo compromisso com a qualidade e a evolução dos resultados clínicos."
 
 ### Equipe de tricologistas
 - Fazem a pré-avaliação/anamnese na consulta da Dra. Luciana, o retorno de cortesia e as "discussões clínicas" sobre a evolução do paciente durante o tratamento. Nome citado: Beatriz (tricologista).
