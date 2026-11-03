@@ -19,9 +19,9 @@ flowchart TD
     T2 -->|sem resposta · 3 dias| T3[T3 · resgate_solicitacao_ainda_pendente<br/>UTILITY · mesmos botões]
     T3 -->|toca Quero continuar<br/>ou escreve| C
     T3 -->|toca Agora não| AN
-    T3 -->|sem resposta · 7 dias| T4[T4 · resgate_solicitacao_encerramento<br/>UTILITY · botões Quero continuar / Pode encerrar]
+    T3 -->|sem resposta · 7 dias| T4[T4 · resgate_solicitacao_encerramento_v2<br/>UTILITY · botões Sim, tenho interesse / Encerrar solicitação]
     T4 -->|toca Quero continuar<br/>ou escreve| C
-    T4 -->|toca Pode encerrar| OUT
+    T4 -->|toca Encerrar solicitação| OUT
     T4 -->|sem resposta| P[Pausa 15 dias → recomeça no T1<br/>2º ciclo; depois: Sem resposta, esteira encerrada]
     C --> F[Fluxo de atendimento · seção 2]
 ```

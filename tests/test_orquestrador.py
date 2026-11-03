@@ -670,6 +670,8 @@ def test_classificar_botao_t1():
     assert oapp.classificar_botao_t1("nao_quero_continuar", "Não quero continuar") == "sair"
     assert oapp.classificar_botao_t1(None, "Não quero continuar") == "sair"
     assert oapp.classificar_botao_t1("Pode encerrar", "Pode encerrar") == "encerrar"
+    assert oapp.classificar_botao_t1("Encerrar solicitação", "Encerrar solicitação") == "encerrar"   # T4 v2 (03/11/2026)
+    assert oapp.classificar_botao_t1("Sim, tenho interesse", "Sim, tenho interesse") is None        # segue para a Celeste
     assert oapp.classificar_botao_t1("Quero continuar", "Quero continuar") is None
     assert oapp.classificar_botao_t1("Não tenho interesse", "Não tenho interesse") == "sair"   # T1 de 28/10/2026
     assert oapp.classificar_botao_t1("Não quero receber", "Não quero receber") == "sair"

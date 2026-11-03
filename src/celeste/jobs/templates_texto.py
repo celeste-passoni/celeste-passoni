@@ -50,10 +50,10 @@ TEMPLATES: dict[str, dict] = {
         "sem_rodape": True,
     },
     "T4": {   # aprovado pela clínica em 14/10/2026 (UTILITY). 7 dias após o T3: aviso de encerramento da solicitação
-        "nome": "resgate_solicitacao_encerramento",
+        "nome": "resgate_solicitacao_encerramento_v2",   # 03/11/2026 (clínica): botões novos; a v1 (Quero continuar · Pode encerrar) continua aprovada na Meta
         "corpo": ("Olá, {1}. Como não tivemos o seu retorno, vamos encerrar a sua solicitação de consulta na Passoni Clinic. "
                   "Se ainda quiser agendar, responda esta mensagem."),
-        "botoes": ["Quero continuar", "Pode encerrar"],
+        "botoes": ["Sim, tenho interesse", "Encerrar solicitação"],   # "Sim, tenho interesse" vai para a Celeste (como qualquer texto); "Encerrar solicitação" = opt-out com despedida própria
         "sem_rodape": True,
     },
     "TR": {   # decisão da clínica em 25/10/2026: retorno na data que o lead pediu ("me chama na segunda"), no lugar do T2. UTILITY, sem botões

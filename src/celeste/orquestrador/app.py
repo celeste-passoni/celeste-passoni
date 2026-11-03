@@ -434,7 +434,7 @@ def classificar_botao_t1(botao: str | None, texto: str | None) -> str | None:
     cand = {str(x or "").strip().casefold() for x in (botao, texto)}
     if cand & {x.casefold() for x in [b.get("sair_id"), b.get("sair_rotulo"), *(b.get("sair_outros_rotulos") or [])] if x}:
         return "sair"
-    if b.get("encerrar_rotulo", "").casefold() in cand:
+    if cand & {x.casefold() for x in [b.get("encerrar_rotulo"), *(b.get("encerrar_outros_rotulos") or [])] if x}:
         return "encerrar"
     if b.get("agora_nao", "").casefold() in cand:
         return "agora_nao"
@@ -563,7 +563,7 @@ def _responder_confirmar_presenca(ref, conv: dict, mt: meta.Meta) -> dict:
 
 
 def _responder_sair(ref, conv: dict, mt: meta.Meta, acao: str = "sair") -> dict:
-    """Lead tocou 'Não quero continuar' (T1–T3) ou 'Pode encerrar' (T4): despedida, opt-out, sai da esteira. Sem modelo."""
+    """Lead tocou 'Não quero continuar' (T1–T3) ou 'Pode encerrar' / 'Encerrar solicitação' (T4): despedida, opt-out, sai da esteira. Sem modelo."""
     b = config.parametros()["t1_botoes"]
     nome = primeiro_nome_conversa(conv)
     texto = (b["encerrar_texto"] if acao == "encerrar" else b["sair_texto"]).replace("{nome}", nome).replace("Tudo bem, .", "Tudo bem.")
