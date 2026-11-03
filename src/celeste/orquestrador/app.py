@@ -67,7 +67,7 @@ def responder(p: Pedido):
         raise HTTPException(404, "conversa não existe")
     if conv.get("debounce_versao") != p.versao:
         return {"ok": True, "ignorado": "tarefa obsoleta"}
-    if not conv.get("aberta", True) or conv.get("modo", "ia") != "ia" or conv.get("opt_out"):
+    if not conv.get("aberta", True) or conv.get("modo", "ia") != "ia":
         return {"ok": True, "ignorado": "conversa fechada/pausada"}
     if conv.get("frente") not in FRENTES_IA and not _e_numero_teste(conv.get("contato", "")):
         return _orientar_recepcao(ref, conv)   # sem frente ou campanha da recepção: a IA não atende
@@ -88,7 +88,15 @@ def responder(p: Pedido):
     historico, ultimo_wamid = _historico(ref, mt)
     if not historico or historico[-1]["role"] != "user":
         return {"ok": True, "ignorado": "nada novo do lead"}
+    conteudo = historico[-1]["content"]   # string (só texto) ou lista de blocos (com mídia)
+    texto_lead = conteudo if isinstance(conteudo, str) else " ".join(b.get("text", "") for b in conteudo if isinstance(b, dict) and b.get("type") == "text")
+    if conv.get("opt_out"):
+        # 03/11/2026 (caso Rute): o gateway reabre a conversa fechada há < 24 h. Só cortesia ("Obrigada", "ok", emoji) → uma linha fixa;
+        # assunto de verdade → a Celeste atende com o histórico (sem se apresentar de novo); o opt-out continua valendo para templates
+        if abertura.e_cortesia_solta(texto_lead):
+            return _responder_cortesia_apos_opt_out(ref, conv, mt, texto_lead)
     _cancelar_retorno_se_lead_voltou(ref, conv)
+    _marcar_em_conversa_se_respondeu_template(ref, conv)
     if ultimo_wamid:
         try:
             mt.marcar_lida(ultimo_wamid)
@@ -107,8 +115,6 @@ def responder(p: Pedido):
         return _responder_confirmar_presenca(ref, conv, mt)
 
     # abertura sem modelo (15/10/2026): conversa nova, não vinda de template, cuja 1ª mensagem é só um cumprimento
-    conteudo = historico[-1]["content"]   # string (só texto) ou lista de blocos (com mídia)
-    texto_lead = conteudo if isinstance(conteudo, str) else " ".join(b.get("text", "") for b in conteudo if isinstance(b, dict) and b.get("type") == "text")
     if len(historico) == 1 and not conv.get("template_origem") and conv.get("origem") != "disparo" and abertura.e_saudacao_solta(texto_lead):
         return _responder_abertura(ref, conv, mt, texto_lead)
     log.info("abertura fixa não aplicada: turnos=%d origem=%r template_origem=%r saudacao=%s texto=%r", len(historico), conv.get("origem"),
@@ -783,6 +789,35 @@ def _avisar_recepcao(mt: meta.Meta, conv: dict, motivo: str, resumo: str) -> Non
 def destino(conv: dict) -> str:
     """Número para onde a Celeste responde: o que a Meta usa (`wa_id`, sem o 9 em alguns DDDs) ou o da base (03/11/2026)."""
     return conv.get("wa_id") or conv["contato"]
+
+
+def _marcar_em_conversa_se_respondeu_template(ref, conv: dict) -> bool:
+    """03/11/2026 (decisão da clínica, caso Felipe): o lead respondeu a um template ("Sim, tenho interesse", texto livre) → a conversa
+    sai de "Template enviado (n°)" para "Em conversa" antes da resposta. Os desfechos continuam sendo registrados pela Celeste."""
+    if not str(conv.get("status") or "").startswith("Template enviado"):
+        return False
+    campos = {"status": "Em conversa", "respondeu_template_em": datetime.now(timezone.utc)}
+    conv.update(campos)
+    ref.set(campos, merge=True)
+    _espelhar_lead(conv)
+    return True
+
+
+def _responder_cortesia_apos_opt_out(ref, conv: dict, mt: meta.Meta, texto_lead: str) -> dict:
+    """Lead que saiu (opt-out) e logo depois só agradeceu ou fechou: uma linha fixa, sem modelo; a conversa volta a ficar fechada."""
+    b = config.parametros()["t1_botoes"]
+    nome = primeiro_nome_conversa(conv)
+    modelo = b["cortesia_agradecimento_texto"] if abertura.e_agradecimento_solto(texto_lead) else b["cortesia_fechamento_texto"]
+    texto = modelo.replace("{nome}", nome).replace(", !", "!").replace(" , ", " ")
+    wamid = mt.enviar_texto(destino(conv), texto)
+    agora = datetime.now(timezone.utc)
+    ref.collection("mensagens").document(wamid).set({
+        "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": "fixo-cortesia",
+        "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
+    campos = {"aberta": False, "pendente_resposta": False, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP,
+              "ultima": {"texto": texto[:160], "direcao": "celeste", "tipo": "text", "em": agora}}
+    conv.update(campos); ref.set(campos, merge=True)
+    return {"ok": True, "enviado": 1, "fluxo": "cortesia_apos_opt_out"}
 
 
 def _cancelar_retorno_se_lead_voltou(ref, conv: dict) -> bool:

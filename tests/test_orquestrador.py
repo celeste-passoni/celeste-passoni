@@ -1063,3 +1063,26 @@ def test_celeste_responde_para_o_numero_que_a_meta_usa():
     assert oapp.destino({"contato": "5562985767814", "wa_id": "556285767814"}) == "556285767814"   # Steffany (03/11/2026)
     assert oapp.destino({"contato": "5562985767814", "wa_id": None}) == "5562985767814"
     assert oapp.destino({"contato": "5511999990000"}) == "5511999990000"
+
+
+def test_cortesia_solta_apos_opt_out():
+    from celeste.orquestrador import abertura as ab
+    assert ab.e_agradecimento_solto("Obrigada") and ab.e_agradecimento_solto("Obrigada! 🙏") and ab.e_agradecimento_solto("valeu")
+    assert ab.e_cortesia_solta("Obrigada") and ab.e_cortesia_solta("ok") and ab.e_cortesia_solta("Beleza, tchau") is False   # 2 fechamentos juntos: não está na lista
+    assert ab.e_cortesia_solta("👍") and ab.e_cortesia_solta("❤️") and ab.e_cortesia_solta("Tudo bem")
+    assert not ab.e_cortesia_solta("Obrigada, mas quanto custa a consulta?")
+    assert not ab.e_cortesia_solta("Quero agendar") and not ab.e_cortesia_solta("") and not ab.e_agradecimento_solto("ok")
+
+
+def test_status_apos_template_estao_na_lista_de_status():
+    from celeste.comum import config
+    p = config.parametros()
+    lista = set(p["leads_perdidos"]["status_ia"])
+    assert set(p["disparos"]["status_apos_template"].values()) <= lista
+    assert p["disparos"]["status_apos_template"]["T4"] == "Template enviado (3°)"   # 03/11/2026: era "(1°)"
+    assert "Template enviado (3°)" in p["leads_perdidos"]["recontato_por_status_ia"]
+    import inspect
+    from celeste.jobs import disparos
+    assert inspect.getsource(disparos.decidir).count("Template enviado (3°)") == 1
+    assert inspect.getsource(disparos._completar_resposta_e_entrega).count("Template enviado (3°)") == 1
+    assert p["t1_botoes"]["cortesia_agradecimento_texto"].startswith("De nada") and p["ia"]["reabrir_conversa_fechada_horas"] == 24

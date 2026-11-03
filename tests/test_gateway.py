@@ -76,3 +76,57 @@ def test_gateway_junta_a_resposta_sem_o_9_na_conversa_do_lead_com_o_9(monkeypatc
     # número desconhecido, sem lead: fica como veio, sem frente, sem wa_id
     ref3 = gw._conversa_aberta("5511999990000", None)
     assert gw.db.store["conversas"][ref3.id]["contato"] == "5511999990000" and gw.db.store["conversas"][ref3.id]["wa_id"] is None
+
+
+def test_gateway_reabre_conversa_fechada_ha_menos_de_24h(monkeypatch):
+    """Caso Rute (03/11/2026): 'Obrigada' 45 s depois do encerramento voltava como conversa nova, sem histórico."""
+    import sys, importlib
+    from datetime import datetime, timedelta, timezone
+    import google.cloud.firestore as fs
+
+    class Doc:
+        def __init__(self, store, col, id_): self.s, self.col, self.id = store, col, id_
+        def get(self): return self
+        @property
+        def exists(self): return self.id in self.s.setdefault(self.col, {})
+        def to_dict(self): return dict(self.s[self.col].get(self.id) or {}) if self.exists else None
+        def set(self, d, merge=False): self.s.setdefault(self.col, {}).setdefault(self.id, {}).update(d)
+        @property
+        def reference(self): return self
+
+    class Query:
+        def __init__(self, store, col, filtros): self.s, self.col, self.f = store, col, filtros
+        def where(self, campo, op, valor): return Query(self.s, self.col, self.f + [(campo, valor)])
+        def limit(self, n): return self
+        def stream(self):
+            for id_, d in list(self.s.setdefault(self.col, {}).items()):
+                if all(d.get(c) == v for c, v in self.f):
+                    yield Doc(self.s, self.col, id_)
+
+    class Col(Query):
+        def __init__(self, store, col): super().__init__(store, col, [])
+        def document(self, id_=None): return Doc(self.s, self.col, id_ or f"novo{len(self.s.setdefault(self.col, {})) + 1}")
+
+    class DB:
+        def __init__(self): self.store = {}
+        def collection(self, nome): return Col(self.store, nome)
+
+    monkeypatch.setattr(fs, "Client", lambda **k: DB())
+    sys.modules.pop("celeste.gateway.app", None)
+    gw = importlib.import_module("celeste.gateway.app")
+    monkeypatch.setattr(gw, "db", DB())
+    agora = datetime.now(timezone.utc)
+    gw.db.store["conversas"] = {
+        "velha": {"contato": "5511985658602", "aberta": False, "ultima_msg_celeste_em": agora - timedelta(days=3)},
+        "rute": {"contato": "5511985658602", "aberta": False, "opt_out": True, "status": "Não quer (opt-out)", "ultima_msg_celeste_em": agora - timedelta(seconds=45)},
+    }
+    gw.db.store["leads"] = {"5511985658602": {"passo": 4}}
+    gw.db.store["config"] = {"atendimento": {"numeros_teste": []}}
+    ref = gw._conversa_aberta("5511985658602", "Rute Sousa")
+    assert ref.id == "rute" and gw.db.store["conversas"]["rute"]["aberta"] is True        # reabriu a MESMA conversa (a mais recente)
+    assert gw.db.store["conversas"]["rute"]["status"] == "Não quer (opt-out)"           # o opt-out continua
+    # fechada há mais de 24 h: conversa nova
+    gw.db.store["conversas"]["rute"]["aberta"] = False
+    gw.db.store["conversas"]["rute"]["ultima_msg_celeste_em"] = agora - timedelta(hours=25)
+    ref2 = gw._conversa_aberta("5511985658602", "Rute Sousa")
+    assert ref2.id not in ("rute", "velha") and gw.db.store["conversas"][ref2.id]["aberta"] is True

@@ -473,6 +473,7 @@ def listas(request: Request, frente: str = "leads_perdidos", status: str = "", p
 ETAPAS_FUNIL = [("Não contatado", "Não contatado", "na base, ainda sem template"),
                 ("Template enviado (1°)", "1º template enviado", "T1 saiu, sem resposta ainda"),
                 ("Template enviado (2°)", "2º/3º template enviado", "T2 ou T3 saíram, sem resposta"),
+                ("Template enviado (3°)", "Encerramento enviado", "T4 saiu, sem resposta"),
                 ("Em conversa", "Em conversa", "respondeu e a Celeste está atendendo"),
                 ("Agendado", "Agendado", "consulta marcada no TI Saúde")]
 GRUPOS_FUNIL = [("Retornos combinados", ["Vamos retornar na data solicitada", "Irá nos retornar", "Agora não"]),
@@ -513,7 +514,7 @@ def funil(request: Request, _=Depends(autenticar)):
     conversaram = sum(1 for l in leads if l.get("ultima_msg_lead_em"))
     agendados = por_status.get("Agendado", 0)
 
-    por_passo = Counter(int(l.get("passo") or 0) for l in leads if (l.get("status_ia") or "Não contatado") in ("Não contatado", "Template enviado (1°)", "Template enviado (2°)"))
+    por_passo = Counter(int(l.get("passo") or 0) for l in leads if (l.get("status_ia") or "Não contatado") in ("Não contatado", "Template enviado (1°)", "Template enviado (2°)", "Template enviado (3°)"))
     passos = []
     for i in range(len(passos_cfg) + 1):
         if i == 0:

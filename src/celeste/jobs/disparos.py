@@ -72,7 +72,7 @@ def decidir(lead: dict, agora: datetime, tarde_livre_hoje: Optional[bool] = None
         return None
 
     # 2) esteira de templates (só quem nunca respondeu)
-    if status not in ("Não contatado", "Template enviado (1°)", "Template enviado (2°)"):
+    if status not in ("Não contatado", "Template enviado (1°)", "Template enviado (2°)", "Template enviado (3°)"):
         return None
     passos = d["passos"]
     passo = int(lead.get("passo") or 0)
@@ -139,7 +139,7 @@ def e_teste(doc: dict, numeros: set) -> bool:
 def _completar_resposta_e_entrega(db, lead: dict) -> None:
     """Lead já abordado e ainda na esteira: traz da conversa se ele escreveu algo (o gateway grava `primeira_msg_lead_em` em
     qualquer mensagem, inclusive resposta automática) e o código de erro da entrega do último template (`status_entrega`)."""
-    if int(lead.get("passo") or 0) <= 0 or lead.get("status_ia") not in ("Template enviado (1°)", "Template enviado (2°)"):
+    if int(lead.get("passo") or 0) <= 0 or lead.get("status_ia") not in ("Template enviado (1°)", "Template enviado (2°)", "Template enviado (3°)"):
         return
     if lead.get("conversa_id"):
         conv = db.collection("conversas").document(lead["conversa_id"]).get().to_dict() or {}

@@ -105,6 +105,15 @@ def _conversa_aberta(telefone: str, nome: str | None):
             if n != telefone and (c.to_dict() or {}).get("wa_id") != telefone:
                 c.reference.set({"wa_id": telefone}, merge=True)   # a resposta da Celeste vai para o número que a Meta usa
             return c.reference
+    recente = _conversa_fechada_recente(numeros)
+    if recente is not None:
+        # 03/11/2026 (caso Rute): "Obrigada" logo depois do encerramento abria uma conversa nova, sem histórico, e a Celeste se
+        # apresentava de novo. Conversa fechada há menos de `reabrir_conversa_fechada_horas` é reaberta, com o histórico
+        campos = {"aberta": True, "reaberta_em": firestore.SERVER_TIMESTAMP}
+        if (recente.to_dict() or {}).get("contato") != telefone:
+            campos["wa_id"] = telefone
+        recente.reference.set(campos, merge=True)
+        return recente.reference
     # frente: lead da base que JÁ recebeu template da Celeste (passo > 0) é Leads Perdidos; quem não está, ou ainda não foi
     # disparado, fica SEM frente (25/10/2026, decisão da clínica: a IA só atende quem ela mesma abordou)
     frente, campanha, teste = None, None, False
@@ -138,6 +147,25 @@ def _conversa_aberta(telefone: str, nome: str | None):
              "campanha": campanha, "modo": "ia", "status": "Em conversa", "aberta": True, "criado_em": firestore.SERVER_TIMESTAMP,
              "origem": "espontaneo", "teste": teste})
     return ref
+
+
+def _conversa_fechada_recente(numeros: list[str]):
+    """A conversa fechada mais recente destes números, se o último movimento foi há menos de N horas (config ia.reabrir_conversa_fechada_horas)."""
+    horas = float(config.parametros()["ia"].get("reabrir_conversa_fechada_horas") or 0)
+    if horas <= 0:
+        return None
+    limite = datetime.now(timezone.utc) - timedelta(hours=horas)
+    melhor, melhor_em = None, None
+    for n in numeros:
+        for c in db.collection("conversas").where("contato", "==", n).stream():
+            d = c.to_dict() or {}
+            if d.get("aberta"):
+                continue
+            em = max((v for v in (d.get("ultima_msg_celeste_em"), d.get("ultima_msg_lead_em"), d.get("opt_out_em"), d.get("criado_em"))
+                      if isinstance(v, datetime)), default=None)
+            if em is not None and em >= limite and (melhor_em is None or em > melhor_em):
+                melhor, melhor_em = c, em
+    return melhor
 
 
 def _gravar_status(ev: dict) -> None:
