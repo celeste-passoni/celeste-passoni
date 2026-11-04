@@ -47,9 +47,9 @@ FERRAMENTAS: list[dict] = [
          "responsavel": {"type": "string"}, "parentesco_responsavel": {"type": "string"}, "cpf_responsavel": {"type": "string"}},
          "required": ["cpf", "email", "celular", "nascimento", "sexo", "cep", "numero", "complemento", "como_conheceu", "responsavel", "parentesco_responsavel", "cpf_responsavel"],
          "additionalProperties": False}},
-    {"name": "buscar_horarios", "description": "Devolve ATÉ 2 horários LIVRES de consulta para UM profissional, do dia pedido (a_partir_de) ou, se esse dia não tiver vaga, do dia mais próximo com vaga (campo dia_pedido_sem_vaga). Se o lead pediu um dia da semana e/ou uma hora específica ('só consigo sexta', 'às 17h'), passe dia_semana e/ou hora: a busca olha até 60 dias e devolve as PRÓXIMAS datas que atendem ao pedido, mesmo que semanas à frente; só diga que 'não tem' esse dia/hora se pedido_sem_vaga vier true. Só chame depois de saber com quem o lead quer (Dra. Luciana ou Dr. Lucas) e qual dia da semana fica melhor para ele; se não souber, pergunte antes. Uma chamada por resposta, nunca para os dois profissionais de uma vez. Ofereça só os horários devolvidos.",
+    {"name": "buscar_horarios", "description": "Devolve ATÉ 2 horários LIVRES de consulta. profissional: 'dra_luciana' ou 'dr_lucas' quando o lead ESCOLHEU o médico; 'prioridade' quando ele não falou em médico (regra da clínica, 04/11/2026): a busca olha a Dra. Luciana no dia e, só se ela não tiver vaga nesse dia, o Dr. Lucas no mesmo dia; se o dia render menos de 2 opções, completa com o dia seguinte que atende, com a mesma prioridade. Cada horário devolvido traz o profissional: ofereça com o nome dele e agende com ele. Se o lead pediu um dia da semana e/ou uma hora ('só consigo sexta', 'às 17h'), passe dia_semana e/ou hora: a busca olha até 60 dias e devolve as PRÓXIMAS datas que atendem ao pedido, mesmo que semanas à frente (só esse dia da semana, nunca outro); só diga que 'não tem' esse dia/hora se pedido_sem_vaga vier true. Chame assim que souber qual dia da semana fica melhor para o lead; não pergunte com quem ele prefere. Uma chamada por resposta. Ofereça só os horários devolvidos.",
      "strict": True, "input_schema": {"type": "object", "properties": {
-         "profissional": {"type": "string", "enum": ["dra_luciana", "dr_lucas"]},
+         "profissional": {"type": "string", "enum": ["dra_luciana", "dr_lucas", "prioridade"], "description": "o médico que o lead escolheu; 'prioridade' se ele não escolheu (Dra. Luciana primeiro, Dr. Lucas se ela não tem vaga no dia)"},
          "a_partir_de": {"type": "string", "description": "AAAA-MM-DD ou vazio para a partir de hoje"},
          "dias": {"type": "integer", "description": "quantos dias à frente (1 a 60)"},
          "dia_semana": {"type": "string", "enum": ["", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"], "description": "dia da semana pedido pelo lead, ou vazio"},
@@ -150,6 +150,27 @@ def selecionar_opcoes(livres: list, n: int = 2) -> list:
     """Até n horários para oferecer (22/10/2026, pedido da clínica): os n primeiros do primeiro dia com vaga; se esse dia
     tiver menos que n, completa em ordem com os dias seguintes. Antes era 2 do 1º dia + 1 do 2º."""
     return list(livres)[:n]
+
+
+PRIORIDADE = ("dra_luciana", "dr_lucas")
+
+
+def selecionar_prioridade(por_profissional: list, n: int = 2) -> list:
+    """04/11/2026 (decisão da clínica, caso de um lead que disse 'sexta-feira' e foi perguntado se preferia a Dra. ou o Dr.):
+    quando o lead não escolheu o médico, dia a dia, a Dra. Luciana tem prioridade e o Dr. Lucas só entra num dia em que ela
+    não tem vaga. Se o primeiro dia render menos de n opções, completa com o dia seguinte que atende, com a mesma prioridade.
+    `por_profissional` é [(id, horarios)] na ordem de prioridade, horários já filtrados pelo pedido e em ordem de data/hora."""
+    datas = sorted({h["data"] for _, hs in por_profissional for h in hs})
+    out = []
+    for d in datas:
+        for prof, hs in por_profissional:
+            do_dia = [dict(h, profissional=prof) for h in hs if h["data"] == d]
+            if do_dia:
+                out.extend(do_dia)
+                break
+        if len(out) >= n:
+            break
+    return out[:n]
 
 
 class Contexto:
@@ -298,26 +319,37 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         dias = max(1, min(int(e.get("dias") or 14), 60))
         if pedido:
             dias = max(dias, 60)   # 04/11/2026: dia da semana/hora pedidos olham 60 dias (pedido da clínica; 45 no 1º commit) (a Dra. só tinha sexta 17h três semanas à frente)
-        livres = ctx.ts.buscar_horarios(e["profissional"], dias=dias, a_partir_de=inicio)
+        prof_pedido = e["profissional"]
+        ordem = list(PRIORIDADE) if prof_pedido == "prioridade" else [prof_pedido]   # 04/11/2026: lead sem médico escolhido → Dra. Luciana primeiro
+        por_prof = [(p, ctx.ts.buscar_horarios(p, dias=dias, a_partir_de=inicio)) for p in ordem]
         from celeste.comum import config as _cfg
         n = int(((_cfg.parametros().get("ia") or {}).get("horarios") or {}).get("opcoes_por_vez", 3))
-        atendem = filtrar_por_pedido(livres, dia_semana, hora) if pedido else list(livres)
-        pedido_sem_vaga = pedido and not atendem
-        oferecer = selecionar_opcoes(atendem or livres, n)   # 22/10/2026: 2 horários do dia pedido (antes 3; em 14/10 a Celeste listava 12)
+        atendem_por_prof = [(p, filtrar_por_pedido(l, dia_semana, hora) if pedido else list(l)) for p, l in por_prof]
+        pedido_sem_vaga = pedido and not any(l for _, l in atendem_por_prof)
+        oferecer = selecionar_prioridade(por_prof if pedido_sem_vaga else atendem_por_prof, n)   # 22/10/2026: 2 horários do dia pedido (antes 3; em 14/10 a Celeste listava 12)
+        total = sum(len(l) for _, l in por_prof)
         sem_vaga_no_dia = bool(inicio) and bool(oferecer) and oferecer[0]["data"] != inicio.isoformat()
         ja = list(ctx.conversa.get("horarios_oferecidos") or [])
         novos = [f"{l['data']} {l['hora']}" for l in oferecer if f"{l['data']} {l['hora']}" not in ja]
         ctx.conversa["horarios_oferecidos"] = (ja + novos)[-60:]
-        ctx.atualizar({"horarios_oferecidos": ctx.conversa["horarios_oferecidos"]})
+        prof_por_horario = dict(ctx.conversa.get("horarios_oferecidos_prof") or {})   # de quem é cada horário oferecido (agendar_consulta confere)
+        prof_por_horario.update({f"{l['data']} {l['hora']}": l["profissional"] for l in oferecer})
+        ctx.conversa["horarios_oferecidos_prof"] = dict(list(prof_por_horario.items())[-60:])
+        ctx.atualizar({"horarios_oferecidos": ctx.conversa["horarios_oferecidos"], "horarios_oferecidos_prof": ctx.conversa["horarios_oferecidos_prof"]})
         descricao_pedido = " ".join(x for x in (dia_semana, ("às " + hora) if hora else "") if x).strip()
-        aviso = "ofereça só estes; se o lead quiser outro dia ou horário, chame de novo com a_partir_de, dia_semana ou hora"
+        profs = [p for p in ordem if any(l["profissional"] == p for l in oferecer)]
+        aviso = "ofereça só estes, com o nome do profissional de cada um, e agende com esse profissional; se o lead quiser outro dia ou horário, chame de novo com a_partir_de, dia_semana ou hora"
+        if prof_pedido == "prioridade" and profs == ["dr_lucas"]:
+            aviso += "; a Dra. Luciana não tem vaga nesse(s) dia(s), estes são do Dr. Lucas: diga isso em uma frase e ofereça-os (não ofereça a Dra. Luciana em outro dia, a menos que o lead peça)"
+        elif len(profs) > 1:
+            aviso += "; são de profissionais diferentes: diga o nome em cada opção"
         if pedido_sem_vaga:
             aviso += f"; NÃO há {descricao_pedido} livre nos próximos {dias} dias: diga isso em uma frase, ofereça estes (os mais próximos) e nunca prometa avisar quando abrir"
         elif pedido:
             aviso += f"; estes são os PRÓXIMOS horários de {descricao_pedido} livres (podem estar semanas à frente): ofereça-os com a data"
         elif sem_vaga_no_dia:
             aviso += "; o dia pedido não tem vaga: avise em uma frase e ofereça estes, do dia mais próximo"
-        return {"profissional": e["profissional"], "livres": oferecer, "ha_mais_no_periodo": len(livres) > len(oferecer),
+        return {"profissional": prof_pedido, "profissionais_oferecidos": profs, "livres": oferecer, "ha_mais_no_periodo": total > len(oferecer),
                 "dia_pedido_sem_vaga": sem_vaga_no_dia, "pedido": {"dia_semana": dia_semana, "hora": hora}, "pedido_sem_vaga": pedido_sem_vaga,
                 "horizonte_dias": dias, "aviso": aviso}
 
@@ -325,6 +357,9 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         chave = f"{e['data']} {e['hora']}"
         if chave not in (ctx.conversa.get("horarios_oferecidos") or []):
             raise ValueError("horário não veio de buscar_horarios; chame buscar_horarios e ofereça só o que está livre")
+        prof_do_horario = (ctx.conversa.get("horarios_oferecidos_prof") or {}).get(chave)
+        if prof_do_horario and prof_do_horario != e["profissional"]:   # 04/11/2026: horário do Dr. Lucas não pode virar consulta com a Dra. Luciana
+            raise ValueError(f"esse horário é de {prof_do_horario}, não de {e['profissional']}; agende com profissional={prof_do_horario}")
         obs = f"Agendado pela Celeste (IA) via WhatsApp | frente {ctx.conversa.get('frente')} | conversa {ctx.conversa.get('id')}"
         a = ctx.ts.agendar_consulta(id_paciente=int(e["id_paciente"]), profissional_id=e["profissional"],
                                     data=date.fromisoformat(e["data"]), hora=e["hora"], observacoes=obs)

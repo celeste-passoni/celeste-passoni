@@ -1109,3 +1109,45 @@ def test_buscar_horarios_filtra_dia_da_semana_e_hora():
     r = json.loads(saida)
     assert r["pedido_sem_vaga"] is True and r["livres"][0]["data"] == "2026-11-13" and "NÃO há sabado" in r["aviso"]
     assert ferramentas_ia.normalizar_hora("17") == "17:00" and ferramentas_ia.normalizar_hora("17h30") == "17:30" and ferramentas_ia.normalizar_hora("tarde") == ""
+
+
+def test_buscar_horarios_prioridade_dra_luciana_depois_dr_lucas():
+    """04/11/2026 (lead disse 'sexta-feira' sem escolher médico; a Celeste perguntou 'prefere a Dra. ou o Dr.?' e ofereceu terça):
+    com profissional='prioridade' a ferramenta olha a Dra. Luciana no dia pedido, o Dr. Lucas só no dia em que ela não tem vaga,
+    e completa as 2 opções com a sexta seguinte quando a primeira rende uma só."""
+    agenda = {"dra_luciana": [{"data": "2026-11-10", "hora": "13:00"}, {"data": "2026-11-20", "hora": "17:00"}, {"data": "2026-11-27", "hora": "13:00"}, {"data": "2026-11-27", "hora": "17:00"}],
+              "dr_lucas": [{"data": "2026-11-13", "hora": "11:00"}, {"data": "2026-11-13", "hora": "15:00"}, {"data": "2026-11-20", "hora": "11:00"}]}
+    ts = MagicMock()
+    ts.buscar_horarios.side_effect = lambda prof, dias=None, a_partir_de=None: [h for h in agenda[prof] if not a_partir_de or h["data"] >= a_partir_de.isoformat()]
+    ts.agendar_consulta.return_value = {"id": 7, "status": 0}
+    conv = {"id": "c1", "frente": "leads_perdidos"}
+    ctx = _ctx(conv, ts); ctx.atualizar = lambda campos: conv.update(campos)
+    saida, erro = ferramentas_ia.executar("buscar_horarios", {"profissional": "prioridade", "a_partir_de": "", "dias": 14, "dia_semana": "sexta", "hora": ""}, ctx)
+    assert not erro
+    r = json.loads(saida)
+    # sexta 13/11: a Dra. Luciana não tem vaga → os 2 do Dr. Lucas; só sextas (a terça 10/11 da Dra. Luciana nunca entra)
+    assert [(h["data"], h["hora"], h["profissional"]) for h in r["livres"]] == [("2026-11-13", "11:00", "dr_lucas"), ("2026-11-13", "15:00", "dr_lucas")]
+    assert r["profissionais_oferecidos"] == ["dr_lucas"] and "Dra. Luciana não tem vaga" in r["aviso"] and r["pedido_sem_vaga"] is False
+    assert {c.args[0] for c in ts.buscar_horarios.call_args_list} == {"dra_luciana", "dr_lucas"}
+    assert conv["horarios_oferecidos_prof"]["2026-11-13 15:00"] == "dr_lucas"
+    # agendar um horário do Dr. Lucas com a Dra. Luciana é recusado; com o profissional certo, passa
+    saida, erro = ferramentas_ia.executar("agendar_consulta", {"id_paciente": 1, "profissional": "dra_luciana", "data": "2026-11-13", "hora": "15:00"}, ctx)
+    assert erro and "dr_lucas" in saida
+    saida, erro = ferramentas_ia.executar("agendar_consulta", {"id_paciente": 1, "profissional": "dr_lucas", "data": "2026-11-13", "hora": "15:00"}, ctx)
+    assert not erro
+    # a partir de 16/11: sexta 20/11 a Dra. Luciana tem 1 (17h) → ela, e não o Dr. Lucas; completa com a sexta seguinte, de novo ela primeiro
+    saida, erro = ferramentas_ia.executar("buscar_horarios", {"profissional": "prioridade", "a_partir_de": "2026-11-16", "dias": 14, "dia_semana": "sexta", "hora": ""}, ctx)
+    r = json.loads(saida)
+    assert [(h["data"], h["hora"], h["profissional"]) for h in r["livres"]] == [("2026-11-20", "17:00", "dra_luciana"), ("2026-11-27", "13:00", "dra_luciana")]
+    # sem dia da semana: dia a dia a partir de 09/11, Dra. Luciana primeiro (terça 10/11), depois o dia seguinte com vaga (sexta 13/11, Dr. Lucas)
+    saida, erro = ferramentas_ia.executar("buscar_horarios", {"profissional": "prioridade", "a_partir_de": "2026-11-09", "dias": 14, "dia_semana": "", "hora": ""}, ctx)
+    r = json.loads(saida)
+    assert [(h["data"], h["profissional"]) for h in r["livres"]] == [("2026-11-10", "dra_luciana"), ("2026-11-13", "dr_lucas")]
+    assert r["profissionais_oferecidos"] == ["dra_luciana", "dr_lucas"] and "profissionais diferentes" in r["aviso"]
+    # médico escolhido pelo lead: só ele
+    saida, erro = ferramentas_ia.executar("buscar_horarios", {"profissional": "dra_luciana", "a_partir_de": "", "dias": 14, "dia_semana": "sexta", "hora": ""}, ctx)
+    assert {h["profissional"] for h in json.loads(saida)["livres"]} == {"dra_luciana"}
+    # sábado: ninguém atende → pedido_sem_vaga e os mais próximos, com a prioridade
+    saida, erro = ferramentas_ia.executar("buscar_horarios", {"profissional": "prioridade", "a_partir_de": "", "dias": 14, "dia_semana": "sabado", "hora": ""}, ctx)
+    r = json.loads(saida)
+    assert r["pedido_sem_vaga"] is True and r["livres"][0]["data"] == "2026-11-10" and r["livres"][0]["profissional"] == "dra_luciana"
