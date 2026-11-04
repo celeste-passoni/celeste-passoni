@@ -47,12 +47,14 @@ FERRAMENTAS: list[dict] = [
          "responsavel": {"type": "string"}, "parentesco_responsavel": {"type": "string"}, "cpf_responsavel": {"type": "string"}},
          "required": ["cpf", "email", "celular", "nascimento", "sexo", "cep", "numero", "complemento", "como_conheceu", "responsavel", "parentesco_responsavel", "cpf_responsavel"],
          "additionalProperties": False}},
-    {"name": "buscar_horarios", "description": "Devolve ATÉ 2 horários LIVRES de consulta para UM profissional, do dia pedido (a_partir_de) ou, se esse dia não tiver vaga, do dia mais próximo com vaga (campo dia_pedido_sem_vaga). Só chame depois de saber com quem o lead quer (Dra. Luciana ou Dr. Lucas) e qual dia da semana fica melhor para ele; se não souber, pergunte antes. Uma chamada por resposta, nunca para os dois profissionais de uma vez. Ofereça só os horários devolvidos.",
+    {"name": "buscar_horarios", "description": "Devolve ATÉ 2 horários LIVRES de consulta para UM profissional, do dia pedido (a_partir_de) ou, se esse dia não tiver vaga, do dia mais próximo com vaga (campo dia_pedido_sem_vaga). Se o lead pediu um dia da semana e/ou uma hora específica ('só consigo sexta', 'às 17h'), passe dia_semana e/ou hora: a busca olha até 45 dias e devolve as PRÓXIMAS datas que atendem ao pedido, mesmo que semanas à frente; só diga que 'não tem' esse dia/hora se pedido_sem_vaga vier true. Só chame depois de saber com quem o lead quer (Dra. Luciana ou Dr. Lucas) e qual dia da semana fica melhor para ele; se não souber, pergunte antes. Uma chamada por resposta, nunca para os dois profissionais de uma vez. Ofereça só os horários devolvidos.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "profissional": {"type": "string", "enum": ["dra_luciana", "dr_lucas"]},
          "a_partir_de": {"type": "string", "description": "AAAA-MM-DD ou vazio para a partir de hoje"},
-         "dias": {"type": "integer", "description": "quantos dias à frente (1 a 30)"}},
-         "required": ["profissional", "a_partir_de", "dias"], "additionalProperties": False}},
+         "dias": {"type": "integer", "description": "quantos dias à frente (1 a 60)"},
+         "dia_semana": {"type": "string", "enum": ["", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"], "description": "dia da semana pedido pelo lead, ou vazio"},
+         "hora": {"type": "string", "description": "hora pedida pelo lead, HH:MM ('17:00'), ou vazio"}},
+         "required": ["profissional", "a_partir_de", "dias", "dia_semana", "hora"], "additionalProperties": False}},
     {"name": "agendar_consulta", "description": "Agenda a Consulta no TI Saúde em um horário que veio de buscar_horarios. Exige o id do paciente (de buscar_paciente ou criar_paciente).",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "id_paciente": {"type": "integer"}, "profissional": {"type": "string", "enum": ["dra_luciana", "dr_lucas"]},
@@ -116,6 +118,32 @@ def proxima_foto(bloco: dict, slug: str, enviadas: list, geral: list | None = No
             if a not in enviadas:
                 return s, a
     return None
+
+
+_DIAS_SEMANA = {"segunda": 0, "terca": 1, "terça": 1, "quarta": 2, "quinta": 3, "sexta": 4, "sabado": 5, "sábado": 5, "domingo": 6}
+
+
+def normalizar_hora(h: str) -> str:
+    """'17', '17h', '17:00', '17h30' → '17:00' / '17:30'; vazio se não for hora."""
+    m = re.match(r"^\s*(\d{1,2})\s*(?:[:h]\s*(\d{2}))?\s*(?:h)?\s*$", str(h or ""))
+    if not m or int(m.group(1)) > 23:
+        return ""
+    return f"{int(m.group(1)):02d}:{m.group(2) or '00'}"
+
+
+def filtrar_por_pedido(livres: list, dia_semana: str = "", hora: str = "") -> list:
+    """04/11/2026 (caso de uma lead que só podia sexta às 17h): só os horários que atendem ao dia da semana e/ou à hora pedidos,
+    em ordem. Antes a ferramenta devolvia os 2 primeiros do dia e a Celeste dizia 'às 17h não tem' quando o 17h existia."""
+    wd = _DIAS_SEMANA.get((dia_semana or "").strip().lower())
+    hh = normalizar_hora(hora)
+    out = []
+    for h in livres:
+        if wd is not None and date.fromisoformat(h["data"]).weekday() != wd:
+            continue
+        if hh and str(h["hora"])[:5] != hh:
+            continue
+        out.append(h)
+    return out
 
 
 def selecionar_opcoes(livres: list, n: int = 2) -> list:
@@ -264,20 +292,34 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
 
     if nome == "buscar_horarios":
         inicio = date.fromisoformat(e["a_partir_de"]) if e.get("a_partir_de") else None
-        dias = max(1, min(int(e.get("dias") or 14), 30))
+        dia_semana = (e.get("dia_semana") or "").strip().lower()
+        hora = normalizar_hora(e.get("hora") or "")
+        pedido = bool(dia_semana or hora)
+        dias = max(1, min(int(e.get("dias") or 14), 60))
+        if pedido:
+            dias = max(dias, 45)   # 04/11/2026: dia da semana/hora pedidos olham 45 dias (a Dra. só tinha sexta 17h três semanas à frente)
         livres = ctx.ts.buscar_horarios(e["profissional"], dias=dias, a_partir_de=inicio)
         from celeste.comum import config as _cfg
         n = int(((_cfg.parametros().get("ia") or {}).get("horarios") or {}).get("opcoes_por_vez", 3))
-        oferecer = selecionar_opcoes(livres, n)   # 22/10/2026: 2 horários do dia pedido (antes 3; em 14/10 a Celeste listava 12)
+        atendem = filtrar_por_pedido(livres, dia_semana, hora) if pedido else list(livres)
+        pedido_sem_vaga = pedido and not atendem
+        oferecer = selecionar_opcoes(atendem or livres, n)   # 22/10/2026: 2 horários do dia pedido (antes 3; em 14/10 a Celeste listava 12)
         sem_vaga_no_dia = bool(inicio) and bool(oferecer) and oferecer[0]["data"] != inicio.isoformat()
         ja = list(ctx.conversa.get("horarios_oferecidos") or [])
         novos = [f"{l['data']} {l['hora']}" for l in oferecer if f"{l['data']} {l['hora']}" not in ja]
         ctx.conversa["horarios_oferecidos"] = (ja + novos)[-60:]
         ctx.atualizar({"horarios_oferecidos": ctx.conversa["horarios_oferecidos"]})
+        descricao_pedido = " ".join(x for x in (dia_semana, ("às " + hora) if hora else "") if x).strip()
+        aviso = "ofereça só estes; se o lead quiser outro dia ou horário, chame de novo com a_partir_de, dia_semana ou hora"
+        if pedido_sem_vaga:
+            aviso += f"; NÃO há {descricao_pedido} livre nos próximos {dias} dias: diga isso em uma frase, ofereça estes (os mais próximos) e nunca prometa avisar quando abrir"
+        elif pedido:
+            aviso += f"; estes são os PRÓXIMOS horários de {descricao_pedido} livres (podem estar semanas à frente): ofereça-os com a data"
+        elif sem_vaga_no_dia:
+            aviso += "; o dia pedido não tem vaga: avise em uma frase e ofereça estes, do dia mais próximo"
         return {"profissional": e["profissional"], "livres": oferecer, "ha_mais_no_periodo": len(livres) > len(oferecer),
-                "dia_pedido_sem_vaga": sem_vaga_no_dia,
-                "aviso": "ofereça só estes; se o lead quiser outro dia ou horário, chame de novo com a_partir_de"
-                         + ("; o dia pedido não tem vaga: avise em uma frase e ofereça estes, do dia mais próximo" if sem_vaga_no_dia else "")}
+                "dia_pedido_sem_vaga": sem_vaga_no_dia, "pedido": {"dia_semana": dia_semana, "hora": hora}, "pedido_sem_vaga": pedido_sem_vaga,
+                "horizonte_dias": dias, "aviso": aviso}
 
     if nome == "agendar_consulta":
         chave = f"{e['data']} {e['hora']}"

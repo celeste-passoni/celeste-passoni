@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import anthropic
+import json
 import pytest
 
 from celeste.comum import config
@@ -1086,3 +1087,25 @@ def test_status_apos_template_estao_na_lista_de_status():
     assert inspect.getsource(disparos.decidir).count("Template enviado (3°)") == 1
     assert inspect.getsource(disparos._completar_resposta_e_entrega).count("Template enviado (3°)") == 1
     assert p["t1_botoes"]["cortesia_agradecimento_texto"].startswith("De nada") and p["ia"]["reabrir_conversa_fechada_horas"] == 24
+
+
+def test_buscar_horarios_filtra_dia_da_semana_e_hora():
+    """04/11/2026 (lead que só podia sexta às 17h): a ferramenta devolve as próximas sextas 17h, olhando 45 dias,
+    em vez dos 2 primeiros horários do dia (que faziam a Celeste dizer 'às 17h não tem')."""
+    ts = MagicMock()
+    ts.buscar_horarios.return_value = [{"data": "2026-11-13", "hora": "11:00"}, {"data": "2026-11-13", "hora": "15:00"}, {"data": "2026-11-13", "hora": "17:00"},
+                                       {"data": "2026-11-16", "hora": "17:00"}, {"data": "2026-11-27", "hora": "17:00"}, {"data": "2026-12-04", "hora": "17:00"}]
+    conv = {"id": "c1", "frente": "leads_perdidos"}
+    ctx = _ctx(conv, ts); ctx.atualizar = lambda campos: conv.update(campos)
+    saida, erro = ferramentas_ia.executar("buscar_horarios", {"profissional": "dr_lucas", "a_partir_de": "", "dias": 14, "dia_semana": "sexta", "hora": "17h"}, ctx)
+    assert not erro
+    r = json.loads(saida)
+    assert [(h["data"], h["hora"]) for h in r["livres"]] == [("2026-11-13", "17:00"), ("2026-11-27", "17:00")]
+    assert r["pedido_sem_vaga"] is False and r["pedido"] == {"dia_semana": "sexta", "hora": "17:00"}
+    assert ts.buscar_horarios.call_args.kwargs["dias"] >= 45
+    assert "2026-11-27 17:00" in conv["horarios_oferecidos"]
+    # nenhum horário atende: avisa e cai nos mais próximos
+    saida, erro = ferramentas_ia.executar("buscar_horarios", {"profissional": "dr_lucas", "a_partir_de": "", "dias": 14, "dia_semana": "sabado", "hora": ""}, ctx)
+    r = json.loads(saida)
+    assert r["pedido_sem_vaga"] is True and r["livres"][0]["data"] == "2026-11-13" and "NÃO há sabado" in r["aviso"]
+    assert ferramentas_ia.normalizar_hora("17") == "17:00" and ferramentas_ia.normalizar_hora("17h30") == "17:30" and ferramentas_ia.normalizar_hora("tarde") == ""
