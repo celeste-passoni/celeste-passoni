@@ -47,7 +47,7 @@ FERRAMENTAS: list[dict] = [
          "responsavel": {"type": "string"}, "parentesco_responsavel": {"type": "string"}, "cpf_responsavel": {"type": "string"}},
          "required": ["cpf", "email", "celular", "nascimento", "sexo", "cep", "numero", "complemento", "como_conheceu", "responsavel", "parentesco_responsavel", "cpf_responsavel"],
          "additionalProperties": False}},
-    {"name": "buscar_horarios", "description": "Devolve ATÉ 2 horários LIVRES de consulta para UM profissional, do dia pedido (a_partir_de) ou, se esse dia não tiver vaga, do dia mais próximo com vaga (campo dia_pedido_sem_vaga). Se o lead pediu um dia da semana e/ou uma hora específica ('só consigo sexta', 'às 17h'), passe dia_semana e/ou hora: a busca olha até 45 dias e devolve as PRÓXIMAS datas que atendem ao pedido, mesmo que semanas à frente; só diga que 'não tem' esse dia/hora se pedido_sem_vaga vier true. Só chame depois de saber com quem o lead quer (Dra. Luciana ou Dr. Lucas) e qual dia da semana fica melhor para ele; se não souber, pergunte antes. Uma chamada por resposta, nunca para os dois profissionais de uma vez. Ofereça só os horários devolvidos.",
+    {"name": "buscar_horarios", "description": "Devolve ATÉ 2 horários LIVRES de consulta para UM profissional, do dia pedido (a_partir_de) ou, se esse dia não tiver vaga, do dia mais próximo com vaga (campo dia_pedido_sem_vaga). Se o lead pediu um dia da semana e/ou uma hora específica ('só consigo sexta', 'às 17h'), passe dia_semana e/ou hora: a busca olha até 60 dias e devolve as PRÓXIMAS datas que atendem ao pedido, mesmo que semanas à frente; só diga que 'não tem' esse dia/hora se pedido_sem_vaga vier true. Só chame depois de saber com quem o lead quer (Dra. Luciana ou Dr. Lucas) e qual dia da semana fica melhor para ele; se não souber, pergunte antes. Uma chamada por resposta, nunca para os dois profissionais de uma vez. Ofereça só os horários devolvidos.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "profissional": {"type": "string", "enum": ["dra_luciana", "dr_lucas"]},
          "a_partir_de": {"type": "string", "description": "AAAA-MM-DD ou vazio para a partir de hoje"},
@@ -297,7 +297,7 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         pedido = bool(dia_semana or hora)
         dias = max(1, min(int(e.get("dias") or 14), 60))
         if pedido:
-            dias = max(dias, 45)   # 04/11/2026: dia da semana/hora pedidos olham 45 dias (a Dra. só tinha sexta 17h três semanas à frente)
+            dias = max(dias, 60)   # 04/11/2026: dia da semana/hora pedidos olham 60 dias (pedido da clínica; 45 no 1º commit) (a Dra. só tinha sexta 17h três semanas à frente)
         livres = ctx.ts.buscar_horarios(e["profissional"], dias=dias, a_partir_de=inicio)
         from celeste.comum import config as _cfg
         n = int(((_cfg.parametros().get("ia") or {}).get("horarios") or {}).get("opcoes_por_vez", 3))
