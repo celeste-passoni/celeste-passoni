@@ -150,7 +150,8 @@ def _conversa_aberta(telefone: str, nome: str | None):
 
 
 def _conversa_fechada_recente(numeros: list[str]):
-    """A conversa fechada mais recente destes números, se o último movimento foi há menos de N horas (config ia.reabrir_conversa_fechada_horas)."""
+    """A conversa fechada mais recente destes números, se o último movimento foi há menos de N horas (config ia.reabrir_conversa_fechada_horas).
+    Conversa encerrada pelo botão do painel (status 'Encerrada (reiniciada)') nunca é reaberta: a próxima mensagem abre uma nova."""
     horas = float(config.parametros()["ia"].get("reabrir_conversa_fechada_horas") or 0)
     if horas <= 0:
         return None
@@ -159,7 +160,7 @@ def _conversa_fechada_recente(numeros: list[str]):
     for n in numeros:
         for c in db.collection("conversas").where("contato", "==", n).stream():
             d = c.to_dict() or {}
-            if d.get("aberta"):
+            if d.get("aberta") or d.get("status") == "Encerrada (reiniciada)":   # 04/11/2026: 'Encerrar e reiniciar' no painel = conversa nova de verdade, mesmo dentro das 24 h
                 continue
             em = max((v for v in (d.get("ultima_msg_celeste_em"), d.get("ultima_msg_lead_em"), d.get("opt_out_em"), d.get("criado_em"))
                       if isinstance(v, datetime)), default=None)

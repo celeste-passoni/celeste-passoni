@@ -130,3 +130,8 @@ def test_gateway_reabre_conversa_fechada_ha_menos_de_24h(monkeypatch):
     gw.db.store["conversas"]["rute"]["ultima_msg_celeste_em"] = agora - timedelta(hours=25)
     ref2 = gw._conversa_aberta("5511985658602", "Rute Sousa")
     assert ref2.id not in ("rute", "velha") and gw.db.store["conversas"][ref2.id]["aberta"] is True
+    # 04/11/2026: 'Encerrar e reiniciar' no painel fechou a conversa há segundos → a próxima mensagem abre uma NOVA (não reabre)
+    gw.db.store["conversas"][ref2.id].update({"aberta": False, "status": "Encerrada (reiniciada)", "encerrada_em": agora, "ultima_msg_celeste_em": agora - timedelta(seconds=30)})
+    ref3 = gw._conversa_aberta("5511985658602", "Rute Sousa")
+    assert ref3.id not in ("rute", "velha", ref2.id) and gw.db.store["conversas"][ref3.id]["aberta"] is True
+    assert gw.db.store["conversas"][ref2.id]["aberta"] is False                           # a reiniciada continua fechada
