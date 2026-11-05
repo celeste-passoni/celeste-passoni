@@ -297,3 +297,18 @@ def test_publicar_funil_templates_grava_de_para_testes_e_view():
     assert bq.cargas["numeros_teste"] == [{"contato": "5511980567117"}, {"contato": "5511999405671"}]
     assert len(bq.queries) == 1 and bq.queries[0].startswith("CREATE OR REPLACE VIEW `") and "vw_funil_templates" in bq.queries[0]
     assert "automacoes.leads_disponibilizados_diario" in bq.queries[0] and "CELESTE MARIA" in bq.queries[0]
+
+
+def test_espelho_limpa_nome_de_coluna_com_ponto():
+    """05/11/2026: 'por_template.T4' (disparos_diarios) derrubava a carga do espelho no BigQuery."""
+    from celeste.jobs import espelho
+
+    class Ref:
+        class parent:
+            parent = None
+
+    class Doc:
+        id = "2026-11-05"; reference = Ref()
+        def to_dict(self): return {"enviados": 3, "por_template.T4": 1, "por_template.T1": 2}
+
+    assert espelho._linha(Doc()) == {"enviados": 3, "por_template_T4": 1, "por_template_T1": 2, "_id": "2026-11-05"}

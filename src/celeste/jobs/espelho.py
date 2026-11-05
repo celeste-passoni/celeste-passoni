@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import date, datetime
 
 from google.cloud import bigquery, firestore
@@ -41,8 +42,14 @@ def _plano(v):
     return v
 
 
+def _coluna(nome: str) -> str:
+    """Nome de coluna válido no BigQuery. 05/11/2026: disparos_diarios tem chaves com ponto ("por_template.T1") e a carga
+    falhava no meio da rodada, deixando campanha_contatos e o funil por template sem atualizar."""
+    return re.sub(r"[^A-Za-z0-9_]", "_", nome)
+
+
 def _linha(doc) -> dict:
-    d = {k: _plano(v) for k, v in (doc.to_dict() or {}).items()}
+    d = {_coluna(k): _plano(v) for k, v in (doc.to_dict() or {}).items()}
     d["_id"] = doc.id
     if doc.reference.parent.parent is not None:
         d["_pai_id"] = doc.reference.parent.parent.id
