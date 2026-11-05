@@ -85,7 +85,7 @@ METADADOS: dict[str, dict] = {   # templates EM USO (mesmas chaves de TEMPLATES)
             "com_interesse": ["Quero continuar"], "sem_interesse": ["Agora não"]},
     "T3": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-10-14",
            "com_interesse": ["Quero continuar"], "sem_interesse": ["Agora não"]},
-    "T4": {"versao": 2, "categoria": "UTILITY", "em_uso_desde": "2026-11-03",
+    "T4": {"versao": 2, "categoria": "UTILITY", "em_uso_desde": "2026-11-03", "etapa_funil": "T3",   # 05/11/2026 (clínica): encerramento conta como T3 no funil até a revisão dos templates (em 03/11 o T3 foi pulado e 81 leads foram do T2 direto para ele)
            "com_interesse": ["Sim, tenho interesse"], "sem_interesse": ["Encerrar solicitação"]},
     "TR": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-10-25", "com_interesse": [], "sem_interesse": []},
 }
@@ -103,7 +103,7 @@ HISTORICO: list[dict] = [   # templates que já saíram de uso (continuam no de-
      "em_uso_desde": "2026-10-13", "em_uso_ate": "2026-10-28", "botoes": ["Quero continuar", "Agora não"],
      "com_interesse": ["Quero continuar"], "sem_interesse": ["Agora não"],
      "corpo": TEMPLATES["T2r"]["corpo"]},
-    {"codigo": "T4", "nome": "resgate_solicitacao_encerramento", "versao": 1, "categoria": "UTILITY",
+    {"codigo": "T4", "nome": "resgate_solicitacao_encerramento", "versao": 1, "categoria": "UTILITY", "etapa_funil": "T3",
      "em_uso_desde": "2026-10-14", "em_uso_ate": "2026-11-02", "botoes": ["Quero continuar", "Pode encerrar"],
      "com_interesse": ["Quero continuar"], "sem_interesse": ["Pode encerrar"],
      "corpo": TEMPLATES["T4"]["corpo"]},
@@ -113,7 +113,7 @@ HISTORICO: list[dict] = [   # templates que já saíram de uso (continuam no de-
 def de_para() -> list[dict]:
     """Linhas da tabela `templates_de_para` (BigQuery): uma por (etapa, template). Listas de botões em texto ' | ' (Power BI)."""
     def linha(codigo, nome, meta, botoes, corpo, em_uso, ate, imagem):
-        rotulo, ordem = ETAPAS[codigo]
+        rotulo, ordem = ETAPAS[meta.get("etapa_funil") or codigo]   # etapa_funil: coluna do funil diferente do código do fluxo
         return {"codigo": codigo, "etapa": rotulo, "etapa_ordem": ordem, "template": nome, "versao": int(meta["versao"]),
                 "rotulo_versao": f"{rotulo} v{meta['versao']} · {nome}", "categoria": meta["categoria"],
                 "botoes": " | ".join(botoes), "botoes_com_interesse": " | ".join(meta["com_interesse"]),
