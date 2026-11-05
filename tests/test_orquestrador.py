@@ -1151,3 +1151,15 @@ def test_buscar_horarios_prioridade_dra_luciana_depois_dr_lucas():
     saida, erro = ferramentas_ia.executar("buscar_horarios", {"profissional": "prioridade", "a_partir_de": "", "dias": 14, "dia_semana": "sabado", "hora": ""}, ctx)
     r = json.loads(saida)
     assert r["pedido_sem_vaga"] is True and r["livres"][0]["data"] == "2026-11-10" and r["livres"][0]["profissional"] == "dra_luciana"
+
+
+def test_lembrete_depois_do_video_pergunta_se_conseguiu_assistir():
+    """05/11/2026 (clínica): retomada de quem tocou 'Quero ver o vídeo' e sumiu: texto fixo novo, com a pergunta de diagnóstico."""
+    from celeste.orquestrador import lembretes_texto as lt
+    conv = {"nome": "Any Souza", "ultima": {"direcao": "celeste", "texto": "Assista com calma e depois me conta o que achou! 😊"}}
+    assert lt.etapa(conv) == "video"
+    t1 = lt.texto_lembrete(conv, 1)
+    assert t1.startswith("Oi, Any! Conseguiu assistir ao vídeo da Dra. Luciana? 💛") and "diagnóstico" in t1 and ":" not in t1
+    assert lt.texto_lembrete(conv, 2) == "Aguardo seu retorno, Any! 💛"
+    sem_nome = lt.texto_lembrete({"nome": "", "ultima": conv["ultima"]}, 1)
+    assert sem_nome.startswith("Oi! Conseguiu assistir") and "{nome}" not in sem_nome
