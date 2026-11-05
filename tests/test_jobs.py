@@ -295,7 +295,8 @@ def test_publicar_funil_templates_grava_de_para_testes_e_view():
     r = espelho.publicar_funil_templates(DB(), bq)
     assert r["templates_de_para"] == len(bq.cargas["templates_de_para"]) >= 6
     assert bq.cargas["numeros_teste"] == [{"contato": "5511980567117"}, {"contato": "5511999405671"}]
-    assert len(bq.queries) == 1 and bq.queries[0].startswith("CREATE OR REPLACE VIEW `") and "vw_funil_templates" in bq.queries[0]
+    assert len(bq.queries) == 2 and bq.queries[0].startswith("CREATE OR REPLACE VIEW `") and "vw_funil_templates" in bq.queries[0]
+    assert bq.queries[1].startswith("CREATE OR REPLACE TABLE `") and ".funil_templates` AS SELECT * FROM `" in bq.queries[1]
     assert "automacoes.leads_disponibilizados_diario" in bq.queries[0] and "CELESTE MARIA" in bq.queries[0]
 
 

@@ -113,7 +113,8 @@ ESQUEMA_DE_PARA = [bigquery.SchemaField(n, t) for n, t in (
 
 def publicar_funil_templates(db, bq) -> dict:
     """05/11/2026 (pedido da clínica): grava `templates_de_para` (do código, templates_texto.de_para) e `numeros_teste`
-    (config/atendimento) e recria a view `vw_funil_templates` a partir de sql/vw_funil_templates.sql."""
+    (config/atendimento), recria a view `vw_funil_templates` a partir de sql/vw_funil_templates.sql e grava a tabela
+    `funil_templates` (cópia física da view, para o Power BI)."""
     from pathlib import Path
     from celeste.jobs import templates_texto
     base = f"{config.PROJETO_GCP}.{DATASET}"
@@ -127,4 +128,6 @@ def publicar_funil_templates(db, bq) -> dict:
     sql = (Path(__file__).parent / "sql" / "vw_funil_templates.sql").read_text(encoding="utf-8")
     ddl = "CREATE OR REPLACE VIEW `" + base + ".vw_funil_templates` AS" + chr(10) + sql
     bq.query(ddl).result()
-    return {"templates_de_para": len(de_para), "numeros_teste": len(numeros), "vw_funil_templates": "ok"}
+    # 05/11/2026 (clínica): o Power BI precisa de TABELA (a view não entra); cópia física recriada a cada rodada
+    bq.query(f"CREATE OR REPLACE TABLE `{base}.funil_templates` AS SELECT * FROM `{base}.vw_funil_templates`").result()
+    return {"templates_de_para": len(de_para), "numeros_teste": len(numeros), "vw_funil_templates": "ok", "funil_templates": "ok"}
