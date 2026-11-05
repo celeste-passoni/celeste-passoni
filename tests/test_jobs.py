@@ -247,3 +247,53 @@ def test_numero_de_teste_fora_de_todas_as_filas():
     assert disparos.e_teste({"celular": "5511900000000", "teste": True}, numeros)
     assert not disparos.e_teste({"celular": "5511900000000"}, numeros)
     assert not disparos.e_teste({"contato": "5511900000000", "teste": False}, numeros)
+
+
+def test_de_para_cobre_todos_os_templates():
+    """05/11/2026: todo template em uso (e todo aposentado) tem etapa, versão e botões de interesse coerentes; chaves únicas."""
+    from celeste.jobs import templates_texto as t
+    linhas = t.de_para()
+    chaves = [(l["codigo"], l["template"]) for l in linhas]
+    assert len(chaves) == len(set(chaves))
+    em_uso = {(l["codigo"], l["template"]) for l in linhas if l["em_uso"]}
+    assert em_uso == {(c, x["nome"]) for c, x in t.TEMPLATES.items()}      # cada template enviado hoje está no de-para
+    assert set(t.METADADOS) == set(t.TEMPLATES)
+    for l in linhas:
+        botoes = set(l["botoes"].split(" | ")) if l["botoes"] else set()
+        for campo in ("botoes_com_interesse", "botoes_sem_interesse"):
+            assert set(filter(None, l[campo].split(" | "))) <= botoes, (l["template"], campo)
+        assert l["etapa"] and l["versao"] >= 1 and l["em_uso_desde"]
+        assert l["em_uso"] == (l["em_uso_ate"] is None)
+    # uma versão por etapa em uso
+    from collections import Counter
+    assert max(Counter(l["codigo"] for l in linhas if l["em_uso"]).values()) == 1
+    # a mesma etapa não repete número de versão
+    assert len({(l["codigo"], l["versao"]) for l in linhas}) == len(linhas)
+
+
+def test_publicar_funil_templates_grava_de_para_testes_e_view():
+    from celeste.jobs import espelho
+
+    class Job:
+        def result(self): return self
+
+    class BQ:
+        def __init__(self): self.cargas, self.queries = {}, []
+        def load_table_from_json(self, linhas, destino, job_config=None):
+            self.cargas[destino.split(".")[-1]] = linhas; return Job()
+        def query(self, sql): self.queries.append(sql); return Job()
+
+    class Doc:
+        def get(self): return self
+        def to_dict(self): return {"numeros_teste": ["5511999405671", 5511980567117], "numeros_teste_escrita_real": ["5511999405671"]}
+
+    class DB:
+        def collection(self, nome): return self
+        def document(self, nome): return Doc()
+
+    bq = BQ()
+    r = espelho.publicar_funil_templates(DB(), bq)
+    assert r["templates_de_para"] == len(bq.cargas["templates_de_para"]) >= 6
+    assert bq.cargas["numeros_teste"] == [{"contato": "5511980567117"}, {"contato": "5511999405671"}]
+    assert len(bq.queries) == 1 and bq.queries[0].startswith("CREATE OR REPLACE VIEW `") and "vw_funil_templates" in bq.queries[0]
+    assert "automacoes.leads_disponibilizados_diario" in bq.queries[0] and "CELESTE MARIA" in bq.queries[0]

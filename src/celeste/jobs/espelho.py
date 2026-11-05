@@ -88,5 +88,36 @@ def rodar(tabelas: list[str] | None = None) -> dict:
         for col, tipo in COLUNAS_GARANTIDAS.get(tabela, {}).items():
             bq.query(f"ALTER TABLE `{config.PROJETO_GCP}.{DATASET}.{tabela}` ADD COLUMN IF NOT EXISTS `{col}` {tipo}").result()
         resumo[tabela] = len(linhas)
+    try:   # 05/11/2026: de-para de templates + view do funil por template (falha aqui não derruba o espelho)
+        resumo.update(publicar_funil_templates(db, bq))
+    except Exception as e:   # noqa: BLE001
+        log.exception("funil por template: %s", e)
+        resumo["funil_templates_erro"] = str(e)[:300]
     log.info("espelho BigQuery: %s", resumo)
     return resumo
+
+
+ESQUEMA_DE_PARA = [bigquery.SchemaField(n, t) for n, t in (
+    ("codigo", "STRING"), ("etapa", "STRING"), ("etapa_ordem", "INT64"), ("template", "STRING"), ("versao", "INT64"),
+    ("rotulo_versao", "STRING"), ("categoria", "STRING"), ("botoes", "STRING"), ("botoes_com_interesse", "STRING"),
+    ("botoes_sem_interesse", "STRING"), ("tem_imagem", "BOOL"), ("em_uso", "BOOL"), ("em_uso_desde", "DATE"),
+    ("em_uso_ate", "DATE"), ("corpo", "STRING"))]
+
+
+def publicar_funil_templates(db, bq) -> dict:
+    """05/11/2026 (pedido da clínica): grava `templates_de_para` (do código, templates_texto.de_para) e `numeros_teste`
+    (config/atendimento) e recria a view `vw_funil_templates` a partir de sql/vw_funil_templates.sql."""
+    from pathlib import Path
+    from celeste.jobs import templates_texto
+    base = f"{config.PROJETO_GCP}.{DATASET}"
+    trunc = lambda esquema: bigquery.LoadJobConfig(write_disposition="WRITE_TRUNCATE", schema=esquema)   # noqa: E731
+    de_para = templates_texto.de_para()
+    bq.load_table_from_json(de_para, f"{base}.templates_de_para", job_config=trunc(ESQUEMA_DE_PARA)).result()
+    cfg = db.collection("config").document("atendimento").get().to_dict() or {}
+    numeros = sorted({str(n) for n in (cfg.get("numeros_teste") or []) + (cfg.get("numeros_teste_escrita_real") or [])})
+    bq.load_table_from_json([{"contato": n} for n in numeros], f"{base}.numeros_teste",
+                            job_config=trunc([bigquery.SchemaField("contato", "STRING")])).result()
+    sql = (Path(__file__).parent / "sql" / "vw_funil_templates.sql").read_text(encoding="utf-8")
+    ddl = "CREATE OR REPLACE VIEW `" + base + ".vw_funil_templates` AS" + chr(10) + sql
+    bq.query(ddl).result()
+    return {"templates_de_para": len(de_para), "numeros_teste": len(numeros), "vw_funil_templates": "ok"}

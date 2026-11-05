@@ -64,6 +64,69 @@ TEMPLATES: dict[str, dict] = {
     },
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# DE-PARA DE TEMPLATES (05/11/2026, pedido da clínica): todo template que a esteira já usou, com a etapa a que pertence e
+# quais botões contam como "com interesse" e "sem interesse". O espelho noturno grava isto em BigQuery
+# (`ia_atendimento.templates_de_para`) e a view `vw_funil_templates` mede a eficiência por etapa e por versão.
+# AO TROCAR UM TEMPLATE: atualize TEMPLATES acima (o que é enviado), ponha a nova versão em METADADOS e mova a antiga
+# para HISTORICO com a data em que saiu de uso. O teste test_de_para_cobre_todos_os_templates falha se faltar algo.
+# ---------------------------------------------------------------------------------------------------------------------
+ETAPAS = {   # código → (rótulo da etapa no funil, ordem). TR e T2r ficam fora da esteira T1→T4 (recontato/retorno combinado)
+    "T1": ("T1", 1), "T2": ("T2", 2), "T3": ("T3", 3), "T4": ("T4", 4),
+    "T2r": ("Recontato", 5), "TR": ("Retorno combinado", 6),
+}
+
+METADADOS: dict[str, dict] = {   # templates EM USO (mesmas chaves de TEMPLATES)
+    "T1": {"versao": 3, "categoria": "MARKETING", "em_uso_desde": "2026-10-28",
+           "com_interesse": ["Quero agendar uma consulta"], "sem_interesse": ["Não tenho interesse"]},
+    "T2": {"versao": 2, "categoria": "UTILITY", "em_uso_desde": "2026-10-29",
+           "com_interesse": ["Quero ver o vídeo"], "sem_interesse": ["Agora não"]},
+    "T2r": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-10-29",
+            "com_interesse": ["Quero continuar"], "sem_interesse": ["Agora não"]},
+    "T3": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-10-14",
+           "com_interesse": ["Quero continuar"], "sem_interesse": ["Agora não"]},
+    "T4": {"versao": 2, "categoria": "UTILITY", "em_uso_desde": "2026-11-03",
+           "com_interesse": ["Sim, tenho interesse"], "sem_interesse": ["Encerrar solicitação"]},
+    "TR": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-10-25", "com_interesse": [], "sem_interesse": []},
+}
+
+HISTORICO: list[dict] = [   # templates que já saíram de uso (continuam no de-para para o histórico do funil)
+    {"codigo": "T1", "nome": "resgate_solicitacao_pendente", "versao": 1, "categoria": "UTILITY",
+     "em_uso_desde": "2026-10-13", "em_uso_ate": "2026-10-27", "botoes": ["Quero continuar", "Agora não"],
+     "com_interesse": ["Quero continuar"], "sem_interesse": ["Agora não"],
+     "corpo": "Olá, {1}. Sua solicitação de consulta na Passoni Clinic, feita em {2}, ficou pendente. Caso ainda queira concluir o agendamento, responda esta mensagem."},
+    {"codigo": "T1", "nome": "resgate_queda_3cm", "versao": 2, "categoria": "MARKETING",
+     "em_uso_desde": "2026-10-27", "em_uso_ate": "2026-10-28", "imagem": True, "botoes": ["Quero uma avaliação", "Tenho uma dúvida", "Não quero receber"],
+     "com_interesse": ["Quero uma avaliação", "Tenho uma dúvida"], "sem_interesse": ["Não quero receber"],
+     "corpo": "Oi, {1}! Você sabia que um fio saudável cresce cerca de 3 cm em 3 meses? (versão 1, com imagem vertical)"},
+    {"codigo": "T2", "nome": "resgate_solicitacao_segue_pendente", "versao": 1, "categoria": "UTILITY",
+     "em_uso_desde": "2026-10-13", "em_uso_ate": "2026-10-28", "botoes": ["Quero continuar", "Agora não"],
+     "com_interesse": ["Quero continuar"], "sem_interesse": ["Agora não"],
+     "corpo": TEMPLATES["T2r"]["corpo"]},
+    {"codigo": "T4", "nome": "resgate_solicitacao_encerramento", "versao": 1, "categoria": "UTILITY",
+     "em_uso_desde": "2026-10-14", "em_uso_ate": "2026-11-02", "botoes": ["Quero continuar", "Pode encerrar"],
+     "com_interesse": ["Quero continuar"], "sem_interesse": ["Pode encerrar"],
+     "corpo": TEMPLATES["T4"]["corpo"]},
+]
+
+
+def de_para() -> list[dict]:
+    """Linhas da tabela `templates_de_para` (BigQuery): uma por (etapa, template). Listas de botões em texto ' | ' (Power BI)."""
+    def linha(codigo, nome, meta, botoes, corpo, em_uso, ate, imagem):
+        rotulo, ordem = ETAPAS[codigo]
+        return {"codigo": codigo, "etapa": rotulo, "etapa_ordem": ordem, "template": nome, "versao": int(meta["versao"]),
+                "rotulo_versao": f"{rotulo} v{meta['versao']} · {nome}", "categoria": meta["categoria"],
+                "botoes": " | ".join(botoes), "botoes_com_interesse": " | ".join(meta["com_interesse"]),
+                "botoes_sem_interesse": " | ".join(meta["sem_interesse"]), "tem_imagem": bool(imagem),
+                "em_uso": em_uso, "em_uso_desde": meta["em_uso_desde"], "em_uso_ate": ate, "corpo": corpo}
+    linhas = []
+    for codigo, t in TEMPLATES.items():
+        linhas.append(linha(codigo, t["nome"], METADADOS[codigo], t["botoes"], t["corpo"], True, None, t.get("imagem")))
+    for h in HISTORICO:
+        linhas.append(linha(h["codigo"], h["nome"], h, h["botoes"], h["corpo"], False, h["em_uso_ate"], h.get("imagem")))
+    return linhas
+
+
 MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
 
 
