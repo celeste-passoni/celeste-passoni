@@ -253,7 +253,7 @@ videos:
 
 # Vídeos reservados para as rotinas de consulta (confirmação D-1, desmarcou) e pós-consulta; NÃO entram na ferramenta enviar_video.
 rotinas_consulta:                        # 26/10/2026 (aprovado pela clínica): só consultas agendadas pela Celeste (status "Agendado")
-  ativo: false                           # 02/11/2026 (decisão da empresa): a Celeste NÃO faz mais confirmação de consulta. C48/C24/CHOJ desligados aqui E no scheduler (pausado); o código fica
+  ativo: true                            # 06/11/2026 (clínica): religado, todos os dias, inclusive fim de semana. (02/11 a 05/11 ficou desligado por decisão da empresa)
   hora_48h: 10                           # C48 sai a partir das 10h de 2 dias antes
   hora_vespera: 10                       # C24 sai a partir das 10h da véspera, só para quem não confirmou
   hora_dia: 7                            # CHOJ sai a partir das 7h do dia, antes da hora da consulta
