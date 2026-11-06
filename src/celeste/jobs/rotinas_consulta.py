@@ -75,6 +75,8 @@ def decidir(conv: dict, agora: datetime) -> Optional[str]:
     if str(ag.get("status") or "").strip().lower() in STATUS_QUE_CANCELAM:
         return None
     rot = conv.get("rotinas_consulta") or {}
+    if rot.get("desligadas"):   # 06/11/2026 (clínica): a recepção já confirmou por fora → nenhum toque automático nesta consulta
+        return None
     agora = agora.astimezone(FUSO)
     hoje = agora.date()
     agendado_em = conv.get("agendado_em")

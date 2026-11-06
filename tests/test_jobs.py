@@ -168,6 +168,7 @@ def test_rotinas_consulta_decidir_e_parametros():
     assert rc.decidir(dict(base), datetime(2026, 10, 27, 10, 5, tzinfo=F)) == "C48"
     assert rc.decidir(dict(base), datetime(2026, 10, 27, 9, 0, tzinfo=F)) is None                      # antes das 10h
     assert rc.decidir(dict(base, rotinas_consulta={"C48_em": 1}), datetime(2026, 10, 27, 11, 0, tzinfo=F)) is None
+    assert rc.decidir(dict(base, rotinas_consulta={"desligadas": True}), datetime(2026, 10, 27, 11, 0, tzinfo=F)) is None   # 06/11/2026: recepção já confirmou por fora
     assert rc.decidir(dict(base), datetime(2026, 10, 28, 10, 0, tzinfo=F)) == "C24"
     assert rc.decidir(dict(base, rotinas_consulta={"confirmado_em": 1}), datetime(2026, 10, 28, 10, 0, tzinfo=F)) is None   # já confirmou
     assert rc.decidir(dict(base), datetime(2026, 10, 29, 7, 30, tzinfo=F)) == "CHOJ"
