@@ -162,15 +162,41 @@ aguardando AS (
 interagiu AS (   -- escreveu (texto, áudio, foto ou documento), não só clicou em botão
   SELECT DISTINCT contato FROM msgs_lead WHERE botao IS NULL AND tipo IN ('text', 'audio', 'image', 'document')
 ),
+-- 06/11/2026 (clínica, só na tabela): lead em 'Irá nos retornar' ou 'Agora não' que voltou a mandar mensagem depois desse status
+-- conta como em conversa. Momento do status: 'Agora não' → conversas.agora_nao_em; 'Irá nos retornar' → última chamada da Celeste
+-- com atualizar_status (chamadas_ia). Sem o momento gravado, o status fica como está.
+conv_atual AS (
+  SELECT _id AS conversa_id, CAST(contato AS STRING) AS contato, agora_nao_em, status_em
+  FROM `vertical-theory-489419-a7.ia_atendimento.conversas`
+  WHERE NOT COALESCE(teste, FALSE)
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY contato ORDER BY criado_em DESC) = 1
+),
+status_ia_celeste AS (
+  SELECT ch.conversa_id, MAX(ch.em) AS em
+  FROM `vertical-theory-489419-a7.ia_atendimento.chamadas_ia` ch, UNNEST(JSON_QUERY_ARRAY(ch.ferramentas)) f
+  WHERE JSON_VALUE(f, '$.nome') = 'atualizar_status' AND ch.em < TIMESTAMP(CURRENT_DATE('America/Sao_Paulo'), 'America/Sao_Paulo')
+  GROUP BY ch.conversa_id
+),
+ultima_msg_lead AS (
+  SELECT contato, MAX(recebido_em) AS em FROM msgs_lead GROUP BY contato
+),
 status_lead AS (   -- status do painel (leads.status_ia), com 'Em conversa - Interagiu' para quem escreveu texto livre até D-1
-  SELECT CAST(l.celular AS STRING) AS contato,
-    CASE
-      WHEN l.opt_out THEN 'Não quer (opt-out)'
-      WHEN l.status_ia = 'Em conversa' AND it.contato IS NOT NULL THEN 'Em conversa - Interagiu'
-      ELSE COALESCE(l.status_ia, 'Não contatado')
-    END AS status_lead
-  FROM `vertical-theory-489419-a7.ia_atendimento.leads` l
-  LEFT JOIN interagiu it ON it.contato = CAST(l.celular AS STRING)
+  SELECT contato,
+    CASE WHEN status_base = 'Em conversa' AND interagiu THEN 'Em conversa - Interagiu' ELSE status_base END AS status_lead
+  FROM (
+    SELECT CAST(l.celular AS STRING) AS contato, it.contato IS NOT NULL AS interagiu,
+      CASE
+        WHEN l.opt_out THEN 'Não quer (opt-out)'
+        WHEN l.status_ia IN ('Irá nos retornar', 'Agora não')
+         AND uml.em > COALESCE(IF(l.status_ia = 'Agora não', ca.agora_nao_em, sic.em), ca.status_em) THEN 'Em conversa'   -- voltou a escrever
+        ELSE COALESCE(l.status_ia, 'Não contatado')
+      END AS status_base
+    FROM `vertical-theory-489419-a7.ia_atendimento.leads` l
+    LEFT JOIN interagiu it ON it.contato = CAST(l.celular AS STRING)
+    LEFT JOIN conv_atual ca ON ca.contato = CAST(l.celular AS STRING)
+    LEFT JOIN status_ia_celeste sic ON sic.conversa_id = ca.conversa_id
+    LEFT JOIN ultima_msg_lead uml ON uml.contato = CAST(l.celular AS STRING)
+  )
 ),
 em_uso AS (   -- versão em uso de cada etapa (para as linhas sem envio)
   SELECT codigo, template FROM `vertical-theory-489419-a7.ia_atendimento.templates_de_para` WHERE em_uso
