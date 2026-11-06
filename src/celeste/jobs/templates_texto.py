@@ -109,6 +109,10 @@ HISTORICO: list[dict] = [   # templates que já saíram de uso (continuam no de-
      "em_uso_desde": "2026-10-29", "em_uso_ate": "2026-11-06", "botoes": ["Quero ver o vídeo", "Agora não"],
      "com_interesse": ["Quero ver o vídeo"], "sem_interesse": ["Agora não"],
      "corpo": TEMPLATES["T2"]["corpo"]},
+    {"codigo": "T2", "nome": "resgate_video_solicitacao_pendente_v2", "versao": 3, "categoria": "MARKETING",   # reserva da v3 enquanto ela está em análise (06/11/2026)
+     "em_uso_desde": "2026-11-06", "botoes": ["Quero ver o vídeo", "Prefiro agendar direto", "Não tenho interesse"],
+     "com_interesse": ["Quero ver o vídeo", "Prefiro agendar direto"], "sem_interesse": ["Não tenho interesse"],
+     "corpo": TEMPLATES["T2"]["corpo"]},
     {"codigo": "T4", "nome": "resgate_solicitacao_encerramento", "versao": 1, "categoria": "UTILITY", "etapa_funil": "T3",
      "em_uso_desde": "2026-10-14", "em_uso_ate": "2026-11-02", "botoes": ["Quero continuar", "Pode encerrar"],
      "com_interesse": ["Quero continuar"], "sem_interesse": ["Pode encerrar"],

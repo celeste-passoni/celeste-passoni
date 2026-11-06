@@ -539,6 +539,8 @@ disparos:
     T3: resgate_solicitacao_ainda_pendente   # "ainda está pendente" (UTILITY, aprovado pela clínica em 14/10)
     T4: resgate_solicitacao_encerramento_v2  # "vamos encerrar a sua solicitação" (UTILITY). 03/11/2026 (clínica): botões Sim, tenho interesse · Encerrar solicitação (Meta id 1439056767665911); v1 (Quero continuar · Pode encerrar) = 1088086500736244
     TR: retorno_combinado                    # "como combinamos, estou retomando a nossa conversa" (UTILITY; decisão da clínica em 25/10: substitui o T2 no retorno em data pedida)
+  templates_reserva:                    # 06/11/2026 (clínica): se o principal não estiver APPROVED na Meta na hora do disparo, sai este
+    T2: resgate_video_solicitacao_pendente_v2   # 3 botões (Quero ver o vídeo · Prefiro agendar direto · Não tenho interesse), aprovado como MARKETING; só enquanto a v3 (UTILITY) estiver em análise
   templates_alternativos:               # versões com gancho de vídeo, cadastradas em 15/10/2026 (aprovadas pela clínica); entram na esteira só depois da aprovação da Meta e do fluxo dos botões
     T4v: { nome: resgate_video_encerramento, quando: "Alternativa ao T4 (7 dias depois do T3): antes de encerrar, oferece um vídeo. 'Quero ver o vídeo' → vídeo casos_sucesso + Celeste; 'Pode encerrar' → opt-out.", video: casos_sucesso }
   status_apos_template: { T1: "Template enviado (1°)", T2: "Template enviado (2°)", T2r: "Template enviado (2°)", T3: "Template enviado (2°)", T4: "Template enviado (3°)", TR: "Template enviado (2°)" }   # 03/11/2026: T4 era "(1°)" (parecia 1 template só)

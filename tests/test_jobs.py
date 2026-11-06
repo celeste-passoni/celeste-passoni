@@ -209,6 +209,24 @@ def test_lembretes_elegibilidade():
     assert not lembretes.dentro_do_horario(datetime(2026, 10, 10, 10, 0, tzinfo=sp))   # sábado
 
 
+def test_escolher_template_usa_reserva_quando_principal_nao_aprovado():
+    """06/11/2026: T2 v3 (UTILITY) em análise; enquanto não aprovar, sai a v2 (MARKETING); sem checagem (None) sai o principal."""
+    d = disparos.config.parametros()["disparos"]
+    assert d["templates_reserva"]["T2"] == "resgate_video_solicitacao_pendente_v2"
+    assert disparos.escolher_template("T2", d, None) == d["templates"]["T2"]
+    assert disparos.escolher_template("T2", d, {d["templates"]["T2"], "x"}) == d["templates"]["T2"]
+    assert disparos.escolher_template("T2", d, {"resgate_video_solicitacao_pendente_v2"}) == "resgate_video_solicitacao_pendente_v2"
+    assert disparos.escolher_template("T2", d, set()) is None
+    assert disparos.escolher_template("T1", d, set()) is None and disparos.escolher_template("T1", d, {d["templates"]["T1"]}) == d["templates"]["T1"]
+    from unittest.mock import MagicMock
+    mt = MagicMock(); mt.templates.return_value = [{"name": "a", "status": "APPROVED"}, {"name": "b", "status": "PENDING"}]
+    assert disparos.templates_aprovados(mt) == {"a"}
+    mt.templates.side_effect = RuntimeError("x")
+    assert disparos.templates_aprovados(mt) is None
+    import celeste.jobs.templates_texto as tt
+    assert any(h["nome"] == "resgate_video_solicitacao_pendente_v2" for h in tt.HISTORICO)   # a reserva também está no de-para do funil
+
+
 def test_agora_nao_recebe_t2_no_dia_seguinte():
     # tocou "Agora não" no T1 (status "Agora não") e não escreveu nada → T2r 1 dia depois
     l = _lead(status_ia="Agora não", passo=1, ultimo_template_em=AGORA - timedelta(days=1, hours=1), ultima_msg_lead_em=AGORA - timedelta(hours=20))

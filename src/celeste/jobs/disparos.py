@@ -184,6 +184,28 @@ def _extras_template(codigo: str, tarde: bool, lead: Optional[dict] = None) -> d
     return {}
 
 
+def templates_aprovados(mt) -> Optional[set]:
+    """Nomes dos templates APPROVED na Meta; None se a consulta falhar (aí ninguém é bloqueado por isso)."""
+    try:
+        return {t["name"] for t in mt.templates() if str(t.get("status", "")).upper() == "APPROVED"}
+    except Exception as e:  # noqa: BLE001
+        log.warning("não consegui listar os templates na Meta (%s); seguindo sem a checagem", e)
+        return None
+
+
+def escolher_template(codigo: str, d: dict, aprovados: Optional[set]) -> Optional[str]:
+    """Nome do template a enviar: o principal se aprovado (ou sem checagem), senão a reserva de `templates_reserva`; None se nenhum serve."""
+    principal = d["templates"][codigo]
+    if aprovados is None or principal in aprovados:
+        return principal
+    reserva = (d.get("templates_reserva") or {}).get(codigo)
+    if reserva and reserva in aprovados:
+        log.warning("template %s (%s) não está aprovado na Meta; usando a reserva %s", codigo, principal, reserva)
+        return reserva
+    log.warning("template %s (%s) não está aprovado na Meta e não há reserva aprovada; lead pulado", codigo, principal)
+    return None
+
+
 def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[int] = None) -> dict:
     p = config.parametros()
     d = dict(p["disparos"])
@@ -208,6 +230,7 @@ def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[
     precisa_tarde = any(x.get("so_se_horario_livre_hoje_a_tarde") for x in d["passos"])
     tarde = _tarde_livre_hoje(tisaude.TiSaude()) if precisa_tarde and not dry_run else False
     mt = None if dry_run else meta.Meta()
+    aprovados = None if dry_run else templates_aprovados(mt)   # 06/11/2026: T2 v3 em análise; se não estiver aprovado, sai a reserva (v2)
     ordem = firestore.Query.DESCENDING if d.get("priorizar", "mais_recentes") == "mais_recentes" else firestore.Query.ASCENDING
     consulta = db.collection("leads").where("elegivel", "==", True).where("opt_out", "==", False).order_by("lead_created_at", direction=ordem)
     teste = numeros_teste(db)
@@ -230,7 +253,11 @@ def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[
                 db.collection("leads").document(doc.id).set({"status_ia": "Sem resposta (esteira encerrada)", "esteira_encerrada_em": agora}, merge=True)
             resumo["encerrados"] = resumo.get("encerrados", 0) + 1
             continue
-        nome_tpl = d["templates"][dec.template]
+        nome_tpl = escolher_template(dec.template, d, aprovados)
+        if not nome_tpl:
+            resumo["pulados"] += 1
+            resumo["sem_template_aprovado"] = resumo.get("sem_template_aprovado", 0) + 1
+            continue
         if dry_run:
             resumo["enviados"] += 1
             resumo["detalhe"].append({"lead": doc.id[-4:].rjust(len(doc.id), "*"), "template": dec.template, "motivo": dec.motivo})
