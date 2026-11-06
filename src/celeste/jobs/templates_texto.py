@@ -27,11 +27,12 @@ TEMPLATES: dict[str, dict] = {
         "imagem_descricao": "foto da Dra. Luciana Passoni com o texto \"Você sabia? Um fio saudável cresce 3 cm em 3 meses.\", uma régua de hoje a 3 meses e \"Como estão seus cabelos hoje?\"",
         "sem_rodape": True,
     },
-    "T2": {   # 29/10/2026 (decisão da clínica): 1 dia após o T1, SÓ para quem não respondeu nada. UTILITY (Meta, aprovado em 26/10/2026)
-        "nome": "resgate_video_solicitacao_pendente",
+    "T2": {   # 29/10/2026 (decisão da clínica): 1 dia após o T1, SÓ para quem não respondeu nada. UTILITY.
+              # 06/11/2026 (clínica): v2 com 3 botões; o "Agora não" (7% de cliques, 2,5x o vídeo, zero respostas depois) saiu; entra opt-out de verdade
+        "nome": "resgate_video_solicitacao_pendente_v2",
         "corpo": ("Olá, {1}. Sua solicitação de consulta na Passoni Clinic ainda está pendente. "
                   "Antes de seguir, a Dra. Luciana Passoni gravou um vídeo curto sobre queda de cabelo que pode te ajudar. Quer receber?"),
-        "botoes": ["Quero ver o vídeo", "Agora não"],
+        "botoes": ["Quero ver o vídeo", "Prefiro agendar direto", "Não tenho interesse"],
         "video_botao": "dra_luciana",   # "Quero ver o vídeo" → este vídeo, sem passar pelo modelo (orquestrador/_responder_quero_video)
         "sem_rodape": True,
     },
@@ -79,8 +80,8 @@ ETAPAS = {   # código → (rótulo da etapa no funil, ordem). TR e T2r ficam fo
 METADADOS: dict[str, dict] = {   # templates EM USO (mesmas chaves de TEMPLATES)
     "T1": {"versao": 3, "categoria": "MARKETING", "em_uso_desde": "2026-10-28",
            "com_interesse": ["Quero agendar uma consulta"], "sem_interesse": ["Não tenho interesse"]},
-    "T2": {"versao": 2, "categoria": "UTILITY", "em_uso_desde": "2026-10-29",
-           "com_interesse": ["Quero ver o vídeo"], "sem_interesse": ["Agora não"]},
+    "T2": {"versao": 3, "categoria": "UTILITY", "em_uso_desde": "2026-11-06",
+           "com_interesse": ["Quero ver o vídeo", "Prefiro agendar direto"], "sem_interesse": ["Não tenho interesse"]},
     "T2r": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-10-29",
             "com_interesse": ["Quero continuar"], "sem_interesse": ["Agora não"]},
     "T3": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-10-14", "em_uso_ate": "2026-11-05",   # 06/11/2026: saiu da esteira (encerramento vai 3 dias após o T2); o texto continua aqui para o histórico e envios manuais
@@ -103,6 +104,10 @@ HISTORICO: list[dict] = [   # templates que já saíram de uso (continuam no de-
      "em_uso_desde": "2026-10-13", "em_uso_ate": "2026-10-28", "botoes": ["Quero continuar", "Agora não"],
      "com_interesse": ["Quero continuar"], "sem_interesse": ["Agora não"],
      "corpo": TEMPLATES["T2r"]["corpo"]},
+    {"codigo": "T2", "nome": "resgate_video_solicitacao_pendente", "versao": 2, "categoria": "UTILITY",
+     "em_uso_desde": "2026-10-29", "em_uso_ate": "2026-11-06", "botoes": ["Quero ver o vídeo", "Agora não"],
+     "com_interesse": ["Quero ver o vídeo"], "sem_interesse": ["Agora não"],
+     "corpo": TEMPLATES["T2"]["corpo"]},
     {"codigo": "T4", "nome": "resgate_solicitacao_encerramento", "versao": 1, "categoria": "UTILITY", "etapa_funil": "T3",
      "em_uso_desde": "2026-10-14", "em_uso_ate": "2026-11-02", "botoes": ["Quero continuar", "Pode encerrar"],
      "com_interesse": ["Quero continuar"], "sem_interesse": ["Pode encerrar"],

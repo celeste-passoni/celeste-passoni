@@ -457,17 +457,17 @@ def classificar_botao_t1(botao: str | None, texto: str | None) -> str | None:
 
 
 def _responder_agora_nao(ref, conv: dict, mt: meta.Meta) -> dict:
-    """Lead tocou 'Agora não': pergunta o motivo com um botão de saída; status 'Irá nos retornar'. Sem modelo."""
+    """Lead tocou 'Agora não' (T2r, T3, T2 antigo): acolhimento fixo, sem pedir motivo e sem botão de saída (clínica, 06/11/2026); status 'Agora não'. Sem modelo."""
     b = config.parametros()["t1_botoes"]
     nome = primeiro_nome_conversa(conv)
-    texto = b["agora_nao_texto"].replace("{nome}", nome).replace("Entendo, !", "Entendo!")
-    wamid = mt.enviar_botoes_resposta(destino(conv), texto, [(b["sair_id"], b["sair_rotulo"])])
+    texto = b["agora_nao_texto"].replace(", {nome}", f", {nome}" if nome else "").replace("{nome}", nome)
+    wamid = mt.enviar_texto(destino(conv), texto)
     agora = datetime.now(timezone.utc)
     ref.collection("mensagens").document(wamid).set({
-        "direcao": "celeste", "tipo": "interactive", "texto": f"{texto}\n[botão: {b['sair_rotulo']}]", "modelo": "fluxo T1",
+        "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": "fluxo T1",
         "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
     campos = {"status": "Agora não", "agora_nao_em": agora, "pendente_resposta": False,
-              "ultima": {"texto": texto[:160], "direcao": "celeste", "tipo": "interactive", "em": agora}, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP}
+              "ultima": {"texto": texto[:160], "direcao": "celeste", "tipo": "text", "em": agora}, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP}
     conv.update(campos); ref.set(campos, merge=True)
     _espelhar_lead(conv)
     return {"ok": True, "enviado": 1, "fluxo": "t1_agora_nao"}

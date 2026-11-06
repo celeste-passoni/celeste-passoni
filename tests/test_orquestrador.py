@@ -682,6 +682,22 @@ def test_classificar_botao_t1():
     assert oapp.classificar_botao_t1(None, "oi") is None
     assert oapp.classificar_botao_t1("Quero ver o vídeo", "Quero ver o vídeo") == "quero_video"   # T2 de 29/10/2026
 
+def test_responder_agora_nao_acolhe_sem_pedir_motivo_nem_botao(monkeypatch):
+    """06/11/2026 (clínica): o 'Agora não' recebe acolhimento fixo em texto, sem pergunta e sem botão de saída; status 'Agora não'."""
+    from celeste.orquestrador import app as oapp
+    monkeypatch.setattr(oapp, "_espelhar_lead", lambda conv: None)
+    mt, ref = MagicMock(), MagicMock()
+    mt.enviar_texto.return_value = "wamid-t"
+    conv = {"id": "c1", "contato": "5511999990000", "nome": "Vanessa Silva"}
+    r = oapp._responder_agora_nao(ref, conv, mt)
+    texto = mt.enviar_texto.call_args[0][1]
+    assert r["fluxo"] == "t1_agora_nao" and texto.startswith("Tudo bem, Vanessa! Sem pressa.") and "motivo" not in texto and "dificultando" not in texto
+    assert not mt.enviar_botoes_resposta.called and conv["status"] == "Agora não" and conv["ultima"]["tipo"] == "text"
+    conv2 = {"id": "c2", "contato": "5511999990001"}
+    oapp._responder_agora_nao(ref, conv2, mt)
+    assert mt.enviar_texto.call_args[0][1].startswith("Tudo bem! Sem pressa.")   # sem nome: sem vírgula sobrando
+
+
 
 def test_botao_quero_video_manda_o_video_do_template(monkeypatch):
     from datetime import datetime, timezone

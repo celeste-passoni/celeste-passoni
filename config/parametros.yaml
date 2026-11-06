@@ -387,8 +387,9 @@ pre_cadastro_endereco_via_cep: true      # a IA pede só CEP + número/complemen
                                          # se o CEP não existir, pede para conferir; se o ViaCEP estiver fora, pede o endereço completo
 t1_botoes:                               # fluxograma do T1 (aprovado pela clínica em 13/10/2026)
   quero_continuar: "Quero continuar"      # → a Celeste continua o atendimento (modalidade → agenda)
-  agora_nao: "Agora não"                  # → mensagem fixa abaixo, com botão de saída; status "Irá nos retornar"; sem resposta → segue a esteira
-  agora_nao_texto: "Entendo, {nome}! Só para eu te ajudar da melhor forma, me conta o que está dificultando agora? Pode escrever aqui embaixo.\n\nE se preferir não seguir por enquanto, é só tocar no botão."
+  agora_nao: "Agora não"                  # (T2r, T3 e o T2 antigo) → mensagem fixa abaixo; status "Agora não"; sem resposta → segue a esteira
+  agora_nao_texto: "Tudo bem, {nome}! Sem pressa. Quando quiser retomar, é só me chamar por aqui que eu vejo os horários para você 💛"   # 06/11/2026 (clínica): antes pedia o motivo e oferecia o botão "Não quero continuar" (13 leads, zero respostas)
+  prefiro_agendar: "Prefiro agendar direto"   # botão do T2 v2 (06/11/2026): vai para o modelo, que faz a pergunta de diagnóstico e a agenda
   sair_id: "nao_quero_continuar"
   sair_rotulo: "Não quero continuar"      # a Meta documenta 25 caracteres por botão de resposta rápida (o T1 de 28/10 passou com 26); antes este comentário dizia 20
   sair_outros_rotulos: ["Não tenho interesse", "Não quero receber"]   # botões do T1 de 28/10/2026 (o 2º é da 1ª versão): mesmo efeito do "Não quero continuar" (despedida + opt-out)
@@ -534,7 +535,7 @@ disparos:
   # Os MESMOS templates que a clínica usa hoje no MarketZap (decisão de 09/10/2026); textos em src/celeste/jobs/templates_texto.py
   templates:                            # nome na Meta (idioma pt_BR); {{1}} = primeiro nome
     T1: resgate_queda_3cm_v2   # 28/10/2026 (decisão da clínica): "Você sabia que um fio saudável cresce cerca de 3 cm em 3 meses? … Quer que a gente avalie como eles estão hoje?", imagem da Dra., botões Quero agendar uma consulta · Não tenho interesse (MARKETING, Meta id 1827070681628958; a v1 958115566957712 terminava em "Como estão seus cabelos hoje?"). Antes: resgate_solicitacao_pendente_v2
-    T2: resgate_video_solicitacao_pendente   # 29/10/2026 (decisão da clínica): "ainda está pendente… a Dra. gravou um vídeo… Quer receber?" (UTILITY); botões Quero ver o vídeo · Agora não. Só para quem não respondeu o T1
+    T2: resgate_video_solicitacao_pendente_v2   # 29/10/2026 (decisão da clínica): "ainda está pendente… a Dra. gravou um vídeo… Quer receber?" (UTILITY). 06/11/2026: v2 com botões Quero ver o vídeo · Prefiro agendar direto · Não tenho interesse (a v1 tinha "Agora não"). Só para quem não respondeu o T1
     T2r: resgate_solicitacao_segue_pendente  # o T2 de 13/10 ("sua solicitação segue pendente"); desde 29/10 só no recontato de "Irá nos retornar" e "Agora não"
     T3: resgate_solicitacao_ainda_pendente   # "ainda está pendente" (UTILITY, aprovado pela clínica em 14/10)
     T4: resgate_solicitacao_encerramento_v2  # "vamos encerrar a sua solicitação" (UTILITY). 03/11/2026 (clínica): botões Sim, tenho interesse · Encerrar solicitação (Meta id 1439056767665911); v1 (Quero continuar · Pode encerrar) = 1088086500736244
@@ -544,7 +545,7 @@ disparos:
   status_apos_template: { T1: "Template enviado (1°)", T2: "Template enviado (2°)", T2r: "Template enviado (2°)", T3: "Template enviado (2°)", T4: "Template enviado (3°)", TR: "Template enviado (2°)" }   # 03/11/2026: T4 era "(1°)" (parecia 1 template só)
   quando:                               # descrição para o painel (página Templates)
     T1: "Dia 0. Primeiro toque a quem está na base de Leads Perdidos e nunca respondeu."
-    T2: "1 dia depois do T1, só se o lead não respondeu nada (nem resposta automática) e a entrega do T1 não falhou de vez. 'Quero ver o vídeo' → vídeo da Dra. Luciana sobre queda de cabelo, na hora."
+    T2: "1 dia depois do T1, só se o lead não respondeu nada (nem resposta automática) e a entrega do T1 não falhou de vez. 'Quero ver o vídeo' → vídeo da Dra. Luciana sobre queda de cabelo, na hora; 'Prefiro agendar direto' → a Celeste faz a pergunta de diagnóstico e vai para a agenda; 'Não tenho interesse' → despedida e opt-out."
     T2r: "Recontato de quem respondeu e parou: 7 dias depois de 'Irá nos retornar' ou 1 dia depois de 'Agora não' sem motivo."
     T3: "Fora da esteira desde 06/11/2026 (decisão da clínica). Antes: 3 dias depois do T2."
     T4: "3 dias depois do T2, se não houve resposta (desde 06/11/2026; antes, 7 dias depois do T3). Depois: pausa de 15 dias e recomeça no T1 uma única vez."
