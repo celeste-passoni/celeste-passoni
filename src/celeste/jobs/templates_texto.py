@@ -28,11 +28,12 @@ TEMPLATES: dict[str, dict] = {
         "sem_rodape": True,
     },
     "T2": {   # 29/10/2026 (decisão da clínica): 1 dia após o T1, SÓ para quem não respondeu nada. UTILITY.
-              # 06/11/2026 (clínica): v2 com 3 botões; o "Agora não" (7% de cliques, 2,5x o vídeo, zero respostas depois) saiu; entra opt-out de verdade
-        "nome": "resgate_video_solicitacao_pendente_v2",
+              # 06/11/2026 (clínica): o "Agora não" (7% de cliques, 2,5x o vídeo, zero respostas depois) saiu; entra opt-out de verdade.
+              # A v2 (3 botões, com "Prefiro agendar direto", Meta id 1214650231228426) foi recategorizada como MARKETING e NÃO é usada; a v3 (2 botões) é UTILITY
+        "nome": "resgate_video_solicitacao_pendente_v3",
         "corpo": ("Olá, {1}. Sua solicitação de consulta na Passoni Clinic ainda está pendente. "
                   "Antes de seguir, a Dra. Luciana Passoni gravou um vídeo curto sobre queda de cabelo que pode te ajudar. Quer receber?"),
-        "botoes": ["Quero ver o vídeo", "Prefiro agendar direto", "Não tenho interesse"],
+        "botoes": ["Quero ver o vídeo", "Não tenho interesse"],
         "video_botao": "dra_luciana",   # "Quero ver o vídeo" → este vídeo, sem passar pelo modelo (orquestrador/_responder_quero_video)
         "sem_rodape": True,
     },
@@ -81,7 +82,7 @@ METADADOS: dict[str, dict] = {   # templates EM USO (mesmas chaves de TEMPLATES)
     "T1": {"versao": 3, "categoria": "MARKETING", "em_uso_desde": "2026-10-28",
            "com_interesse": ["Quero agendar uma consulta"], "sem_interesse": ["Não tenho interesse"]},
     "T2": {"versao": 3, "categoria": "UTILITY", "em_uso_desde": "2026-11-06",
-           "com_interesse": ["Quero ver o vídeo", "Prefiro agendar direto"], "sem_interesse": ["Não tenho interesse"]},
+           "com_interesse": ["Quero ver o vídeo"], "sem_interesse": ["Não tenho interesse"]},
     "T2r": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-10-29",
             "com_interesse": ["Quero continuar"], "sem_interesse": ["Agora não"]},
     "T3": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-10-14", "em_uso_ate": "2026-11-05",   # 06/11/2026: saiu da esteira (encerramento vai 3 dias após o T2); o texto continua aqui para o histórico e envios manuais

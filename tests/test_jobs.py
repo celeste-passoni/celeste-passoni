@@ -101,7 +101,7 @@ def test_t2_so_para_quem_nao_respondeu_o_t1():
     # 29/10/2026 (decisão da clínica): T2 = vídeo, só para quem não escreveu nada; status pode continuar "Template enviado (1°)"
     base = dict(status_ia="Template enviado (1°)", passo=1, ultimo_template_em=AGORA - timedelta(days=1))
     assert disparos.decidir(_lead(**base), AGORA).template == "T2"
-    assert disparos.config.parametros()["disparos"]["templates"]["T2"] == "resgate_video_solicitacao_pendente_v2"   # 06/11/2026: 3 botões
+    assert disparos.config.parametros()["disparos"]["templates"]["T2"] == "resgate_video_solicitacao_pendente_v3"   # 06/11/2026: opt-out no lugar do "Agora não" (a v2, 3 botões, virou MARKETING)
     assert disparos.decidir(_lead(**base, respondeu_em=AGORA - timedelta(hours=5)), AGORA) is None        # resposta automática conta
     assert disparos.decidir(_lead(**base, ultima_msg_lead_em=AGORA - timedelta(hours=5)), AGORA) is None
     assert disparos.decidir(_lead(**base, falha_entrega=131050), AGORA) is None    # parou de receber marketing
@@ -111,8 +111,8 @@ def test_t2_so_para_quem_nao_respondeu_o_t1():
     agora_nao = _lead(status_ia="Agora não", passo=1, ultimo_template_em=AGORA - timedelta(days=2), ultima_msg_lead_em=AGORA - timedelta(days=2))
     assert disparos.decidir(agora_nao, AGORA).template == "T2r"
     assert tt.renderizar("T2", "Ana").startswith("Olá, Ana. Sua solicitação de consulta na Passoni Clinic ainda está pendente.")
-    assert "[botões: Quero ver o vídeo · Prefiro agendar direto · Não tenho interesse]" in tt.renderizar("T2", "Ana")
-    assert tt.METADADOS["T2"]["sem_interesse"] == ["Não tenho interesse"] and "Prefiro agendar direto" in tt.METADADOS["T2"]["com_interesse"]
+    assert "[botões: Quero ver o vídeo · Não tenho interesse]" in tt.renderizar("T2", "Ana")
+    assert tt.METADADOS["T2"] ["sem_interesse"] == ["Não tenho interesse"] and tt.METADADOS["T2"]["com_interesse"] == ["Quero ver o vídeo"]
     assert any(h["nome"] == "resgate_video_solicitacao_pendente" and h["em_uso_ate"] == "2026-11-06" for h in tt.HISTORICO)   # a v1 fica no de-para do funil
     assert tt.TEMPLATES["T2"]["video_botao"] == "dra_luciana" and tt.parametros("T2", "Ana") == ["Ana"]
 
