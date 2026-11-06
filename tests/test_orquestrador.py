@@ -565,6 +565,7 @@ def test_video_e_adiado_para_depois_dos_baloes():
     # 15/10/2026: 1º balão → mídia → resto do texto; no máximo 3 envios contando a mídia
     assert "videos_pendentes" in src and src.index("_balao(baloes[0], False)") < src.index("\n    _midia()\n") < src.index("for texto in baloes[1:]")
     assert "max_texto = max(1, 3 - n_midia)" in src
+    assert oapp.MAX_ARQUIVOS_SEGUIDOS == 2 and "del videos_pendentes[MAX_ARQUIVOS_SEGUIDOS:]" in src   # 06/11/2026: no máximo 2 arquivos seguidos
     assert 'ArrayUnion([v])' in src and "ArrayRemove" not in src   # 28/10/2026: marca a mídia só depois do envio real
 
 
@@ -863,6 +864,38 @@ def test_enviar_antes_e_depois_uma_vez_por_doenca_e_config_consistente():
     enum = next(t for t in ferramentas_ia.FERRAMENTAS if t["name"] == "enviar_antes_e_depois")["input_schema"]["properties"]["doenca"]["enum"]
     assert set(enum) == set(cfg["doencas"]) and all(d["arquivos"] for d in cfg["doencas"].values())
     assert "{doenca}" in cfg["legenda"]
+
+
+def test_enviar_imagem_referencia_sexo_atlas_e_uma_vez_por_imagem():
+    """06/11/2026: imagem composta inteira; homem -> masculina, mulher -> feminina; atlas para as raras; posição devolvida ao modelo."""
+    conv = {"id": "c1", "frente": "leads_perdidos"}
+    pend = []
+    ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos); ctx.enviar_imagem = lambda d: (pend.append(d), "adiado")[1]
+    s1, e1 = ferramentas_ia.executar("enviar_imagem_referencia", {"doenca": "alopecia_areata", "sexo": "feminino"}, ctx)
+    assert not e1 and pend == ["referencia:doencas_comuns_feminina:doencas-comuns-feminina.jpg"] and "a do meio, em cima" in s1 and "não confirme" in s1.lower()
+    s2, e2 = ferramentas_ia.executar("enviar_imagem_referencia", {"doenca": "psoriase_couro_cabeludo", "sexo": "feminino"}, ctx)
+    assert "já foi enviada" in s2 and "a de baixo, à direita" in s2 and len(pend) == 1      # mesma imagem: só aponta a posição
+    ferramentas_ia.executar("enviar_imagem_referencia", {"doenca": "alopecia_areata", "sexo": "masculino"}, ctx)
+    ferramentas_ia.executar("enviar_imagem_referencia", {"doenca": "tinea_capitis", "sexo": "feminino"}, ctx)
+    ferramentas_ia.executar("enviar_imagem_referencia", {"doenca": "alopecia_por_tracao", "sexo": "feminino"}, ctx)
+    assert [d.split(":")[1] for d in pend] == ["doencas_comuns_feminina", "doencas_comuns_masculina", "doencas_especificas", "atlas"]
+    assert conv["imagens_referencia_enviadas"] == [d.split(":")[2] for d in pend]
+    cfg = config.parametros()["imagens_referencia"]
+    enum = next(t for t in ferramentas_ia.FERRAMENTAS if t["name"] == "enviar_imagem_referencia")["input_schema"]["properties"]["doenca"]["enum"]
+    assert set(enum) == set(cfg["doencas"]) and len(enum) == 36
+    assert all(d["imagem"] in ("comuns", "doencas_especificas", "atlas") and d["posicao"] and d["nome"] for d in cfg["doencas"].values())
+    assert all(i["arquivo"] and i["legenda"] and "referência" in i["legenda"] for i in cfg["imagens"].values())
+
+
+def test_enviar_foto_referencia_grava_caminho_e_legenda():
+    from celeste.orquestrador import app as oapp
+    mt, ref = MagicMock(), MagicMock()
+    mt.enviar_imagem_link.return_value = "wamid-img"
+    n = oapp._enviar_foto(mt, ref, {"contato": "5511999990000"}, "referencia", "doencas_comuns_masculina", "doencas-comuns-masculina.jpg")
+    url, legenda = mt.enviar_imagem_link.call_args[0][1], mt.enviar_imagem_link.call_args[0][2]
+    assert n == 1 and url.endswith("/imagens-referencia/doencas-comuns-masculina.jpg") and "referência" in legenda
+    doc = ref.collection.return_value.document.return_value.set.call_args[0][0]
+    assert doc["tipo"] == "image" and doc["imagem"] == "imagens-referencia/doencas-comuns-masculina.jpg" and "imagem de referência" in doc["texto"]
 
 
 # ------------------------------------------------------------------ saneamento: marcação de ferramenta vazada no texto (caso Curti, 24/10/2026)

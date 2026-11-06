@@ -84,7 +84,7 @@ FERRAMENTAS: list[dict] = [
          "video": {"type": "string", "enum": list(config.parametros()["videos"].keys())},   # catálogo = bloco `videos` do YAML
          "reenviar": {"type": "boolean", "description": "true só quando o lead CONFIRMOU que quer receber de novo um vídeo já enviado"}},
          "required": ["video", "reenviar"], "additionalProperties": False}},
-    {"name": "enviar_antes_e_depois", "description": "Envia ao lead UMA foto real de antes e depois de um caso daquela doença tratado na clínica (com legenda e aviso de que resultados variam). Resultado é VÍDEO primeiro (enviar_video) quando o lead pede resultados em geral; a foto entra se ele pediu FOTO explicitamente, se a doença não tem vídeo de resultado (areata, seborreica, fibrosante, psoríase etc.) ou se ele disse SIM à sua oferta. 03/11/2026: quando o lead NOMEIA a doença ou o diagnóstico dele (ou de alguém da família) e ela está nesta lista, envie a foto DIRETO, sem oferecer, e no balão seguinte pergunte se se parece com o caso dele; se ele só descreve sintomas sem nomear a doença, NÃO deduza a doença (seria diagnóstico): nada de foto. Fora da lista, só texto. Se ele pedir mais, chame de novo e sai a próxima foto. A foto sai logo depois do seu PRIMEIRO balão e o resto da sua resposta vem depois dela; não diga que já enviou.",
+    {"name": "enviar_antes_e_depois", "description": "Envia ao lead UMA foto real de antes e depois de um caso daquela doença tratado na clínica (com legenda e aviso de que resultados variam). Resultado é VÍDEO primeiro (enviar_video) quando o lead pede resultados em geral; a foto entra se ele pediu FOTO explicitamente, se a doença não tem vídeo de resultado (areata, seborreica, fibrosante, psoríase etc.) ou se ele disse SIM à sua oferta. 06/11/2026: quando o lead NOMEIA a doença dele, a ordem é vídeo de resultado (enviar_video) → imagem de referência (enviar_imagem_referencia) → esta foto; ela só vai direto se a doença não tem vídeo nem imagem de referência, ou se ele pedir mais/pedir FOTO. Se ele só descreve sintomas sem nomear a doença, NÃO deduza a doença (seria diagnóstico): nada de foto. Fora da lista, só texto. Se ele pedir mais, chame de novo e sai a próxima foto. A foto sai logo depois do seu PRIMEIRO balão e o resto da sua resposta vem depois dela; não diga que já enviou.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "doenca": {"type": "string", "enum": ["dermatite_seborreica", "psoriase_couro_cabeludo", "alopecia_areata", "alopecia_fibrosante_frontal",
                                                 "lupus_couro_cabeludo", "alopecia_por_tracao", "foliculite_decalvante", "foliculite_dissecante",
@@ -95,6 +95,11 @@ FERRAMENTAS: list[dict] = [
      "strict": True, "input_schema": {"type": "object", "properties": {
          "tratamento": {"type": "string", "enum": list(config.parametros()["antes_e_depois_tratamentos"]["tratamentos"].keys()) + ["geral"]}},
          "required": ["tratamento"], "additionalProperties": False}},
+    {"name": "enviar_imagem_referencia", "description": "Envia ao lead UMA imagem de referência (ilustração de como a doença costuma aparecer; NÃO é paciente nem antes e depois) com várias condições lado a lado, para ele comparar. Use quando o lead NOMEIA a doença ou o diagnóstico dele (ou de alguém da família) e ela NÃO tem vídeo de resultado (androgenética → vídeo primeiro; transplante → vídeo). Nunca deduza a doença a partir de sintomas. Para as 6 doenças comuns há versão masculina e feminina: informe o sexo do lead (deduza pelo nome; na dúvida, feminino). A resposta diz a posição da doença na imagem: no balão seguinte aponte a posição e pergunte se se parece com o caso dele; a resposta dele nunca vira diagnóstico. Uma imagem por conversa cada; a imagem sai logo depois do seu PRIMEIRO balão. Nunca junto com vídeo ou foto na mesma resposta.",
+     "strict": True, "input_schema": {"type": "object", "properties": {
+         "doenca": {"type": "string", "enum": list(config.parametros()["imagens_referencia"]["doencas"].keys())},
+         "sexo": {"type": "string", "enum": ["masculino", "feminino"], "description": "sexo do lead, deduzido pelo nome; na dúvida, feminino"}},
+         "required": ["doenca", "sexo"], "additionalProperties": False}},
     {"name": "sinalizar_revisao", "description": "Marca a conversa para a equipe revisar quando o lead perguntou algo que NÃO está na base de conhecimento (você não inventa a resposta). Registre a dúvida exata.",
      "strict": True, "input_schema": {"type": "object", "properties": {"duvida": {"type": "string", "description": "a pergunta do lead que ficou sem resposta na base"}},
                                       "required": ["duvida"], "additionalProperties": False}},
@@ -439,6 +444,22 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         wamid = ctx.enviar_imagem(f"{grupo}:{s}:{arquivo}")
         ctx.atualizar({"fotos_enviadas": enviadas + [arquivo]})
         return {"ok": True, "wamid": wamid, "aviso": "UMA foto sai logo depois do seu primeiro balão, com legenda; o resto da sua resposta vem depois dela. Se o lead pedir mais, chame de novo."}
+
+    if nome == "enviar_imagem_referencia":   # 06/11/2026: imagem composta inteira (sem recorte); a Celeste aponta a posição e pergunta se se parece
+        from celeste.comum import config as _cfg
+        cfg = _cfg.parametros()["imagens_referencia"]
+        item = cfg["doencas"][e["doenca"]]
+        chave = item["imagem"]
+        if chave == "comuns":
+            chave = "doencas_comuns_masculina" if e.get("sexo") == "masculino" else "doencas_comuns_feminina"
+        arquivo = cfg["imagens"][chave]["arquivo"]
+        enviadas = list(ctx.conversa.get("imagens_referencia_enviadas") or [])
+        if arquivo in enviadas:
+            return {"ok": False, "aviso": f"essa imagem já foi enviada nesta conversa; a {item['nome']} é {item['posicao']}. Só aponte a posição, sem reenviar."}
+        wamid = ctx.enviar_imagem(f"referencia:{chave}:{arquivo}")
+        ctx.atualizar({"imagens_referencia_enviadas": enviadas + [arquivo]})
+        return {"ok": True, "wamid": wamid, "imagem": cfg["imagens"][chave]["descricao"], "posicao_da_doenca": item["posicao"],
+                "aviso": f"A imagem (com várias condições) sai logo depois do seu primeiro balão. No balão seguinte diga que a {item['nome']} é {item['posicao']} e pergunte se se parece com o que ele está vivendo. Não confirme nem negue diagnóstico depois."}
 
     if nome == "sinalizar_revisao":
         pend = list(ctx.conversa.get("duvidas_pendentes") or []) + [e["duvida"][:300]]

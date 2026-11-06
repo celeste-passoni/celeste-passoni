@@ -290,6 +290,68 @@ antes_e_depois:
     disturbios_da_haste:             { nome: "distúrbios da haste capilar",       arquivos: ["15-disturbios-da-haste-capilar-a.jpg"] }
     efluvio_telogeno:                { nome: "eflúvio telógeno",                  arquivos: ["16-efluvio-telogeno-a.jpg", "16-efluvio-telogeno-b.jpg"] }
 
+# Imagens de referência por doença (4 imagens compostas enviadas pela clínica em 06/11/2026; ilustrações de como cada condição
+# costuma aparecer, NÃO são pacientes nem antes e depois). Enviadas inteiras, sem recorte: a Celeste aponta a posição da doença
+# e pergunta se alguma se parece com o caso do lead. Ordem quando o lead nomeia a doença: vídeo de resultado → imagem de referência → foto de antes e depois.
+imagens_referencia:
+  base_url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/imagens-referencia/"
+  padrao_sexo: feminino      # quando o nome não deixa claro (a maioria dos leads é mulher)
+  imagens:
+    doencas_comuns_masculina:
+      arquivo: "doencas-comuns-masculina.jpg"
+      descricao: "6 condições mais comuns, em homens (grade 2x3)"
+      legenda: "Imagens de referência de como cada uma dessas condições costuma aparecer no couro cabeludo, só para você comparar."
+    doencas_comuns_feminina:
+      arquivo: "doencas-comuns-feminina.jpg"
+      descricao: "6 condições mais comuns, em mulheres (grade 2x3)"
+      legenda: "Imagens de referência de como cada uma dessas condições costuma aparecer no couro cabeludo, só para você comparar."
+    doencas_especificas:
+      arquivo: "doencas-especificas.jpg"
+      descricao: "6 condições menos comuns (grade 2x3)"
+      legenda: "Imagens de referência de como cada uma dessas condições costuma aparecer, só para você comparar."
+    atlas:
+      arquivo: "atlas-doencas-capilares.jpg"
+      descricao: "Atlas de Doenças Capilares da Passoni Clinic (cerca de 40 condições em 7 grupos)"
+      legenda: "Atlas de doenças capilares da Passoni Clinic, com as principais condições do couro cabeludo e dos fios, só para referência."
+  # doença → imagem (as 6 comuns têm versão masculina e feminina; `posicao` é o que a Celeste diz ao lead para ele achar a foto)
+  doencas:
+    alopecia_androgenetica:       { nome: "alopecia androgenética",        imagem: comuns, posicao: "a primeira, em cima à esquerda" }
+    alopecia_areata:              { nome: "alopecia areata",               imagem: comuns, posicao: "a do meio, em cima" }
+    efluvio_telogeno:             { nome: "eflúvio telógeno",              imagem: comuns, posicao: "a de cima, à direita" }
+    alopecia_frontal_fibrosante:  { nome: "alopecia frontal fibrosante",   imagem: comuns, posicao: "a de baixo, à esquerda" }
+    dermatite_seborreica:         { nome: "dermatite seborreica",          imagem: comuns, posicao: "a do meio, embaixo" }
+    psoriase_couro_cabeludo:      { nome: "psoríase do couro cabeludo",    imagem: comuns, posicao: "a de baixo, à direita" }
+    liquen_plano_pilar:           { nome: "líquen plano pilar",            imagem: doencas_especificas, posicao: "a primeira, em cima à esquerda" }
+    tinea_capitis:                { nome: "tinea capitis (micose)",        imagem: doencas_especificas, posicao: "a do meio, em cima" }
+    foliculite_couro_cabeludo:    { nome: "foliculite do couro cabeludo",  imagem: doencas_especificas, posicao: "a de cima, à direita" }
+    dermatite_de_contato:         { nome: "dermatite de contato",          imagem: doencas_especificas, posicao: "a de baixo, à esquerda" }
+    tricorrexe_nodosa:            { nome: "tricorrexe nodosa",             imagem: doencas_especificas, posicao: "a do meio, embaixo" }
+    tricotilomania:               { nome: "tricotilomania",                imagem: doencas_especificas, posicao: "a de baixo, à direita" }
+    alopecia_por_tracao:          { nome: "alopecia por tração",           imagem: atlas, posicao: "no grupo Alopecias não cicatriciais, a quarta" }
+    efluvio_anageno:              { nome: "eflúvio anágeno (quimioterapia, tóxicos)", imagem: atlas, posicao: "no grupo Alopecias não cicatriciais, a última" }
+    alopecia_central_centrifuga:  { nome: "alopecia central centrífuga",   imagem: atlas, posicao: "no grupo Alopecias cicatriciais, a terceira" }
+    lupus_eritematoso_discoide:   { nome: "lúpus eritematoso discoide",    imagem: atlas, posicao: "no grupo Alopecias cicatriciais, a quarta" }
+    foliculite_decalvante:        { nome: "foliculite decalvante",         imagem: atlas, posicao: "no grupo Alopecias cicatriciais, a última" }
+    querion_de_celso:             { nome: "quérion de Celso",              imagem: atlas, posicao: "no grupo Doenças infecciosas, a do meio" }
+    pediculose:                   { nome: "pediculose (piolhos)",          imagem: atlas, posicao: "no grupo Doenças infecciosas, a última" }
+    tricoptilose:                 { nome: "tricoptilose (pontas duplas)",  imagem: atlas, posicao: "no grupo Alterações da haste capilar, a segunda" }
+    moniletrix:                   { nome: "moniletrix",                    imagem: atlas, posicao: "no grupo Alterações da haste capilar, a terceira" }
+    tricorrexe_invaginata:        { nome: "tricorrexe invaginata (cabelo em bambu)", imagem: atlas, posicao: "no grupo Alterações da haste capilar, a quarta" }
+    pili_torti:                   { nome: "pili torti",                    imagem: atlas, posicao: "no grupo Alterações da haste capilar, a quinta" }
+    pili_annulati:                { nome: "pili annulati",                 imagem: atlas, posicao: "no grupo Alterações da haste capilar, a sexta" }
+    tricodonose:                  { nome: "tricodonose (fio com nó)",      imagem: atlas, posicao: "no grupo Alterações da haste capilar, a sétima" }
+    bubble_hair:                  { nome: "bubble hair",                   imagem: atlas, posicao: "no grupo Alterações da haste capilar, a última" }
+    alopecia_por_pressao:         { nome: "alopecia por pressão",          imagem: atlas, posicao: "no grupo Outras alopecias e condições, a primeira" }
+    alopecia_triangular_temporal: { nome: "alopecia triangular temporal",  imagem: atlas, posicao: "no grupo Outras alopecias e condições, a segunda" }
+    alopecia_sifilitica:          { nome: "alopecia sifilítica",           imagem: atlas, posicao: "no grupo Outras alopecias e condições, a terceira" }
+    sindrome_cabelo_anageno_frouxo: { nome: "síndrome do cabelo em anágeno frouxo", imagem: atlas, posicao: "no grupo Outras alopecias e condições, a quarta" }
+    sindrome_cabelo_curto_anageno:  { nome: "síndrome do cabelo curto anágeno", imagem: atlas, posicao: "no grupo Outras alopecias e condições, a quinta" }
+    alopecia_difusa_nao_padronizada: { nome: "alopecia difusa não padronizada", imagem: atlas, posicao: "no grupo Outras alopecias e condições, a sexta" }
+    alopecia_por_medicamentos:    { nome: "alopecia por medicamentos",     imagem: atlas, posicao: "no grupo Outras alopecias e condições, a última" }
+    celulite_dissecante:          { nome: "celulite dissecante do couro cabeludo (foliculite dissecante)", imagem: atlas, posicao: "no grupo Outras doenças foliculares, a primeira" }
+    foliculite_queloidiana_nuca:  { nome: "foliculite queloidiana da nuca", imagem: atlas, posicao: "no grupo Outras doenças foliculares, a do meio" }
+    dermatose_pustulosa_erosiva:  { nome: "dermatose pustulosa erosiva",   imagem: atlas, posicao: "no grupo Outras doenças foliculares, a última" }
+
 # Fotos de antes e depois por TRATAMENTO (galeria geral do site; o rótulo da imagem é a tecnologia). Decisão da clínica em 15/10/2026:
 # só quando o lead PERGUNTA explicitamente por um tratamento/tecnologia ("vocês fazem Fotona?", "quais tratamentos vocês fazem?").
 antes_e_depois_tratamentos:

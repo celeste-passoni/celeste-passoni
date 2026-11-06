@@ -33,6 +33,7 @@ app = FastAPI(title="Celeste · Orquestrador")
 db = firestore.Client(project=config.PROJETO_GCP)
 BUCKET = os.environ.get("BUCKET_MIDIA", f"celeste-midia-{config.PROJETO_GCP}")
 SIMULAR_DELAY = os.environ.get("SIMULAR_DELAY", "1") == "1"   # desligar em testes locais
+MAX_ARQUIVOS_SEGUIDOS = 2   # clínica, 06/11/2026: no máximo 2 vídeos/imagens numa mesma resposta
 FUSO = ZoneInfo(config.FUSO)
 FRENTES_IA = {f for f, cfg in config.parametros()["frentes"].items() if cfg.get("ativa")}   # hoje: leads_perdidos
 
@@ -163,7 +164,12 @@ def responder(p: Pedido):
 
     # Regra da clínica (15/10/2026): no máximo 3 envios seguidos, contando fotos e vídeos. Com mídia, a ordem é
     # 1º balão (anuncia) → mídia → resto do texto. Sem mídia: até 3 balões.
+    # 06/11/2026: no máximo 2 ARQUIVOS seguidos (vídeo ou imagem); o excedente é descartado e fica para quando o lead pedir.
     baloes = [b for b in (referencias.resolver(b) for b in res.baloes) if b]
+    if len(videos_pendentes) + len(imagens_pendentes) > MAX_ARQUIVOS_SEGUIDOS:
+        log.warning("mais de %d arquivos numa resposta (vídeos=%s imagens=%s); descartando o excedente", MAX_ARQUIVOS_SEGUIDOS, videos_pendentes, imagens_pendentes)
+        del videos_pendentes[MAX_ARQUIVOS_SEGUIDOS:]
+        del imagens_pendentes[max(0, MAX_ARQUIVOS_SEGUIDOS - len(videos_pendentes)):]
     n_midia = len(videos_pendentes) + len(imagens_pendentes)
     max_texto = max(1, 3 - n_midia)
     if len(baloes) > max_texto:
@@ -197,7 +203,8 @@ def responder(p: Pedido):
             try:
                 grupo, slug, arquivo = d.split(":", 2)
                 enviados += _enviar_foto(mt, ref, conv, grupo, slug, arquivo)
-                ref.set({"fotos_enviadas": firestore.ArrayUnion([arquivo])}, merge=True)
+                campo = "imagens_referencia_enviadas" if grupo == "referencia" else "fotos_enviadas"
+                ref.set({campo: firestore.ArrayUnion([arquivo])}, merge=True)
             except Exception as e:
                 log.warning("antes e depois %s não enviado: %s", d, e)
 
@@ -735,6 +742,9 @@ def _enviar_foto(mt: meta.Meta, ref, conv: dict, grupo: str, slug: str, arquivo:
     if grupo == "doenca":
         cfg, item = p["antes_e_depois"], p["antes_e_depois"]["doencas"][slug]
         legenda, rotulo, caminho = cfg["legenda"].format(doenca=item["nome"]), f"antes e depois: {item['nome']}", arquivo
+    elif grupo == "referencia":   # 06/11/2026: imagem de referência composta (ilustração, não é paciente)
+        cfg, item = p["imagens_referencia"], p["imagens_referencia"]["imagens"][slug]
+        legenda, rotulo, caminho = item["legenda"], f"imagem de referência: {item['descricao']}", "imagens-referencia/" + arquivo
     else:
         cfg, item = p["antes_e_depois_tratamentos"], p["antes_e_depois_tratamentos"]["tratamentos"][slug]
         legenda, rotulo, caminho = cfg["legenda"].format(tratamento=item["nome"]), f"antes e depois do tratamento: {item['nome']}", "tratamentos/" + arquivo
