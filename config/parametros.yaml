@@ -527,7 +527,7 @@ disparos:
   ativo: false                          # chave geral: nada sai enquanto false
   limite_diario: 100                    # templates por dia (todas as frentes)
   limite_por_execucao: 25               # por rodada do job (roda de hora em hora no horário permitido; 25/10/2026: era a cada 30 min)
-  horario: { dias_uteis: true, inicio: 9, fim: 18 }   # hora local (America/Sao_Paulo)
+  horario: { dias_uteis: false, inicio: 9, fim: 18 }  # hora local (America/Sao_Paulo). 06/11/2026 (clínica): todos os dias, fim de semana também
   retorno_hora_padrao: 10               # 02/11/2026: retorno combinado pedido só com a data ("me chama na terça") sai às 10h (antes: meia-noite)
   intervalo_entre_envios_segundos: [4, 12]            # ritmo humano entre um lead e outro
   priorizar: "mais_recentes"            # mais_recentes | mais_antigos
@@ -589,7 +589,7 @@ lembretes:
   # sem modelo (custo zero). Medido nelas: mediana ~5 h após a última msg sem resposta, 25% em até 2 h.
   ativo: true                          # refeito em 09/10/2026; o liga/desliga é o scheduler celeste-lembretes (pausado fora dos testes)
   horas: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]   # Cloud Scheduler roda de hora em hora nesses horários (America/Sao_Paulo)
-  dias_uteis: true
+  dias_uteis: false                    # 06/11/2026 (clínica): lembretes também no fim de semana
   minimo_sem_resposta_min: 120         # 1º lembrete: 2 h depois da última mensagem da Celeste sem resposta
   intervalo_entre_lembretes_min: 180   # 2º lembrete: 3 h depois do 1º
   max_por_conversa: 2                  # por fio: o contador zera quando o lead responde

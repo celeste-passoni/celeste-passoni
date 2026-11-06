@@ -71,9 +71,9 @@ deploy_jobs() {
     fi
   }
   agendar celeste-carregar-base "0 6 * * *"        /jobs/carregar-base
-  agendar celeste-disparos      "0 9-18 * * 1-5"    /jobs/disparos        # de hora em hora (decisão da clínica, 25/10/2026)
+  agendar celeste-disparos      "0 9-18 * * *"      /jobs/disparos        # de hora em hora (25/10/2026); todos os dias desde 06/11/2026 (clínica)
   agendar celeste-espelho       "30 0 * * *"        /jobs/espelho        # 06/11/2026: 00:30 (era 23:30) para o funil_templates D-1 ter o dia anterior completo
-  agendar celeste-lembretes     "0 9-19 * * 1-5"  /jobs/lembretes      # retomada no mesmo dia; fica PAUSADO até a clínica liberar
+  agendar celeste-lembretes     "0 9-19 * * *"    /jobs/lembretes      # retomada no mesmo dia, todos os dias (06/11/2026); ligado pela clínica em 06/11/2026
   agendar celeste-rotinas-consulta "0 7-19 * * *"  /jobs/rotinas-consulta   # lembretes da consulta agendada (C48/C24/CHOJ); nasce PAUSADO
   agendar celeste-retornos      "*/5 * * * *"     /jobs/retornos         # retorno combinado, qualquer dia/hora; a cada 5 min (02/11/2026, antes todo minuto); LIGADO em 02/11
   agendar celeste-aquecer-cache "0,50 * * * *"     /jobs/aquecer-cache   # 24 h (01/11/2026): parar à noite fazia o cache morrer e ser regravado às 6h (US$ 0,91 > 7 pings)

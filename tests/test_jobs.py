@@ -155,7 +155,7 @@ def test_horario_de_disparo():
     sp = ZoneInfo("America/Sao_Paulo")
     assert disparos.dentro_do_horario(datetime(2026, 10, 13, 10, 0, tzinfo=sp))
     assert not disparos.dentro_do_horario(datetime(2026, 10, 13, 18, 30, tzinfo=sp))
-    assert not disparos.dentro_do_horario(datetime(2026, 10, 17, 10, 0, tzinfo=sp))  # sábado
+    assert disparos.dentro_do_horario(datetime(2026, 10, 17, 10, 0, tzinfo=sp))      # sábado: desde 06/11/2026 a esteira roda todos os dias
 
 
 def test_rotinas_consulta_decidir_e_parametros():
@@ -206,7 +206,7 @@ def test_lembretes_elegibilidade():
     sp = ZoneInfo("America/Sao_Paulo")
     assert lembretes.dentro_do_horario(datetime(2026, 10, 6, 14, 0, tzinfo=sp))
     assert not lembretes.dentro_do_horario(datetime(2026, 10, 6, 20, 0, tzinfo=sp))
-    assert not lembretes.dentro_do_horario(datetime(2026, 10, 10, 10, 0, tzinfo=sp))   # sábado
+    assert lembretes.dentro_do_horario(datetime(2026, 10, 10, 10, 0, tzinfo=sp))       # sábado: desde 06/11/2026 os lembretes rodam todos os dias
 
 
 def test_escolher_template_usa_reserva_quando_principal_nao_aprovado():
