@@ -81,7 +81,7 @@ ETAPAS = {   # código → (rótulo da etapa no funil, ordem). TR e T2r ficam fo
 METADADOS: dict[str, dict] = {   # templates EM USO (mesmas chaves de TEMPLATES)
     "T1": {"versao": 3, "categoria": "MARKETING", "em_uso_desde": "2026-10-28",
            "com_interesse": ["Quero agendar uma consulta"], "sem_interesse": ["Não tenho interesse"]},
-    "T2": {"versao": 3, "categoria": "UTILITY", "em_uso_desde": "2026-11-06",
+    "T2": {"versao": 4, "categoria": "MARKETING", "em_uso_desde": "2026-11-06",   # v3 na Meta (a v2 de 3 botões é a versão 3 do de-para); cadastrada como UTILITY, aprovada como MARKETING (06/11/2026)
            "com_interesse": ["Quero ver o vídeo"], "sem_interesse": ["Não tenho interesse"]},
     "T2r": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-10-29",
             "com_interesse": ["Quero continuar"], "sem_interesse": ["Agora não"]},
@@ -109,8 +109,8 @@ HISTORICO: list[dict] = [   # templates que já saíram de uso (continuam no de-
      "em_uso_desde": "2026-10-29", "em_uso_ate": "2026-11-06", "botoes": ["Quero ver o vídeo", "Agora não"],
      "com_interesse": ["Quero ver o vídeo"], "sem_interesse": ["Agora não"],
      "corpo": TEMPLATES["T2"]["corpo"]},
-    {"codigo": "T2", "nome": "resgate_video_solicitacao_pendente_v2", "versao": 3, "categoria": "MARKETING",   # reserva da v3 enquanto ela está em análise (06/11/2026)
-     "em_uso_desde": "2026-11-06", "botoes": ["Quero ver o vídeo", "Prefiro agendar direto", "Não tenho interesse"],
+    {"codigo": "T2", "nome": "resgate_video_solicitacao_pendente_v2", "versao": 3, "categoria": "MARKETING",   # 3 botões; aprovada como MARKETING e nunca enviada (06/11/2026)
+     "em_uso_desde": "2026-11-06", "em_uso_ate": "2026-11-06", "botoes": ["Quero ver o vídeo", "Prefiro agendar direto", "Não tenho interesse"],
      "com_interesse": ["Quero ver o vídeo", "Prefiro agendar direto"], "sem_interesse": ["Não tenho interesse"],
      "corpo": TEMPLATES["T2"]["corpo"]},
     {"codigo": "T4", "nome": "resgate_solicitacao_encerramento", "versao": 1, "categoria": "UTILITY", "etapa_funil": "T3",
@@ -134,7 +134,7 @@ def de_para() -> list[dict]:
         m = METADADOS[codigo]   # em_uso_ate: continua em TEMPLATES (histórico, envio manual), mas a esteira não usa mais
         linhas.append(linha(codigo, t["nome"], m, t["botoes"], t["corpo"], not m.get("em_uso_ate"), m.get("em_uso_ate"), t.get("imagem")))
     for h in HISTORICO:
-        linhas.append(linha(h["codigo"], h["nome"], h, h["botoes"], h["corpo"], False, h["em_uso_ate"], h.get("imagem")))
+        linhas.append(linha(h["codigo"], h["nome"], h, h["botoes"], h["corpo"], not h.get("em_uso_ate"), h.get("em_uso_ate"), h.get("imagem")))   # sem em_uso_ate = reserva em uso (06/11/2026)
     return linhas
 
 

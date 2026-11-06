@@ -211,8 +211,7 @@ def test_lembretes_elegibilidade():
 
 def test_escolher_template_usa_reserva_quando_principal_nao_aprovado():
     """06/11/2026: T2 v3 (UTILITY) em análise; enquanto não aprovar, sai a v2 (MARKETING); sem checagem (None) sai o principal."""
-    d = disparos.config.parametros()["disparos"]
-    assert d["templates_reserva"]["T2"] == "resgate_video_solicitacao_pendente_v2"
+    d = dict(disparos.config.parametros()["disparos"], templates_reserva={"T2": "resgate_video_solicitacao_pendente_v2"})
     assert disparos.escolher_template("T2", d, None) == d["templates"]["T2"]
     assert disparos.escolher_template("T2", d, {d["templates"]["T2"], "x"}) == d["templates"]["T2"]
     assert disparos.escolher_template("T2", d, {"resgate_video_solicitacao_pendente_v2"}) == "resgate_video_solicitacao_pendente_v2"
@@ -277,7 +276,8 @@ def test_de_para_cobre_todos_os_templates():
     chaves = [(l["codigo"], l["template"]) for l in linhas]
     assert len(chaves) == len(set(chaves))
     em_uso = {(l["codigo"], l["template"]) for l in linhas if l["em_uso"]}
-    assert em_uso == {(c, x["nome"]) for c, x in t.TEMPLATES.items() if not t.METADADOS[c].get("em_uso_ate")}   # cada template que a esteira usa está no de-para
+    reservas = {(c, n) for c, n in (disparos.config.parametros()["disparos"].get("templates_reserva") or {}).items()}   # 06/11/2026: a reserva também conta como em uso
+    assert em_uso == {(c, x["nome"]) for c, x in t.TEMPLATES.items() if not t.METADADOS[c].get("em_uso_ate")} | reservas   # cada template que a esteira usa está no de-para
     assert ("T3", "resgate_solicitacao_ainda_pendente") not in em_uso      # 06/11/2026: T3 fora da esteira
     assert set(t.METADADOS) == set(t.TEMPLATES)
     for l in linhas:
