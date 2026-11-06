@@ -58,7 +58,7 @@ def _linha(doc) -> dict:
 
 def rodar(tabelas: list[str] | None = None) -> dict:
     db = firestore.Client(project=config.PROJETO_GCP)
-    bq = bigquery.Client(project=config.PROJETO_GCP)
+    bq = bigquery.Client(project=config.PROJETO_GCP, location=LOCALIZACAO)   # 06/11/2026: sem a região, get_job deu 404 transitório no ALTER TABLE
     nome_ds = f"{config.PROJETO_GCP}.{DATASET}"
     try:   # dataset criado na região errada (1ª rodada, 22/10/2026) é refeito: é só espelho, recarregado inteiro a cada rodada
         existente = bq.get_dataset(nome_ds)
