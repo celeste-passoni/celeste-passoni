@@ -8,6 +8,10 @@
 -- Atribuição: resposta vai para o template que o lead respondeu (contexto do WhatsApp) ou, sem contexto, ao último template
 -- recebido antes dela; marcação (e o que vem dela: consulta, comparecimento, venda) vai para o último template recebido antes
 -- da marcação. Cada lead marcado conta em UMA etapa só.
+-- D-1 (06/11/2026, pedido da clínica): só entra o que aconteceu ATÉ ONTEM (envios, respostas, marcações, vendas, disponibilizações);
+-- o espelho roda às 00:30 para a tabela da manhã ter o dia anterior completo. status_lead e status de entrega são os atuais.
+-- status_lead (06/11/2026): o mesmo status do painel da Celeste (leads.status_ia; opt-out → 'Não quer (opt-out)'), com
+-- 'Em conversa' dividido em 'Em conversa - Interagiu' quando o lead escreveu texto livre (não só clicou em botão).
 -- Gerada pelo espelho noturno (celeste.jobs.espelho); a fonte é este arquivo no repositório.
 WITH
 etapas AS (
@@ -25,13 +29,13 @@ teste AS (
 disp AS (   -- base da Celeste no funil da clínica
   SELECT contato, MIN(data_disponibilizacao) AS data_disponibilizacao
   FROM `vertical-theory-489419-a7.automacoes.leads_disponibilizados_diario`
-  WHERE frente = 'Perdidos IA'
+  WHERE frente = 'Perdidos IA' AND data_disponibilizacao < CURRENT_DATE('America/Sao_Paulo')   -- D-1
   GROUP BY contato
 ),
 optout AS (
   SELECT CAST(celular AS STRING) AS contato FROM `vertical-theory-489419-a7.ia_atendimento.leads` WHERE opt_out
   UNION DISTINCT
-  SELECT CAST(contato AS STRING) FROM `vertical-theory-489419-a7.ia_atendimento.conversas` WHERE opt_out
+  SELECT CAST(contato AS STRING) FROM `vertical-theory-489419-a7.ia_atendimento.conversas` WHERE opt_out AND (opt_out_em IS NULL OR opt_out_em < TIMESTAMP(CURRENT_DATE('America/Sao_Paulo'), 'America/Sao_Paulo'))
 ),
 envios AS (
   SELECT
@@ -44,6 +48,7 @@ envios AS (
   FROM `vertical-theory-489419-a7.ia_atendimento.leads` l, UNNEST(JSON_QUERY_ARRAY(l.templates_enviados)) x
   WHERE JSON_VALUE(x, '$.codigo') IS NOT NULL
     AND CAST(l.celular AS STRING) NOT IN (SELECT contato FROM teste)
+    AND TIMESTAMP(JSON_VALUE(x, '$.em')) < TIMESTAMP(CURRENT_DATE('America/Sao_Paulo'), 'America/Sao_Paulo')   -- D-1
 ),
 envios_ord AS (
   SELECT e.*,
@@ -52,10 +57,10 @@ envios_ord AS (
   FROM envios e
 ),
 msgs_lead AS (
-  SELECT m._id AS msg_id, CAST(c.contato AS STRING) AS contato, m.recebido_em, m.botao, m.contexto_wamid
+  SELECT m._id AS msg_id, CAST(c.contato AS STRING) AS contato, m.recebido_em, m.botao, m.contexto_wamid, m.tipo
   FROM `vertical-theory-489419-a7.ia_atendimento.mensagens` m
   JOIN `vertical-theory-489419-a7.ia_atendimento.conversas` c ON c._id = m._pai_id
-  WHERE m.direcao = 'lead' AND m.recebido_em IS NOT NULL
+  WHERE m.direcao = 'lead' AND m.recebido_em IS NOT NULL AND m.recebido_em < TIMESTAMP(CURRENT_DATE('America/Sao_Paulo'), 'America/Sao_Paulo')   -- D-1
 ),
 resp_janela AS (   -- sem contexto: último template recebido antes da mensagem
   SELECT ml.msg_id, e.wamid
@@ -86,6 +91,7 @@ marc AS (
   WHERE UPPER(a.marcadopor) = 'CELESTE MARIA'
     AND DATE(a.marcacao) >= DATE '2026-10-28'
     AND a.tipo_procedimento IS DISTINCT FROM 'PC - AVALIAÇÃO'
+    AND DATE(a.marcacao) < CURRENT_DATE('America/Sao_Paulo')   -- D-1
 ),
 marc_lead AS (
   SELECT contato,
@@ -109,6 +115,7 @@ vendas AS (
     DATE(v.data_venda) AS data_venda, v.valor_total, v.macro_produto
   FROM `vertical-theory-489419-a7.silver.vendas` v
   WHERE v.tipo_consulta = 'RESGATE' AND UPPER(v.marcadopor) = 'CELESTE MARIA' AND DATE(v.data_venda) >= DATE '2026-10-28'
+    AND DATE(v.data_venda) < CURRENT_DATE('America/Sao_Paulo')   -- D-1
 ),
 venda_lead AS (
   SELECT ma.contato,
@@ -150,7 +157,20 @@ aguardando AS (
   WHERE u.primeira_resposta_em IS NULL
     AND u.contato NOT IN (SELECT contato FROM optout)
     AND u.contato NOT IN (SELECT contato FROM marc_lead)
-    AND DATE_DIFF(CURRENT_DATE('America/Sao_Paulo'), DATE(u.enviado_em, 'America/Sao_Paulo'), DAY) >= prox.prazo_dias
+    AND DATE_DIFF(DATE_SUB(CURRENT_DATE('America/Sao_Paulo'), INTERVAL 1 DAY), DATE(u.enviado_em, 'America/Sao_Paulo'), DAY) >= prox.prazo_dias   -- no fim de D-1
+),
+interagiu AS (   -- escreveu (texto, áudio, foto ou documento), não só clicou em botão
+  SELECT DISTINCT contato FROM msgs_lead WHERE botao IS NULL AND tipo IN ('text', 'audio', 'image', 'document')
+),
+status_lead AS (   -- status do painel (leads.status_ia), com 'Em conversa - Interagiu' para quem escreveu texto livre até D-1
+  SELECT CAST(l.celular AS STRING) AS contato,
+    CASE
+      WHEN l.opt_out THEN 'Não quer (opt-out)'
+      WHEN l.status_ia = 'Em conversa' AND it.contato IS NOT NULL THEN 'Em conversa - Interagiu'
+      ELSE COALESCE(l.status_ia, 'Não contatado')
+    END AS status_lead
+  FROM `vertical-theory-489419-a7.ia_atendimento.leads` l
+  LEFT JOIN interagiu it ON it.contato = CAST(l.celular AS STRING)
 ),
 em_uso AS (   -- versão em uso de cada etapa (para as linhas sem envio)
   SELECT codigo, template FROM `vertical-theory-489419-a7.ia_atendimento.templates_de_para` WHERE em_uso
@@ -164,6 +184,7 @@ linhas AS (
 )
 SELECT
   l.contato,
+  COALESCE(sl.status_lead, 'Não contatado') AS status_lead,
   d.data_disponibilizacao,
   DATE_TRUNC(d.data_disponibilizacao, MONTH) AS mes_disponibilizacao,
   COALESCE(dp.etapa, l.codigo) AS etapa,
@@ -211,6 +232,7 @@ SELECT
   COALESCE(vl.teve_venda, FALSE) AS teve_venda,
   vl.data_venda,
   COALESCE(vl.faturamento, 0) AS faturamento,
+  DATE_SUB(CURRENT_DATE('America/Sao_Paulo'), INTERVAL 1 DAY) AS dados_ate,
   CURRENT_TIMESTAMP() AS calculado_em
 FROM linhas l
 LEFT JOIN disp d ON d.contato = l.contato
@@ -220,3 +242,4 @@ LEFT JOIN `vertical-theory-489419-a7.ia_atendimento.templates_de_para` dp
   ON dp.codigo = l.codigo AND dp.template = COALESCE(l.template, eu.template)   -- sem envio: versão em uso
 LEFT JOIN marc_atrib ma ON ma.wamid = l.wamid
 LEFT JOIN venda_lead vl ON vl.contato = ma.contato
+LEFT JOIN status_lead sl ON sl.contato = l.contato
