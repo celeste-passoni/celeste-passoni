@@ -83,7 +83,7 @@ METADADOS: dict[str, dict] = {   # templates EM USO (mesmas chaves de TEMPLATES)
            "com_interesse": ["Quero ver o vídeo"], "sem_interesse": ["Agora não"]},
     "T2r": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-10-29",
             "com_interesse": ["Quero continuar"], "sem_interesse": ["Agora não"]},
-    "T3": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-10-14",
+    "T3": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-10-14", "em_uso_ate": "2026-11-05",   # 06/11/2026: saiu da esteira (encerramento vai 3 dias após o T2); o texto continua aqui para o histórico e envios manuais
            "com_interesse": ["Quero continuar"], "sem_interesse": ["Agora não"]},
     "T4": {"versao": 2, "categoria": "UTILITY", "em_uso_desde": "2026-11-03", "etapa_funil": "T3",   # 05/11/2026 (clínica): encerramento conta como T3 no funil até a revisão dos templates (em 03/11 o T3 foi pulado e 81 leads foram do T2 direto para ele)
            "com_interesse": ["Sim, tenho interesse"], "sem_interesse": ["Encerrar solicitação"]},
@@ -121,7 +121,8 @@ def de_para() -> list[dict]:
                 "em_uso": em_uso, "em_uso_desde": meta["em_uso_desde"], "em_uso_ate": ate, "corpo": corpo}
     linhas = []
     for codigo, t in TEMPLATES.items():
-        linhas.append(linha(codigo, t["nome"], METADADOS[codigo], t["botoes"], t["corpo"], True, None, t.get("imagem")))
+        m = METADADOS[codigo]   # em_uso_ate: continua em TEMPLATES (histórico, envio manual), mas a esteira não usa mais
+        linhas.append(linha(codigo, t["nome"], m, t["botoes"], t["corpo"], not m.get("em_uso_ate"), m.get("em_uso_ate"), t.get("imagem")))
     for h in HISTORICO:
         linhas.append(linha(h["codigo"], h["nome"], h, h["botoes"], h["corpo"], False, h["em_uso_ate"], h.get("imagem")))
     return linhas

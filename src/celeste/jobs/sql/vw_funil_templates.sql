@@ -17,7 +17,9 @@ WITH
 etapas AS (
   SELECT * FROM UNNEST([
     STRUCT('T1' AS codigo, 1 AS ordem, CAST(NULL AS STRING) AS anterior, 0 AS prazo_dias),
-    STRUCT('T2', 2, 'T1', 1), STRUCT('T3', 3, 'T2', 3), STRUCT('T4', 4, 'T3', 7)])
+    STRUCT('T2', 2, 'T1', 1),
+    STRUCT('T3', 3, CAST(NULL AS STRING), 0),   -- 06/11/2026: T3 fora da esteira (ninguém fica 'aguardando' T3)
+    STRUCT('T4', 4, 'T2', 3)])                  -- encerramento 3 dias depois do T2 (conta na coluna T3 pelo de-para)
 ),
 teste AS (
   SELECT contato FROM `vertical-theory-489419-a7.ia_atendimento.numeros_teste`

@@ -484,15 +484,14 @@ disparos:
     T1: "Dia 0. Primeiro toque a quem está na base de Leads Perdidos e nunca respondeu."
     T2: "1 dia depois do T1, só se o lead não respondeu nada (nem resposta automática) e a entrega do T1 não falhou de vez. 'Quero ver o vídeo' → vídeo da Dra. Luciana sobre queda de cabelo, na hora."
     T2r: "Recontato de quem respondeu e parou: 7 dias depois de 'Irá nos retornar' ou 1 dia depois de 'Agora não' sem motivo."
-    T3: "3 dias depois do T2, se não houve resposta."
-    T4: "7 dias depois do T3, se não houve resposta. Depois: pausa de 15 dias e recomeça no T1 uma única vez."
+    T3: "Fora da esteira desde 06/11/2026 (decisão da clínica). Antes: 3 dias depois do T2."
+    T4: "3 dias depois do T2, se não houve resposta (desde 06/11/2026; antes, 7 dias depois do T3). Depois: pausa de 15 dias e recomeça no T1 uma única vez."
     TR: "Na data e hora exatas que o lead pediu ('me chama na segunda às 11h30'), em qualquer dia e horário, pelo job de retornos (a cada 5 min). A Celeste retoma a conversa de onde parou."
 
   passos:                               # cadência medida na atendente de referência (medianas): 3 d, 3 d, 8 d, 3 d
     - { template: T1, apos_dias: 0,  ciclo: 1 }
     - { template: T2, apos_dias: 1,  ciclo: 1 }         # 1 dia após o T1 (decisão da clínica, 13/10/2026)
-    - { template: T3, apos_dias: 3,  ciclo: 1 }         # dia 4
-    - { template: T4, apos_dias: 7,  ciclo: 1 }         # dia 11: aviso de encerramento
+    - { template: T4, apos_dias: 3,  ciclo: 1 }         # dia 4: aviso de encerramento. 06/11/2026 (decisão da clínica): o T3 saiu da esteira; antes T3 +3 d e T4 +7 d
   reiniciar_no_passo: 0                 # após o último passo, pausa e recomeça no T1
   pausa_apos_ultimo_passo_dias: 15      # decisão da clínica, 14/10/2026
   max_ciclos: 2                         # depois do 2º ciclo completo sem resposta: status "Sem resposta (esteira encerrada)", não aborda mais

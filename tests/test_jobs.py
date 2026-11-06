@@ -44,17 +44,17 @@ def _lead(**k):
 
 
 def test_esteira_segue_cadencia_da_atendente_de_referencia():
-    # T1 (solicitação pendente) → +1 d T2 (segue pendente) → +3 d T3 (ainda pendente) → +7 d T4 (encerramento)
+    # 06/11/2026 (clínica): T1 → +1 d T2 (vídeo) → +3 d T4 (encerramento); o T3 saiu da esteira
     d0 = disparos.decidir(_lead(), AGORA)
     assert d0 and d0.template == "T1" and d0.novo_passo == 1
     assert disparos.decidir(_lead(status_ia="Template enviado (1°)", passo=1, ultimo_template_em=AGORA - timedelta(hours=20)), AGORA) is None
     d2 = disparos.decidir(_lead(status_ia="Template enviado (1°)", passo=1, ultimo_template_em=AGORA - timedelta(days=1)), AGORA)
     assert d2 and d2.template == "T2" and d2.novo_passo == 2
-    d3 = disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=2, ultimo_template_em=AGORA - timedelta(days=3)), AGORA)
-    assert d3 and d3.template == "T3" and d3.novo_passo == 3
-    assert disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=3, ultimo_template_em=AGORA - timedelta(days=6)), AGORA) is None
-    d4 = disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=3, ultimo_template_em=AGORA - timedelta(days=7)), AGORA)
-    assert d4 and d4.template == "T4" and d4.novo_passo == 4 and d4.novo_ciclo == 1
+    assert disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=2, ultimo_template_em=AGORA - timedelta(days=2)), AGORA) is None
+    d4 = disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=2, ultimo_template_em=AGORA - timedelta(days=3)), AGORA)
+    assert d4 and d4.template == "T4" and d4.novo_passo == 3 and d4.novo_ciclo == 1
+    # quem já recebeu o T3 no modelo antigo (passo 3) está no fim da esteira: pausa, não recebe T4 de novo pela esteira
+    assert disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=3, ciclos=1, ultimo_template_em=AGORA - timedelta(days=7)), AGORA) is None
 
 
 def test_pausa_e_reinicio_da_esteira():
@@ -256,7 +256,8 @@ def test_de_para_cobre_todos_os_templates():
     chaves = [(l["codigo"], l["template"]) for l in linhas]
     assert len(chaves) == len(set(chaves))
     em_uso = {(l["codigo"], l["template"]) for l in linhas if l["em_uso"]}
-    assert em_uso == {(c, x["nome"]) for c, x in t.TEMPLATES.items()}      # cada template enviado hoje está no de-para
+    assert em_uso == {(c, x["nome"]) for c, x in t.TEMPLATES.items() if not t.METADADOS[c].get("em_uso_ate")}   # cada template que a esteira usa está no de-para
+    assert ("T3", "resgate_solicitacao_ainda_pendente") not in em_uso      # 06/11/2026: T3 fora da esteira
     assert set(t.METADADOS) == set(t.TEMPLATES)
     for l in linhas:
         botoes = set(l["botoes"].split(" | ")) if l["botoes"] else set()
