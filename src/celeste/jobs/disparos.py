@@ -235,7 +235,10 @@ def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[
     consulta = db.collection("leads").where("elegivel", "==", True).where("opt_out", "==", False).order_by("lead_created_at", direction=ordem)
     teste = numeros_teste(db)
 
-    for doc in consulta.stream():
+    # 07/11/2026: materializa a consulta ANTES do laço. Com o stream aberto durante os envios (4-12 s cada), o gRPC do Firestore
+    # estourava o prazo (~5 min, '504 Deadline Exceeded') e a rodada morria no 34º envio com HTTP 500.
+    docs = list(consulta.stream())
+    for doc in docs:
         if resumo["enviados"] >= cota:
             break
         lead = doc.to_dict()
