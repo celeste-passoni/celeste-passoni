@@ -55,7 +55,7 @@ deploy_painel() {
 }
 
 deploy_jobs() {
-  gcloud run deploy celeste-jobs --project "$PROJETO" --region "$REGIAO" --image "$IMAGEM"     --service-account "celeste-jobs@${PROJETO}.iam.gserviceaccount.com"     --no-allow-unauthenticated --timeout 900 --concurrency 1 --memory 1Gi --cpu 1 --min-instances 0 --max-instances 1     --set-env-vars "SERVICO=jobs,GCP_PROJECT=${PROJETO},GCP_REGION=${REGIAO},URL_ORQUESTRADOR=$(gcloud run services describe celeste-orquestrador --project "$PROJETO" --region "$REGIAO" --format 'value(status.url)')" --quiet
+  gcloud run deploy celeste-jobs --project "$PROJETO" --region "$REGIAO" --image "$IMAGEM"     --service-account "celeste-jobs@${PROJETO}.iam.gserviceaccount.com"     --no-allow-unauthenticated --timeout 900 --concurrency 1 --memory 1Gi --cpu 1 --min-instances 0 --max-instances 3     --set-env-vars "SERVICO=jobs,GCP_PROJECT=${PROJETO},GCP_REGION=${REGIAO},URL_ORQUESTRADOR=$(gcloud run services describe celeste-orquestrador --project "$PROJETO" --region "$REGIAO" --format 'value(status.url)')" --quiet
   gcloud run services add-iam-policy-binding celeste-orquestrador --project "$PROJETO" --region "$REGIAO" \
     --member "serviceAccount:celeste-jobs@${PROJETO}.iam.gserviceaccount.com" --role roles/run.invoker --quiet
   URL=$(gcloud run services describe celeste-jobs --project "$PROJETO" --region "$REGIAO" --format 'value(status.url)')
