@@ -21,7 +21,7 @@ from celeste.jobs import disparos
 log = logging.getLogger(__name__)
 FUSO = ZoneInfo(config.FUSO)
 STATUS_FINAIS = {"Agendado", "Encaminhado à recepção", "Não quer (opt-out)", "Orientado à recepção", "Encerrada (reiniciada)",
-                 "Irá nos retornar", "Vamos retornar na data solicitada", "Agora não"}   # quem disse que volta não leva cutucada no mesmo dia (padrão das atendentes)
+                 "Irá nos retornar", "Vamos retornar na data solicitada", "Agora não", "Não é lead"}   # 07/11/2026: fornecedora recebeu "Aguardo seu retorno"   # quem disse que volta não leva cutucada no mesmo dia (padrão das atendentes)
 
 
 def _cfg() -> dict:

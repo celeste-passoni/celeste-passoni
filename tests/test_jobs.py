@@ -133,7 +133,7 @@ def test_completar_resposta_e_entrega():
 
 
 def test_quem_respondeu_sai_da_esteira():
-    for st in ("Em conversa", "Agendado", "Receiteiro", "Mora em outro País", "Não quer (opt-out)", "Encaminhado à recepção"):
+    for st in ("Em conversa", "Agendado", "Receiteiro", "Mora em outro País", "Não quer (opt-out)", "Encaminhado à recepção", "Não é lead"):
         assert disparos.decidir(_lead(status_ia=st, passo=1, ultimo_template_em=AGORA - timedelta(days=30)), AGORA) is None
     assert disparos.decidir(_lead(opt_out=True), AGORA) is None
     assert disparos.decidir(_lead(elegivel=False), AGORA) is None

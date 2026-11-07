@@ -106,10 +106,10 @@ FERRAMENTAS: list[dict] = [
     {"name": "registrar_nome", "description": "Registra como o lead se chama quando o nome do cadastro não é o dele (nome de empresa, de outra pessoa) e ele disse o próprio nome ('Valter', 'pode me chamar de Ju'). As mensagens automáticas do sistema passam a usar esse nome. Uma vez, assim que ele disser; não use para o nome que já está no cadastro.",
      "strict": True, "input_schema": {"type": "object", "properties": {"nome": {"type": "string", "description": "primeiro nome, como o lead quer ser chamado"}},
                                       "required": ["nome"], "additionalProperties": False}},
-    {"name": "atualizar_status", "description": "Registra o resultado da conversa quando ela chega a um desfecho sem agendamento (ex.: Irá nos retornar, Achou caro).",
+    {"name": "atualizar_status", "description": "Registra o resultado da conversa quando ela chega a um desfecho sem agendamento (ex.: Irá nos retornar, Achou caro). 'Não é lead' (07/11/2026): o contato não é paciente nem interessado em consulta (empresa oferecendo produto ou serviço, fornecedor, parceria, candidato a vaga, cobrança, número errado/engano): responda uma vez com educação e chame com este status na MESMA resposta; a conversa é encerrada e ele sai dos lembretes e da esteira.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "status": {"type": "string", "enum": ["Irá nos retornar", "Vamos retornar na data solicitada", "Achou caro", "Quer pelo convênio",
-                                                "Mora em outro Estado", "Mora em outro País", "Está em outra clínica", "Receiteiro"]},
+                                                "Mora em outro Estado", "Mora em outro País", "Está em outra clínica", "Receiteiro", "Não é lead"]},
          "data_retorno": {"type": "string", "description": "AAAA-MM-DD se o lead pediu uma data; AAAA-MM-DDTHH:MM (hora de São Paulo) se ele pediu uma hora ('me chama às 11h30'); senão vazio"}},
          "required": ["status", "data_retorno"], "additionalProperties": False}},
 ]
@@ -475,6 +475,8 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         if status == "Vamos retornar na data solicitada" and not e.get("data_retorno"):
             status = "Irá nos retornar"   # sem data concreta, cai na cadência padrão
         campos: dict = {"status": status}
+        if status == "Não é lead":   # 07/11/2026 (clínica): fornecedor/empresa/engano: conversa encerrada, fora dos lembretes e da esteira (recontato null)
+            campos.update({"aberta": False, "nao_lead": True, "nao_lead_em": datetime.now(timezone.utc)})
         if e.get("data_retorno"):
             campos["proximo_recontato_em"] = e["data_retorno"]
         campos["horarios_oferecidos"] = []   # assunto fechado sem agendamento: lista antiga não gera lembrete errado (incidente 13/10)

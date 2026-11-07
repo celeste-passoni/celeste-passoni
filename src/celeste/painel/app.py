@@ -478,7 +478,7 @@ ETAPAS_FUNIL = [("Não contatado", "Não contatado", "na base, ainda sem templat
                 ("Agendado", "Agendado", "consulta marcada no TI Saúde")]
 GRUPOS_FUNIL = [("Retornos combinados", ["Vamos retornar na data solicitada", "Irá nos retornar", "Agora não"]),
                 ("Objeções", ["Achou caro", "Quer pelo convênio"]),
-                ("Fora do perfil", ["Mora em outro Estado", "Mora em outro País", "Está em outra clínica", "Receiteiro"]),
+                ("Fora do perfil", ["Mora em outro Estado", "Mora em outro País", "Está em outra clínica", "Receiteiro", "Não é lead"]),
                 ("Equipe", ["Transferido para humano", "Encaminhado à recepção", "Orientado à recepção"])]
 
 

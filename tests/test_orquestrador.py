@@ -682,6 +682,22 @@ def test_classificar_botao_t1():
     assert oapp.classificar_botao_t1(None, "oi") is None
     assert oapp.classificar_botao_t1("Quero ver o vídeo", "Quero ver o vídeo") == "quero_video"   # T2 de 29/10/2026
 
+def test_atualizar_status_nao_e_lead_encerra_e_sai_dos_lembretes():
+    """07/11/2026 (clínica): fornecedor/empresa/engano -> 'Não é lead': conversa fechada, fora dos lembretes e da esteira."""
+    from datetime import datetime as _dt, timezone as _tz
+    from celeste.jobs import lembretes, disparos
+    conv = {"id": "c1", "frente": "leads_perdidos", "aberta": True, "status": "Em conversa"}
+    ctx = _ctx(conv); ctx.atualizar = lambda campos: conv.update(campos)
+    s, e = ferramentas_ia.executar("atualizar_status", {"status": "Não é lead", "data_retorno": ""}, ctx)
+    assert not e and conv["status"] == "Não é lead" and conv["aberta"] is False and conv["nao_lead"] is True
+    enum = next(t for t in ferramentas_ia.FERRAMENTAS if t["name"] == "atualizar_status")["input_schema"]["properties"]["status"]["enum"]
+    assert "Não é lead" in enum and "Não é lead" in config.parametros()["leads_perdidos"]["status_ia"]
+    assert config.parametros()["leads_perdidos"]["recontato_por_status_ia"]["Não é lead"] is None
+    assert "Não é lead" in lembretes.STATUS_FINAIS
+    aberta = dict(conv, aberta=True, modo="ia", ultima={"direcao": "celeste", "tipo": "text", "em": _dt(2026, 1, 1, tzinfo=_tz.utc)}, primeira_msg_celeste_em=1)
+    assert not lembretes.elegivel(aberta, _dt(2026, 1, 2, tzinfo=_tz.utc))[0]
+
+
 def test_responder_agora_nao_acolhe_sem_pedir_motivo_nem_botao(monkeypatch):
     """06/11/2026 (clínica): o 'Agora não' recebe acolhimento fixo em texto, sem pergunta e sem botão de saída; status 'Agora não'."""
     from celeste.orquestrador import app as oapp

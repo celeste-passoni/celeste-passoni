@@ -461,6 +461,7 @@ leads_perdidos:
     - "Mora em outro País"
     - "Está em outra clínica"
     - "Receiteiro"                                       # só quer vir pegar receita
+    - "Não é lead"                                       # 07/11/2026: empresa/fornecedor/engano; a Celeste marca sozinha; fora de lembretes e esteira
     - "Transferido para humano"
     - "Não quer (opt-out)"
     - "Número inválido"
@@ -478,6 +479,7 @@ leads_perdidos:
     "Está em outra clínica": 90
     "Mora em outro País": null
     "Receiteiro": null
+    "Não é lead": null
     "Não quer (opt-out)": null
     "Agendado": null
     "Transferido para humano": null
