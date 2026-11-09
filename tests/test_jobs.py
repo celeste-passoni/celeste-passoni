@@ -408,4 +408,4 @@ def test_lembrete_por_template_para_conversa_em_aberto():
     assert tt.parametros("TL", "Ana") == ["Ana"] and "Ana" in tt.renderizar("TL", "Ana")
     assert "Não tenho interesse" in disparos.config.parametros()["t1_botoes"]["sair_outros_rotulos"]   # botão de saída já é opt-out
     assert lembretes.primeiro_nome({"nome": "maria da silva"}) == "Maria" and lembretes.primeiro_nome({}) == ""
-    assert disparos.config.parametros()["lembretes"]["por_template"]["ativo"] is False   # 09/11/2026: liga depois da aprovação da Meta e do OK da clínica
+    assert disparos.config.parametros()["lembretes"]["por_template"]["ativo"] is True   # ligado em 09/11/2026 (Meta aprovou; clínica aprovou a lista)
