@@ -55,7 +55,7 @@ deploy_painel() {
 }
 
 deploy_jobs() {
-  gcloud run deploy celeste-jobs --project "$PROJETO" --region "$REGIAO" --image "$IMAGEM"     --service-account "celeste-jobs@${PROJETO}.iam.gserviceaccount.com"     --no-allow-unauthenticated --timeout 900 --concurrency 1 --memory 1Gi --cpu 1 --min-instances 0 --max-instances 3     --set-env-vars "SERVICO=jobs,GCP_PROJECT=${PROJETO},GCP_REGION=${REGIAO},URL_ORQUESTRADOR=$(gcloud run services describe celeste-orquestrador --project "$PROJETO" --region "$REGIAO" --format 'value(status.url)')" --quiet
+  gcloud run deploy celeste-jobs --project "$PROJETO" --region "$REGIAO" --image "$IMAGEM"     --service-account "celeste-jobs@${PROJETO}.iam.gserviceaccount.com"     --no-allow-unauthenticated --timeout 1800 --concurrency 1 --memory 1Gi --cpu 1 --min-instances 0 --max-instances 3     --set-env-vars "SERVICO=jobs,GCP_PROJECT=${PROJETO},GCP_REGION=${REGIAO},URL_ORQUESTRADOR=$(gcloud run services describe celeste-orquestrador --project "$PROJETO" --region "$REGIAO" --format 'value(status.url)')" --quiet
   gcloud run services add-iam-policy-binding celeste-orquestrador --project "$PROJETO" --region "$REGIAO" \
     --member "serviceAccount:celeste-jobs@${PROJETO}.iam.gserviceaccount.com" --role roles/run.invoker --quiet
   URL=$(gcloud run services describe celeste-jobs --project "$PROJETO" --region "$REGIAO" --format 'value(status.url)')
@@ -64,7 +64,7 @@ deploy_jobs() {
   agendar() {  # nome cron caminho — nunca religa um agendador: novo nasce pausado, pausado continua pausado (incidente de 13–14/10/2026)
     ESTADO=$(gcloud scheduler jobs describe "$1" --project "$PROJETO" --location "$REGIAO" --format 'value(state)' 2>/dev/null || true)
     if [ -n "$ESTADO" ]; then ACAO=update; else ACAO=create; fi
-    gcloud scheduler jobs $ACAO http "$1" --project "$PROJETO" --location "$REGIAO" --schedule "$2" --time-zone "America/Sao_Paulo"       --uri "${URL}$3" --http-method POST --oidc-service-account-email "$SA" --attempt-deadline 900s --quiet
+    gcloud scheduler jobs $ACAO http "$1" --project "$PROJETO" --location "$REGIAO" --schedule "$2" --time-zone "America/Sao_Paulo"       --uri "${URL}$3" --http-method POST --oidc-service-account-email "$SA" --attempt-deadline 1800s --quiet
     if [ "$ESTADO" != "ENABLED" ]; then
       gcloud scheduler jobs pause "$1" --project "$PROJETO" --location "$REGIAO" --quiet >/dev/null 2>&1 || true
       echo ">> agendador $1: $( [ -z "$ESTADO" ] && echo 'criado PAUSADO' || echo 'mantido PAUSADO' )"

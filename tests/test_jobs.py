@@ -335,3 +335,32 @@ def test_espelho_limpa_nome_de_coluna_com_ponto():
         def to_dict(self): return {"enviados": 3, "por_template.T4": 1, "por_template.T1": 2}
 
     assert espelho._linha(Doc()) == {"enviados": 3, "por_template_T4": 1, "por_template_T1": 2, "_id": "2026-11-05"}
+
+
+def test_disparos_trava_uma_rodada_por_vez(monkeypatch):
+    """08/11/2026: duas rodadas das 9h em paralelo (Scheduler repetiu o disparo) passaram do limite diário: 191 envios. Trava no Firestore."""
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    from unittest.mock import MagicMock
+    from celeste.jobs import disparos
+    agora = _dt(2026, 11, 9, 12, 0, tzinfo=_tz.utc)
+    assert disparos.trava_livre(None, agora) and disparos.trava_livre({"ate": None}, agora)
+    assert not disparos.trava_livre({"ate": agora + _td(minutes=10)}, agora)
+    assert disparos.trava_livre({"ate": agora - _td(minutes=1)}, agora)   # trava velha (processo morreu) expira sozinha
+    # rodar(): com a trava ocupada, nada é enviado e nada é destravado por esta rodada
+    db = MagicMock()
+    db.collection.return_value.document.return_value.get.return_value.to_dict.return_value = {"ativo": True, "limite_por_execucao": 100, "limite_diario": 100}
+    monkeypatch.setattr(disparos.firestore, "Client", lambda project=None: db)
+    monkeypatch.setattr(disparos, "dentro_do_horario", lambda agora=None: True)
+    monkeypatch.setattr(disparos, "_travar", lambda db_, agora_: False)
+    destravou = []
+    monkeypatch.setattr(disparos, "_destravar", lambda db_: destravou.append(1))
+    r = disparos.rodar()
+    assert r["ignorado"] == "outra rodada de disparos em andamento" and r["enviados"] == 0 and not destravou
+    # com a trava livre, a rodada destrava ao terminar (mesmo se falhar no meio)
+    monkeypatch.setattr(disparos, "_travar", lambda db_, agora_: True)
+    monkeypatch.setattr(disparos, "_rodar_travado", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+    try:
+        disparos.rodar()
+    except RuntimeError:
+        pass
+    assert destravou == [1]

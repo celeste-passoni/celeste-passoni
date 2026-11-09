@@ -151,6 +151,35 @@ def _completar_resposta_e_entrega(db, lead: dict) -> None:
             lead["falha_entrega"] = next((e.get("code") for e in (st.get("erros") or []) if isinstance(e, dict)), None)
 
 
+TRAVA_MINUTOS = 35   # uma rodada de 100 envios leva ~17 min; a trava expira sozinha se o processo morrer
+
+
+def trava_livre(doc: Optional[dict], agora: datetime) -> bool:
+    """A trava está livre se não existe ou se já expirou."""
+    ate = (doc or {}).get("ate")
+    return not ate or _dt(ate) <= agora
+
+
+def _travar(db, agora: datetime) -> bool:
+    """08/11/2026: o Cloud Scheduler disparou a rodada das 9h duas vezes (9h00 e 9h01) e, com 3 instâncias no jobs, as duas
+    rodaram em paralelo: 191 envios num dia de limite 100. Só uma rodada por vez (transação no Firestore)."""
+    ref = db.collection("config").document("disparos_trava")
+
+    @firestore.transactional
+    def _tentar(tx):
+        atual = ref.get(transaction=tx).to_dict()
+        if not trava_livre(atual, agora):
+            return False
+        tx.set(ref, {"ate": agora + timedelta(minutes=TRAVA_MINUTOS), "desde": agora})
+        return True
+
+    return bool(_tentar(db.transaction()))
+
+
+def _destravar(db) -> None:
+    db.collection("config").document("disparos_trava").set({"ate": None, "liberada_em": datetime.now(timezone.utc)}, merge=True)
+
+
 def _enviados_hoje(db) -> int:
     hoje = datetime.now(FUSO).strftime("%Y-%m-%d")
     doc = db.collection("disparos_diarios").document(hoje).get().to_dict() or {}
@@ -219,6 +248,17 @@ def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[
         resumo["ignorado"] = "fora do horário de disparo"
         return resumo
     agora = datetime.now(timezone.utc)
+    if not dry_run and not _travar(db, agora):
+        resumo["ignorado"] = "outra rodada de disparos em andamento"
+        return resumo
+    try:
+        return _rodar_travado(db, d, resumo, agora, dry_run, limite)
+    finally:
+        if not dry_run:
+            _destravar(db)
+
+
+def _rodar_travado(db, d: dict, resumo: dict, agora: datetime, dry_run: bool, limite: Optional[int]) -> dict:
     ja_hoje = _enviados_hoje(db)
     cota = min(int(d["limite_por_execucao"]), int(d["limite_diario"]) - ja_hoje)
     if limite is not None:
