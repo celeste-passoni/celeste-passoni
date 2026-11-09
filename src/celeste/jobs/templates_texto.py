@@ -58,6 +58,12 @@ TEMPLATES: dict[str, dict] = {
         "botoes": ["Sim, tenho interesse", "Encerrar solicitação"],   # "Sim, tenho interesse" vai para a Celeste (como qualquer texto); "Encerrar solicitação" = opt-out com despedida própria
         "sem_rodape": True,
     },
+    "TL": {   # 09/11/2026 (clínica): conversa em aberto parada > 2 dias fora da janela de 24 h (job de lembretes, 1x por fio). UTILITY, Meta id 1693036058852742
+        "nome": "retomada_conversa_em_aberto",
+        "corpo": "Olá, {1}! Nossa conversa sobre a sua consulta na Passoni Clinic ficou em aberto. Posso continuar te ajudando por aqui?",
+        "botoes": ["Sim, vamos continuar", "Não tenho interesse"],   # o 1º vai para a Celeste como texto; o 2º é opt-out (t1_botoes.sair_outros_rotulos)
+        "sem_rodape": True,
+    },
     "TR": {   # decisão da clínica em 25/10/2026: retorno na data que o lead pediu ("me chama na segunda"), no lugar do T2. UTILITY, sem botões
         "nome": "retorno_combinado",
         "corpo": "Olá, {1}! Como combinamos, estou retomando a nossa conversa sobre a sua consulta na Passoni Clinic. Podemos continuar?",
@@ -75,7 +81,7 @@ TEMPLATES: dict[str, dict] = {
 # ---------------------------------------------------------------------------------------------------------------------
 ETAPAS = {   # código → (rótulo da etapa no funil, ordem). TR e T2r ficam fora da esteira T1→T4 (recontato/retorno combinado)
     "T1": ("T1", 1), "T2": ("T2", 2), "T3": ("T3", 3), "T4": ("T4", 4),
-    "T2r": ("Recontato", 5), "TR": ("Retorno combinado", 6),
+    "T2r": ("Recontato", 5), "TR": ("Retorno combinado", 6), "TL": ("Retomada de conversa", 7),
 }
 
 METADADOS: dict[str, dict] = {   # templates EM USO (mesmas chaves de TEMPLATES)
@@ -90,6 +96,8 @@ METADADOS: dict[str, dict] = {   # templates EM USO (mesmas chaves de TEMPLATES)
     "T4": {"versao": 2, "categoria": "UTILITY", "em_uso_desde": "2026-11-03", "etapa_funil": "T3",   # 05/11/2026 (clínica): encerramento conta como T3 no funil até a revisão dos templates (em 03/11 o T3 foi pulado e 81 leads foram do T2 direto para ele)
            "com_interesse": ["Sim, tenho interesse"], "sem_interesse": ["Encerrar solicitação"]},
     "TR": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-10-25", "com_interesse": [], "sem_interesse": []},
+    "TL": {"versao": 1, "categoria": "UTILITY", "em_uso_desde": "2026-11-09",
+           "com_interesse": ["Sim, vamos continuar"], "sem_interesse": ["Não tenho interesse"]},
 }
 
 HISTORICO: list[dict] = [   # templates que já saíram de uso (continuam no de-para para o histórico do funil)

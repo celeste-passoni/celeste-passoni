@@ -596,6 +596,13 @@ lembretes:
   intervalo_entre_lembretes_min: 180   # 2º lembrete: 3 h depois do 1º
   max_por_conversa: 2                  # por fio: o contador zera quando o lead responde
   so_dentro_janela_24h: true           # texto livre só até 24 h da última msg do lead; depois, só template
+  por_template:                        # 09/11/2026 (clínica): conversa em aberto parada fora da janela de 24 h recebe UM template; sem resposta, fecha
+    ativo: false                       # liga depois de a Meta aprovar o template e de a clínica ver a lista dos pendentes (09/11/2026)
+    codigo: TL                         # templates_texto: retomada_conversa_em_aberto (UTILITY, Meta id 1693036058852742)
+    status_conversa: ["Em conversa"]   # só conversas em que o lead já escreveu e a Celeste respondeu por último
+    dias_sem_resposta: 2               # dias depois da última mensagem da Celeste sem resposta (e janela de 24 h fechada)
+    encerrar_apos_dias: 5              # sem resposta ao template: conversa fechada com o status abaixo; o lead sai de tudo
+    status_encerrada: "Sem resposta (conversa)"
 
 # Templates das rotinas de consulta (aprovados na Meta como UTILITY; conferido em 15/10/2026). Só para consultas agendadas pela Celeste.
 # Rotinas C48/C24/CHOJ: job celeste-rotinas-consulta (src/celeste/jobs/rotinas_consulta.py), aprovado pela clínica em 26/10/2026.

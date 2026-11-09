@@ -71,7 +71,7 @@ def test_pausa_e_reinicio_da_esteira():
 
 def test_templates_sao_os_da_clinica():
     from celeste.jobs import templates_texto as tt
-    assert set(tt.TEMPLATES) == {"T1", "T2", "T2r", "T3", "T4", "TR"}
+    assert set(tt.TEMPLATES) == {"T1", "T2", "T2r", "T3", "T4", "TR", "TL"}   # 09/11/2026: TL = retomada de conversa em aberto
     assert tt.TEMPLATES["TR"]["nome"] == "retorno_combinado" and tt.parametros("TR", "Ana") == ["Ana"] and "[botões" not in tt.renderizar("TR", "Ana")
     assert "cresce cerca de 3 cm em 3 meses" in tt.TEMPLATES["T1"]["corpo"] and "segue pendente" in tt.TEMPLATES["T2r"]["corpo"]
     assert tt.TEMPLATES["T2r"]["botoes"] == ["Quero continuar", "Agora não"] and "SAIR" not in tt.renderizar("T2", "Ana")
@@ -376,3 +376,35 @@ def test_disparos_relê_o_lead_antes_de_enviar():
     assert disparos.ja_recebeu_depois({"ultimo_template_em": t0}, {})               # recebeu o 1º template depois do retrato
     assert disparos.ja_recebeu_depois({"ultimo_template_em": t0 + _td(minutes=1)}, {"ultimo_template_em": t0})
     assert not disparos.ja_recebeu_depois(None, {"ultimo_template_em": t0})
+
+
+def test_lembrete_por_template_para_conversa_em_aberto():
+    """09/11/2026 (clínica): conversa parada > 2 dias fora da janela recebe o TL uma vez; sem resposta em 5 dias, fecha."""
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    from celeste.jobs import lembretes, templates_texto as tt
+    cfg = {"ativo": True, "codigo": "TL", "status_conversa": ["Em conversa"], "dias_sem_resposta": 2, "encerrar_apos_dias": 5, "status_encerrada": "Sem resposta (conversa)"}
+    agora = _dt(2026, 11, 9, 15, 0, tzinfo=_tz.utc)
+    base = {"frente": "leads_perdidos", "aberta": True, "modo": "ia", "status": "Em conversa",
+            "ultima_msg_lead_em": agora - _td(days=4), "janela_24h_ate": agora - _td(days=3),
+            "ultima": {"direcao": "celeste", "tipo": "text", "em": agora - _td(days=3)}}
+    assert lembretes.elegivel_template(dict(base), agora, cfg) == (True, "ok")
+    assert not lembretes.elegivel_template(dict(base, ultima={"direcao": "celeste", "tipo": "text", "em": agora - _td(days=1)}), agora, cfg)[0]   # ainda dentro do prazo
+    assert not lembretes.elegivel_template(dict(base, janela_24h_ate=agora + _td(hours=2)), agora, cfg)[0]                                   # janela aberta: lembrete por texto
+    assert not lembretes.elegivel_template(dict(base, status="Agora não"), agora, cfg)[0]
+    assert not lembretes.elegivel_template(dict(base, lembrete_template_em=agora - _td(days=1)), agora, cfg)[0]                               # só um por fio
+    assert not lembretes.elegivel_template(dict(base, ultima_msg_lead_em=None), agora, cfg)[0]                                               # nunca respondeu: esteira
+    assert not lembretes.elegivel_template(dict(base, modo="humano"), agora, cfg)[0]
+    # encerramento
+    enviado = dict(base, ultima_msg_lead_em=agora - _td(days=8), lembrete_template_em=agora - _td(days=6), ultima={"direcao": "template", "tipo": "template", "em": agora - _td(days=6)})
+    assert lembretes.deve_encerrar(enviado, agora, cfg)
+    assert not lembretes.deve_encerrar(dict(enviado, lembrete_template_em=agora - _td(days=2)), agora, cfg)
+    assert not lembretes.deve_encerrar(dict(enviado, ultima_msg_lead_em=agora - _td(days=1)), agora, cfg)   # respondeu depois do template
+    assert not lembretes.deve_encerrar(dict(base), agora, cfg)
+    assert "Sem resposta (conversa)" in lembretes.STATUS_FINAIS
+    # template e de-para
+    assert tt.TEMPLATES["TL"]["nome"] == "retomada_conversa_em_aberto" and tt.TEMPLATES["TL"]["botoes"] == ["Sim, vamos continuar", "Não tenho interesse"]
+    assert tt.METADADOS["TL"]["categoria"] == "UTILITY" and tt.ETAPAS["TL"][0] == "Retomada de conversa"
+    assert tt.parametros("TL", "Ana") == ["Ana"] and "Ana" in tt.renderizar("TL", "Ana")
+    assert "Não tenho interesse" in disparos.config.parametros()["t1_botoes"]["sair_outros_rotulos"]   # botão de saída já é opt-out
+    assert lembretes.primeiro_nome({"nome": "maria da silva"}) == "Maria" and lembretes.primeiro_nome({}) == ""
+    assert disparos.config.parametros()["lembretes"]["por_template"]["ativo"] is False   # 09/11/2026: liga depois da aprovação da Meta e do OK da clínica
