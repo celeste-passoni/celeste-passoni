@@ -134,8 +134,8 @@ def elegivel_template(conv: dict, agora: datetime, cfg: dict | None = None) -> t
     if conv.get("lembrete_template_em"):
         return False, "já recebeu o lembrete por template"
     ultima = conv.get("ultima") or {}
-    if ultima.get("direcao") not in ("celeste", "template"):
-        return False, "última mensagem não é da Celeste"
+    if ultima.get("direcao") != "celeste":   # se a última foi um template (ex.: T4 "vamos encerrar"), a esteira já cuidou; "ficou em aberto" contradiria
+        return False, "última mensagem não é texto da Celeste"
     if not conv.get("ultima_msg_lead_em"):
         return False, "lead nunca respondeu (fica com a esteira de templates)"
     em = ultima.get("em")

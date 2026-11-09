@@ -394,6 +394,7 @@ def test_lembrete_por_template_para_conversa_em_aberto():
     assert not lembretes.elegivel_template(dict(base, lembrete_template_em=agora - _td(days=1)), agora, cfg)[0]                               # só um por fio
     assert not lembretes.elegivel_template(dict(base, ultima_msg_lead_em=None), agora, cfg)[0]                                               # nunca respondeu: esteira
     assert not lembretes.elegivel_template(dict(base, modo="humano"), agora, cfg)[0]
+    assert not lembretes.elegivel_template(dict(base, ultima={"direcao": "template", "tipo": "template", "em": agora - _td(days=3)}), agora, cfg)[0]   # última foi template (T4): esteira já cuidou
     # encerramento
     enviado = dict(base, ultima_msg_lead_em=agora - _td(days=8), lembrete_template_em=agora - _td(days=6), ultima={"direcao": "template", "tipo": "template", "em": agora - _td(days=6)})
     assert lembretes.deve_encerrar(enviado, agora, cfg)
