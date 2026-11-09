@@ -364,3 +364,15 @@ def test_disparos_trava_uma_rodada_por_vez(monkeypatch):
     except RuntimeError:
         pass
     assert destravou == [1]
+
+
+def test_disparos_relê_o_lead_antes_de_enviar():
+    """08/11/2026: 53 leads receberam o T1 duas vezes porque a 2ª rodada usava um retrato velho da fila. Antes de enviar, relê o lead."""
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    from celeste.jobs import disparos
+    t0 = _dt(2026, 11, 8, 12, 0, tzinfo=_tz.utc)
+    assert not disparos.ja_recebeu_depois({}, {})                                   # nunca recebeu nada
+    assert not disparos.ja_recebeu_depois({"ultimo_template_em": t0}, {"ultimo_template_em": t0})   # nada mudou
+    assert disparos.ja_recebeu_depois({"ultimo_template_em": t0}, {})               # recebeu o 1º template depois do retrato
+    assert disparos.ja_recebeu_depois({"ultimo_template_em": t0 + _td(minutes=1)}, {"ultimo_template_em": t0})
+    assert not disparos.ja_recebeu_depois(None, {"ultimo_template_em": t0})

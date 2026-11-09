@@ -180,6 +180,14 @@ def _destravar(db) -> None:
     db.collection("config").document("disparos_trava").set({"ate": None, "liberada_em": datetime.now(timezone.utc)}, merge=True)
 
 
+def ja_recebeu_depois(fresco: Optional[dict], retrato: dict) -> bool:
+    """O lead recebeu algum template depois do retrato tirado no início da rodada? (53 leads receberam o T1 em dobro em 08/11/2026)"""
+    a, b = (fresco or {}).get("ultimo_template_em"), retrato.get("ultimo_template_em")
+    if not a:
+        return False
+    return not b or _dt(a) > _dt(b)
+
+
 def _enviados_hoje(db) -> int:
     hoje = datetime.now(FUSO).strftime("%Y-%m-%d")
     doc = db.collection("disparos_diarios").document(hoje).get().to_dict() or {}
@@ -305,6 +313,10 @@ def _rodar_travado(db, d: dict, resumo: dict, agora: datetime, dry_run: bool, li
             resumo["enviados"] += 1
             resumo["detalhe"].append({"lead": doc.id[-4:].rjust(len(doc.id), "*"), "template": dec.template, "motivo": dec.motivo})
             continue
+        if ja_recebeu_depois(db.collection("leads").document(doc.id).get().to_dict(), lead):
+            resumo["pulados"] += 1   # 08/11/2026: a lista é um retrato do início da rodada; outra rodada/pessoa pode ter enviado nesse meio-tempo
+            resumo["ja_recebido"] = resumo.get("ja_recebido", 0) + 1
+            continue
         extras = _extras_template(dec.template, tarde, lead)
         try:
             wamid = mt.enviar_template(lead["celular"], nome_tpl, templates_texto.parametros(dec.template, lead.get("primeiro_nome") or "", **extras),
@@ -314,7 +326,7 @@ def _rodar_travado(db, d: dict, resumo: dict, agora: datetime, dry_run: bool, li
             log.warning("falha ao enviar %s para lead: %s", dec.template, e)
             db.collection("leads").document(doc.id).set({"ultimo_erro_envio": str(e)[:300], "ultimo_erro_em": agora}, merge=True)
             continue
-        _registrar_envio(db, doc.id, lead, dec, nome_tpl, wamid, agora, extras)
+        _registrar_envio(db, doc.id, lead, dec, nome_tpl, wamid, datetime.now(timezone.utc), extras)   # 09/11/2026: hora real do envio, não a do início da rodada
         resumo["enviados"] += 1
         time.sleep(random.uniform(*d["intervalo_entre_envios_segundos"]))
     log.info("disparos: %s", resumo)
