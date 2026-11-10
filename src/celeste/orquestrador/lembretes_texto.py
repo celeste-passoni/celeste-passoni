@@ -14,9 +14,9 @@ ESCASSEZ = ("Os agendamentos são realizados por todos os setores da clínica e 
 TEXTOS = {
     "horarios": ["{nome}, algum desses horários lhe atende?", ESCASSEZ],
     "cadastro": ["Olá, gostaria de dar continuidade ao agendamento?", "{nome}, aguardo o seu retorno para darmos continuidade no seu agendamento."],
-    # 10/11/2026 (clínica): o 2º lembrete envolve a pessoa (pergunta do caso dela), não cobra nem empurra agenda. Antes: "Oi {nome}, conseguiu verificar?"
+    # 10/11/2026 (texto da clínica): o 2º lembrete geral se reapresenta e retoma o atendimento. Antes: "Oi {nome}, conseguiu verificar?"
     "geral":    ["Aguardo seu retorno, {nome}! 💛",
-                 "{nome}, me conta como estão seus cabelos hoje? Se a queda continua igual ou se você notou alguma mudança. Assim eu consigo te orientar melhor 💛"],
+                 "{nome}, aqui a Celeste da Passoni Clinic e estou passando para dar continuidade ao seu atendimento"],
     # 05/11/2026 (clínica): retomada de quem tocou "Quero ver o vídeo" (T2) e não escreveu mais. "Conseguiu assistir?" e não
     # "O que achou?", porque o WhatsApp não avisa se o vídeo foi aberto; a pergunta de diagnóstico já vai junto.
     "video":    ["Oi, {nome}! Conseguiu assistir ao vídeo da Dra. Luciana? 💛 Me conta o que achou. E, se você já tem algum diagnóstico "

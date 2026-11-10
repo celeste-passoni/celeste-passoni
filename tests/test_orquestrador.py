@@ -521,10 +521,9 @@ def test_lembrete_texto_por_etapa():
     velho = {"nome": "tati", "ultima": {"direcao": "celeste", "texto": "Pode desconsiderar minha última mensagem, foi um engano meu, desculpa"}, "horarios_oferecidos": ["2026-10-07 11:00"]}
     assert lt.etapa(velho) == "geral" and lt.texto_lembrete(velho, 1) == "Aguardo seu retorno, Tati! 💛"
     assert lt.texto_lembrete({"nome": "", "ultima": {"direcao": "celeste", "texto": "ok"}}, 1) == "Aguardo seu retorno! 💛"
-    # 10/11/2026 (clínica): o 2º lembrete geral envolve (pergunta do caso), não "conseguiu verificar?"
-    g2 = lt.texto_lembrete(velho, 2)
-    assert g2.startswith("Tati, me conta como estão seus cabelos hoje?") and "verificar" not in g2 and ":" not in g2
-    assert lt.texto_lembrete({"nome": "", "ultima": {"direcao": "celeste", "texto": "ok"}}, 2).startswith("Me conta como estão seus cabelos hoje?")
+    # 10/11/2026 (texto da clínica): o 2º lembrete geral se reapresenta, não "conseguiu verificar?"
+    assert lt.texto_lembrete(velho, 2) == "Tati, aqui a Celeste da Passoni Clinic e estou passando para dar continuidade ao seu atendimento"
+    assert lt.texto_lembrete({"nome": "", "ultima": {"direcao": "celeste", "texto": "ok"}}, 2) == "Aqui a Celeste da Passoni Clinic e estou passando para dar continuidade ao seu atendimento"
     assert lt.etapa({"ultima": {"direcao": "lead", "texto": "tenho às 15h"}}) == "geral"
 
 
