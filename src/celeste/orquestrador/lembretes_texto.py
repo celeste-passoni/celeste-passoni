@@ -14,11 +14,14 @@ ESCASSEZ = ("Os agendamentos são realizados por todos os setores da clínica e 
 TEXTOS = {
     "horarios": ["{nome}, algum desses horários lhe atende?", ESCASSEZ],
     "cadastro": ["Olá, gostaria de dar continuidade ao agendamento?", "{nome}, aguardo o seu retorno para darmos continuidade no seu agendamento."],
-    "geral":    ["Aguardo seu retorno, {nome}! 💛", "Oi {nome}, conseguiu verificar?"],
+    # 10/11/2026 (clínica): o 2º lembrete envolve a pessoa (pergunta do caso dela), não cobra nem empurra agenda. Antes: "Oi {nome}, conseguiu verificar?"
+    "geral":    ["Aguardo seu retorno, {nome}! 💛",
+                 "{nome}, me conta como estão seus cabelos hoje? Se a queda continua igual ou se você notou alguma mudança. Assim eu consigo te orientar melhor 💛"],
     # 05/11/2026 (clínica): retomada de quem tocou "Quero ver o vídeo" (T2) e não escreveu mais. "Conseguiu assistir?" e não
     # "O que achou?", porque o WhatsApp não avisa se o vídeo foi aberto; a pergunta de diagnóstico já vai junto.
     "video":    ["Oi, {nome}! Conseguiu assistir ao vídeo da Dra. Luciana? 💛 Me conta o que achou. E, se você já tem algum diagnóstico "
-                 "para a queda, me fala também, assim eu já te indico a consulta certa para o seu caso.", "Aguardo seu retorno, {nome}! 💛"],
+                 "para a queda, me fala também, assim eu já te indico a consulta certa para o seu caso.",
+                 "{nome}, me conta um pouquinho do seu caso? Há quanto tempo você percebe a queda e se já fez algum tratamento. Assim eu consigo te orientar melhor 💛"],   # 10/11/2026 (clínica): antes "Aguardo seu retorno"
 }
 
 
@@ -29,6 +32,10 @@ _HORA = _re.compile(r"\b\d{1,2}h(\d{2})?\b|\b\d{1,2}:\d{2}\b")
 def etapa(conv: dict) -> str:
     """Em que ponto a conversa parou, lendo a ÚLTIMA mensagem da Celeste (não listas antigas): horários oferecidos nela,
     dados de cadastro pedidos nela, ou outro. Incidente de 13/10: uma lista de horários de uma semana antes gerou lembrete errado."""
+    # 10/11/2026: o 2º lembrete herda a etapa do 1º (gravada em `lembrete_etapa`). Antes, a última mensagem passava a ser o
+    # próprio lembrete 1 e a etapa caía em "geral" (caso Claudia, 07/11: "conseguiu verificar?" depois do vídeo).
+    if int(conv.get("lembretes_enviados") or 0) > 0 and conv.get("lembrete_etapa") in TEXTOS:
+        return conv["lembrete_etapa"]
     u = conv.get("ultima") or {}
     if u.get("direcao") not in ("celeste", "template"):
         return "geral"

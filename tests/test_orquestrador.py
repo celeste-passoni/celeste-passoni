@@ -521,6 +521,10 @@ def test_lembrete_texto_por_etapa():
     velho = {"nome": "tati", "ultima": {"direcao": "celeste", "texto": "Pode desconsiderar minha última mensagem, foi um engano meu, desculpa"}, "horarios_oferecidos": ["2026-10-07 11:00"]}
     assert lt.etapa(velho) == "geral" and lt.texto_lembrete(velho, 1) == "Aguardo seu retorno, Tati! 💛"
     assert lt.texto_lembrete({"nome": "", "ultima": {"direcao": "celeste", "texto": "ok"}}, 1) == "Aguardo seu retorno! 💛"
+    # 10/11/2026 (clínica): o 2º lembrete geral envolve (pergunta do caso), não "conseguiu verificar?"
+    g2 = lt.texto_lembrete(velho, 2)
+    assert g2.startswith("Tati, me conta como estão seus cabelos hoje?") and "verificar" not in g2 and ":" not in g2
+    assert lt.texto_lembrete({"nome": "", "ultima": {"direcao": "celeste", "texto": "ok"}}, 2).startswith("Me conta como estão seus cabelos hoje?")
     assert lt.etapa({"ultima": {"direcao": "lead", "texto": "tenho às 15h"}}) == "geral"
 
 
@@ -1225,6 +1229,11 @@ def test_lembrete_depois_do_video_pergunta_se_conseguiu_assistir():
     assert lt.etapa(conv) == "video"
     t1 = lt.texto_lembrete(conv, 1)
     assert t1.startswith("Oi, Any! Conseguiu assistir ao vídeo da Dra. Luciana? 💛") and "diagnóstico" in t1 and ":" not in t1
-    assert lt.texto_lembrete(conv, 2) == "Aguardo seu retorno, Any! 💛"
+    t2 = lt.texto_lembrete(conv, 2)   # 10/11/2026 (clínica): envolve, pergunta do caso
+    assert t2.startswith("Any, me conta um pouquinho do seu caso?") and "tratamento" in t2 and ":" not in t2
+    # 10/11/2026: depois do lembrete 1 a última mensagem é o próprio lembrete; a etapa vem de `lembrete_etapa` (caso Claudia, 07/11)
+    depois = {"nome": "Any Souza", "lembretes_enviados": 1, "lembrete_etapa": "video", "ultima": {"direcao": "celeste", "texto": lt.texto_lembrete(conv, 1)}}
+    assert lt.etapa(depois) == "video" and lt.texto_lembrete(depois, 2) == t2
+    assert lt.etapa(dict(depois, lembretes_enviados=0)) == "geral"   # o lead respondeu (o gateway zera o contador): a etapa volta a ser lida da última mensagem
     sem_nome = lt.texto_lembrete({"nome": "", "ultima": conv["ultima"]}, 1)
     assert sem_nome.startswith("Oi! Conseguiu assistir") and "{nome}" not in sem_nome

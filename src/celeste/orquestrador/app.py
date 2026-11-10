@@ -338,6 +338,7 @@ def lembrete(p: PedidoLembrete):
     if (conv.get("ultima") or {}).get("direcao") not in ("celeste", "template"):
         raise HTTPException(400, "a última mensagem não é da Celeste")
     n = int(conv.get("lembretes_enviados") or 0) + 1
+    etapa = lembretes_texto.etapa(conv)   # 10/11/2026: gravada na conversa para o 2º lembrete herdar
     texto = lembretes_texto.texto_lembrete(conv, n)
     _, mt, _ = _svc()
     wamid = mt.enviar_texto(destino(conv), texto)
@@ -345,11 +346,11 @@ def lembrete(p: PedidoLembrete):
     ref.collection("mensagens").document(wamid).set({
         "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": "script", "lembrete": n,
         "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
-    ref.set({"lembretes_enviados": n, "ultimo_lembrete_em": agora,
+    ref.set({"lembretes_enviados": n, "ultimo_lembrete_em": agora, "lembrete_etapa": etapa,
              "ultima": {"texto": texto[:160], "direcao": "celeste", "tipo": "text", "em": agora},
              "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP}, merge=True)
-    log.info("lembrete %s (%s) enviado à conversa %s", n, lembretes_texto.etapa(conv), p.conversa_id)
-    return {"ok": True, "enviado": 1, "lembrete": n, "etapa": lembretes_texto.etapa(conv), "custo_usd": 0.0}
+    log.info("lembrete %s (%s) enviado à conversa %s", n, etapa, p.conversa_id)
+    return {"ok": True, "enviado": 1, "lembrete": n, "etapa": etapa, "custo_usd": 0.0}
 
 
 class PedidoAviso(BaseModel):
