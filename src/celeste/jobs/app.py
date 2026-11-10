@@ -87,11 +87,14 @@ def main(argv=None):
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--forcar-horario", action="store_true")
     ap.add_argument("--limite", type=int)
+    ap.add_argument("--apenas", help="disparos: só estes códigos, separados por vírgula (ex.: T1)")
+    ap.add_argument("--sem-limite-diario", action="store_true", help="disparos: a cota é só --limite (uso manual)")
     a = ap.parse_args(argv)
     if a.job == "carregar-base":
         r = base_leads.carregar(dry_run=a.dry_run)
     elif a.job == "disparos":
-        r = disparos.rodar(dry_run=a.dry_run, forcar_horario=a.forcar_horario, limite=a.limite)
+        r = disparos.rodar(dry_run=a.dry_run, forcar_horario=a.forcar_horario, limite=a.limite,
+                           apenas=set(a.apenas.split(",")) if a.apenas else None, sem_limite_diario=a.sem_limite_diario)
     elif a.job == "campanhas":
         r = campanhas.sincronizar()
     elif a.job == "lembretes":

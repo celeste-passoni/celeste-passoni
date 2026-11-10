@@ -243,7 +243,9 @@ def escolher_template(codigo: str, d: dict, aprovados: Optional[set]) -> Optiona
     return None
 
 
-def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[int] = None) -> dict:
+def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[int] = None,
+          apenas: Optional[set] = None, sem_limite_diario: bool = False) -> dict:
+    """apenas = só estes códigos (ex.: {"T1"}); sem_limite_diario = cota é só `limite` (uso manual pela CLI, 10/11/2026: T1 para todos os que esperavam)."""
     p = config.parametros()
     d = dict(p["disparos"])
     db = firestore.Client(project=config.PROJETO_GCP)
@@ -260,17 +262,23 @@ def rodar(dry_run: bool = False, forcar_horario: bool = False, limite: Optional[
         resumo["ignorado"] = "outra rodada de disparos em andamento"
         return resumo
     try:
-        return _rodar_travado(db, d, resumo, agora, dry_run, limite)
+        return _rodar_travado(db, d, resumo, agora, dry_run, limite, apenas, sem_limite_diario)
     finally:
         if not dry_run:
             _destravar(db)
 
 
-def _rodar_travado(db, d: dict, resumo: dict, agora: datetime, dry_run: bool, limite: Optional[int]) -> dict:
+def _rodar_travado(db, d: dict, resumo: dict, agora: datetime, dry_run: bool, limite: Optional[int],
+                   apenas: Optional[set] = None, sem_limite_diario: bool = False) -> dict:
     ja_hoje = _enviados_hoje(db)
-    cota = min(int(d["limite_por_execucao"]), int(d["limite_diario"]) - ja_hoje)
-    if limite is not None:
-        cota = min(cota, limite)
+    if sem_limite_diario and limite is not None:
+        cota = limite
+    else:
+        cota = min(int(d["limite_por_execucao"]), int(d["limite_diario"]) - ja_hoje)
+        if limite is not None:
+            cota = min(cota, limite)
+    if apenas:
+        resumo["apenas"] = sorted(apenas)
     if cota <= 0:
         resumo["ignorado"] = f"limite diário atingido ({ja_hoje})"
         return resumo
@@ -296,6 +304,9 @@ def _rodar_travado(db, d: dict, resumo: dict, agora: datetime, dry_run: bool, li
         _completar_resposta_e_entrega(db, lead)
         dec = decidir(lead, agora, tarde)
         if not dec:
+            resumo["pulados"] += 1
+            continue
+        if apenas and dec.template not in apenas:
             resumo["pulados"] += 1
             continue
         resumo["candidatos"] += 1
