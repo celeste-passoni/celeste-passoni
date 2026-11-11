@@ -3,7 +3,7 @@
 
   POST /jobs/carregar-base      diário 06:00   BigQuery → Firestore leads
   POST /jobs/disparos           a cada 30 min  templates conforme os ciclos (só no horário permitido)
-  POST /jobs/espelho            diário 23:30   Firestore → BigQuery ia_atendimento
+  POST /jobs/espelho            21h e 00h      Firestore → BigQuery ia_atendimento
   POST /jobs/rotinas-consulta   de hora em hora lembretes da consulta agendada (C48/C24/CHOJ)
   POST /jobs/retornos           todo minuto    retorno combinado na hora exata pedida pelo lead (TR)
 
