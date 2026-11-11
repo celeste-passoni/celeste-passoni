@@ -521,9 +521,9 @@ def test_lembrete_texto_por_etapa():
     velho = {"nome": "tati", "ultima": {"direcao": "celeste", "texto": "Pode desconsiderar minha última mensagem, foi um engano meu, desculpa"}, "horarios_oferecidos": ["2026-10-07 11:00"]}
     assert lt.etapa(velho) == "geral" and lt.texto_lembrete(velho, 1) == "Aguardo seu retorno, Tati! 💛"
     assert lt.texto_lembrete({"nome": "", "ultima": {"direcao": "celeste", "texto": "ok"}}, 1) == "Aguardo seu retorno! 💛"
-    # 10/11/2026 (texto da clínica): o 2º lembrete geral se reapresenta, não "conseguiu verificar?"
-    assert lt.texto_lembrete(velho, 2) == "Tati, aqui a Celeste da Passoni Clinic e estou passando para dar continuidade ao seu atendimento"
-    assert lt.texto_lembrete({"nome": "", "ultima": {"direcao": "celeste", "texto": "ok"}}, 2) == "Aqui a Celeste da Passoni Clinic e estou passando para dar continuidade ao seu atendimento"
+    # 11/11/2026 (texto da clínica): o 2º lembrete geral é só o nome com interrogação; sem nome, "Olá?"
+    assert lt.texto_lembrete(velho, 2) == "Tati?"
+    assert lt.texto_lembrete({"nome": "", "ultima": {"direcao": "celeste", "texto": "ok"}}, 2) == "Olá?"
     assert lt.etapa({"ultima": {"direcao": "lead", "texto": "tenho às 15h"}}) == "geral"
 
 

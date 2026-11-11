@@ -14,9 +14,9 @@ ESCASSEZ = ("Os agendamentos são realizados por todos os setores da clínica e 
 TEXTOS = {
     "horarios": ["{nome}, algum desses horários lhe atende?", ESCASSEZ],
     "cadastro": ["Olá, gostaria de dar continuidade ao agendamento?", "{nome}, aguardo o seu retorno para darmos continuidade no seu agendamento."],
-    # 10/11/2026 (texto da clínica): o 2º lembrete geral se reapresenta e retoma o atendimento. Antes: "Oi {nome}, conseguiu verificar?"
-    "geral":    ["Aguardo seu retorno, {nome}! 💛",
-                 "{nome}, aqui a Celeste da Passoni Clinic e estou passando para dar continuidade ao seu atendimento"],
+    # 11/11/2026 (texto da clínica): o 2º lembrete geral é só o nome com interrogação ("Elaine?"); sem nome, "Olá?".
+    # Antes: "{nome}, aqui a Celeste da Passoni Clinic e estou passando para dar continuidade ao seu atendimento" (10/11) e "Oi {nome}, conseguiu verificar?"
+    "geral":    ["Aguardo seu retorno, {nome}! 💛", "{nome}?"],
     # 05/11/2026 (clínica): retomada de quem tocou "Quero ver o vídeo" (T2) e não escreveu mais. "Conseguiu assistir?" e não
     # "O que achou?", porque o WhatsApp não avisa se o vídeo foi aberto; a pergunta de diagnóstico já vai junto.
     "video":    ["Oi, {nome}! Conseguiu assistir ao vídeo da Dra. Luciana? 💛 Me conta o que achou. E, se você já tem algum diagnóstico "
@@ -55,6 +55,6 @@ def texto_lembrete(conv: dict, n: int) -> str:
     lista = TEXTOS[etapa(conv)]
     t = lista[min(max(n, 1), len(lista)) - 1]
     if not nome:
-        t = t.replace("Oi, {nome}! ", "Oi! ").replace("{nome}, ", "").replace(", {nome}", "").replace("Oi {nome}, ", "Oi, ").replace("{nome}", "")
+        t = t.replace("{nome}?", "Olá?").replace("Oi, {nome}! ", "Oi! ").replace("{nome}, ", "").replace(", {nome}", "").replace("Oi {nome}, ", "Oi, ").replace("{nome}", "")
         t = t[0].upper() + t[1:]
     return t.replace("{nome}", nome)
