@@ -55,6 +55,11 @@ def decidir(lead: dict, agora: datetime, tarde_livre_hoje: Optional[bool] = None
     if status == "Vamos retornar na data solicitada":
         return None   # 27/10/2026: hora exata pedida pelo lead é do job de retornos (celeste-retornos, a cada minuto), não da esteira
     if status in d["template_por_status"]:
+        # 13/11/2026: recontato por status só UMA vez por lead. O T2r também tem o botão "Agora não": quem tocava de novo voltava
+        # para "Agora não" e recebia outro T2r no dia seguinte, em laço (um lead recebeu 2 seguidos e respondeu "De novo").
+        motivo_recontato = f"recontato após '{status}'"
+        if any(t.get("motivo") == motivo_recontato for t in (lead.get("templates_enviados") or [])):
+            return None
         dias = p["leads_perdidos"]["recontato_por_status_ia"].get(status)
         quando = lead.get("proximo_recontato_em")
         if dias == "na data":

@@ -409,3 +409,17 @@ def test_lembrete_por_template_para_conversa_em_aberto():
     assert "Não tenho interesse" in disparos.config.parametros()["t1_botoes"]["sair_outros_rotulos"]   # botão de saída já é opt-out
     assert lembretes.primeiro_nome({"nome": "maria da silva"}) == "Maria" and lembretes.primeiro_nome({}) == ""
     assert disparos.config.parametros()["lembretes"]["por_template"]["ativo"] is True   # ligado em 09/11/2026 (Meta aprovou; clínica aprovou a lista)
+
+
+def test_recontato_por_status_so_uma_vez():
+    """13/11/2026: 'Agora não' → T2r (com botão 'Agora não') → 'Agora não' → T2r no dia seguinte, em laço. Agora o recontato sai uma vez só."""
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    agora = _dt(2026, 11, 13, 12, 0, tzinfo=_tz.utc)
+    lead = {"elegivel": True, "opt_out": False, "status_ia": "Agora não", "passo": 2, "ciclos": 1,
+            "ultimo_template_em": agora - _td(days=3), "ultima_msg_lead_em": agora - _td(days=2)}
+    dec = disparos.decidir(dict(lead), agora)
+    assert dec and dec.template == "T2r"                                   # 1º recontato sai normalmente
+    ja = dict(lead, templates_enviados=[{"codigo": "T2r", "motivo": "recontato após 'Agora não'", "em": agora - _td(days=1)}])
+    assert disparos.decidir(ja, agora) is None                              # 2º não sai
+    outro = dict(lead, templates_enviados=[{"codigo": "T2r", "motivo": "recontato após 'Irá nos retornar'", "em": agora - _td(days=9)}])
+    assert disparos.decidir(outro, agora).template == "T2r"                 # o limite é por status
