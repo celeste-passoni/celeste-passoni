@@ -154,6 +154,9 @@ def normalizar_webhook(payload: dict) -> list[dict]:
                 elif tipo == "interactive":
                     i = m["interactive"]; br = i.get("button_reply") or i.get("list_reply") or {}
                     ev["botao"] = br.get("id"); ev["texto"] = br.get("title")
+                elif tipo == "reaction":   # 13/11/2026: o emoji e a mensagem reagida (sem emoji = reação removida)
+                    r = m.get("reaction") or {}
+                    ev["texto"] = r.get("emoji") or ""; ev["contexto"] = r.get("message_id") or ev["contexto"]
                 eventos.append(ev)
             for s in v.get("statuses", []):
                 eventos.append({"kind": "status", "wamid": s["id"], "para": s.get("recipient_id"), "status": s.get("status"),

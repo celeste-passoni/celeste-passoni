@@ -78,6 +78,13 @@ def _processar(ev: dict) -> None:
         conv_ref.set({"primeira_msg_lead_em": firestore.SERVER_TIMESTAMP}, merge=True)
     previa = ev.get("texto") or ev.get("botao") or {"audio": "🎤 áudio", "voice": "🎤 áudio", "image": "🖼️ imagem", "document": "📎 documento",
                                                       "video": "🎬 vídeo", "sticker": "sticker"}.get(ev["tipo"], f"[{ev['tipo']}]")
+    if ev["tipo"] == "reaction":
+        # 13/11/2026 (caso Andrea): reação com emoji não é mensagem. A última mensagem da conversa e a contagem de lembretes ficam
+        # como estavam; o orquestrador decide se a reação pede resposta (só quando reage a uma pergunta).
+        conv_ref.set({"ultima_msg_lead_em": firestore.SERVER_TIMESTAMP, "janela_24h_ate": datetime.now(timezone.utc) + timedelta(hours=24),
+                      "pendente_resposta": True}, merge=True)
+        _agendar_debounce(conv_ref.id, ev["tipo"])
+        return
     conv_ref.set({"ultima": {"texto": str(previa)[:160], "direcao": "lead", "tipo": ev["tipo"],
                              "em": datetime.fromtimestamp(ev["timestamp"], tz=timezone.utc)},
                   "ultima_msg_lead_em": firestore.SERVER_TIMESTAMP,

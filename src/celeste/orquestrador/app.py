@@ -24,7 +24,7 @@ from pydantic import BaseModel
 from celeste.comum import config, nomes
 from celeste.ferramentas import meta, tisaude, transcricao
 from celeste.ferramentas.tisaude_simulado import TiSaudeSimulado
-from celeste.orquestrador import abertura, ferramentas_ia, lembretes_texto, motor, referencias
+from celeste.orquestrador import abertura, ferramentas_ia, lembretes_texto, motor, referencias, silencio
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("orquestrador")
@@ -88,6 +88,7 @@ def responder(p: Pedido):
 
     historico, ultimo_wamid = _historico(ref, mt)
     if not historico or historico[-1]["role"] != "user":
+        ref.set({"pendente_resposta": False}, merge=True)   # 13/11/2026: inclui a reação removida, que não entra no histórico
         return {"ok": True, "ignorado": "nada novo do lead"}
     conteudo = historico[-1]["content"]   # string (só texto) ou lista de blocos (com mídia)
     texto_lead = conteudo if isinstance(conteudo, str) else " ".join(b.get("text", "") for b in conteudo if isinstance(b, dict) and b.get("type") == "text")
@@ -114,6 +115,13 @@ def responder(p: Pedido):
 
     if _acao_botao_consulta(ref, ultimo_wamid) == "confirmar_presenca":   # 26/10/2026: botão do lembrete da consulta, sem modelo
         return _responder_confirmar_presenca(ref, conv, mt)
+
+    # 13/11/2026 (caso Andrea): despedida depois da despedida e reação a mensagem que não era pergunta ficam sem resposta, sem modelo
+    calar = silencio.motivo(_ultimas_mensagens(ref))
+    if calar:
+        ref.set({"pendente_resposta": False, "sem_resposta_em": datetime.now(timezone.utc), "sem_resposta_motivo": calar}, merge=True)
+        log.info("sem resposta (conversa %s): %s | lead: %r", p.conversa_id, calar, texto_lead[:80])
+        return {"ok": True, "enviado": 0, "sem_resposta": calar}
 
     # abertura sem modelo (15/10/2026): conversa nova, não vinda de template, cuja 1ª mensagem é só um cumprimento
     if len(historico) == 1 and not conv.get("template_origem") and conv.get("origem") != "disparo" and abertura.e_saudacao_solta(texto_lead):
@@ -166,6 +174,9 @@ def responder(p: Pedido):
     # 1º balão (anuncia) → mídia → resto do texto. Sem mídia: até 3 balões.
     # 06/11/2026: no máximo 2 ARQUIVOS seguidos (vídeo ou imagem); o excedente é descartado e fica para quando o lead pedir.
     baloes = [b for b in (referencias.resolver(b) for b in res.baloes) if b]
+    if any(silencio.MARCA_SEM_RESPOSTA.match(b) for b in baloes):   # 13/11/2026: o modelo decidiu não responder (despedida, reação)
+        baloes = [b for b in baloes if not silencio.MARCA_SEM_RESPOSTA.match(b)]
+        log.info("modelo escolheu não responder (conversa %s); balões restantes: %d", p.conversa_id, len(baloes))
     if len(videos_pendentes) + len(imagens_pendentes) > MAX_ARQUIVOS_SEGUIDOS:
         log.warning("mais de %d arquivos numa resposta (vídeos=%s imagens=%s); descartando o excedente", MAX_ARQUIVOS_SEGUIDOS, videos_pendentes, imagens_pendentes)
         del videos_pendentes[MAX_ARQUIVOS_SEGUIDOS:]
@@ -225,11 +236,15 @@ def responder(p: Pedido):
             log.warning("botão da recepção não enviado: %s", e)
     if enviados and not conv.get("primeira_msg_celeste_em"):
         ref.set({"primeira_msg_celeste_em": firestore.SERVER_TIMESTAMP}, merge=True)
-    if res.baloes:
-        ref.set({"ultima": {"texto": res.baloes[-1][:160], "direcao": "celeste", "tipo": "text", "em": datetime.now(timezone.utc)}}, merge=True)
-    ref.set({"pendente_resposta": False, "ultima_msg_celeste_em": firestore.SERVER_TIMESTAMP,
-             "total_msgs_celeste": firestore.Increment(enviados), "custo_usd": firestore.Increment(res.custo_usd),
-             "aberta": conv.get("aberta", True) and not ctx.encerrar}, merge=True)
+    if baloes:
+        ref.set({"ultima": {"texto": baloes[-1][:160], "direcao": "celeste", "tipo": "text", "em": datetime.now(timezone.utc)}}, merge=True)
+    fim = {"pendente_resposta": False, "total_msgs_celeste": firestore.Increment(enviados), "custo_usd": firestore.Increment(res.custo_usd),
+           "aberta": conv.get("aberta", True) and not ctx.encerrar}
+    if enviados:
+        fim["ultima_msg_celeste_em"] = firestore.SERVER_TIMESTAMP
+    else:   # 13/11/2026: o modelo escolheu não responder; nada foi enviado
+        fim.update({"sem_resposta_em": datetime.now(timezone.utc), "sem_resposta_motivo": "o modelo escolheu não responder"})
+    ref.set(fim, merge=True)
     _espelhar_lead(conv)
     return {"ok": True, "enviado": enviados, "modelo": res.modelo, "custo_usd": round(res.custo_usd, 5)}
 
@@ -639,13 +654,29 @@ def _pode_responder(contato: str) -> bool:
 
 
 # ----------------------------------------------------------------- histórico
+def _ultimas_mensagens(ref, quantas: int = 15) -> list[dict]:
+    """Últimas mensagens da conversa, em ordem cronológica, com `id` = wamid (para decidir se cabe resposta; ver silencio.py)."""
+    docs = list(ref.collection("mensagens").order_by("recebido_em", direction=firestore.Query.DESCENDING).limit(quantas).stream())
+    return [{**(d.to_dict() or {}), "id": d.id} for d in reversed(docs)]
+
+
 def _historico(ref, mt: meta.Meta) -> tuple[list[dict], str | None]:
     """Converte as mensagens do Firestore em turnos user/assistant, agrupando balões consecutivos."""
     turnos: list[dict] = []
     ultimo_wamid = None
+    textos: dict[str, str] = {}   # wamid → texto, para dizer ao modelo a qual mensagem o lead reagiu
     for doc in ref.collection("mensagens").order_by("recebido_em").stream():
         m = doc.to_dict()
+        textos[doc.id] = m.get("texto") or ""
         if m.get("direcao") == "lead":
+            if m.get("tipo") == "reaction":
+                # 13/11/2026: reação com emoji. Sem emoji (removida, ou gravada antes desta data) não entra no histórico
+                emoji = (m.get("texto") or "").strip()
+                if not emoji:
+                    continue
+                alvo = " ".join((textos.get(m.get("contexto_wamid") or "") or "").split())
+                m = {**m, "tipo": "text", "texto": f'[o lead reagiu com {emoji} à sua mensagem "{alvo[:140]}"]' if alvo
+                     else f"[o lead reagiu com {emoji} a uma mensagem sua]"}
             ultimo_wamid = doc.id
             blocos = _blocos_lead(doc, m, mt)
             if turnos and turnos[-1]["role"] == "user":

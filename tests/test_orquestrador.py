@@ -1236,3 +1236,67 @@ def test_lembrete_depois_do_video_pergunta_se_conseguiu_assistir():
     assert lt.etapa(dict(depois, lembretes_enviados=0)) == "geral"   # o lead respondeu (o gateway zera o contador): a etapa volta a ser lida da última mensagem
     sem_nome = lt.texto_lembrete({"nome": "", "ultima": conv["ultima"]}, 1)
     assert sem_nome.startswith("Oi! Conseguiu assistir") and "{nome}" not in sem_nome
+
+
+def test_despedida_e_reacao_ficam_sem_resposta(monkeypatch):
+    # 13/11/2026 (caso Andrea): consulta marcada, a Celeste escreveu "Até breve", a paciente mandou "Boa tarde 🙏😊" e recebeu
+    # "Boa tarde, Andrea! Tudo bem? 😊". Duas reações com emoji também viraram balões.
+    from datetime import datetime, timedelta, timezone
+    from celeste.ferramentas import meta
+    from celeste.orquestrador import silencio
+    t0 = datetime(2026, 11, 13, 20, 1, 0, tzinfo=timezone.utc)
+
+    def c(texto, seg=0, wid="c1", direcao="celeste", tipo="text"):
+        return {"id": wid, "direcao": direcao, "tipo": tipo, "texto": texto, "recebido_em": t0 + timedelta(seconds=seg)}
+
+    def l(texto, seg=3, tipo="text", alvo=None):
+        return {"id": f"l{seg}", "direcao": "lead", "tipo": tipo, "texto": texto, "contexto_wamid": alvo, "recebido_em": t0 + timedelta(seconds=seg)}
+
+    ate_breve = c("Obrigada pela compreensão, Andrea! Até breve 💙")
+    assert silencio.motivo([l("Magina sem problemas até", -10), ate_breve, l("Boa tarde 🙏🏽☺️")])            # o caso real
+    assert silencio.motivo([c("Poxa, desculpe pelo transtorno! Obrigada pela paciência e até segunda, 30/11 💙"), l("Magina sem problemas até")])
+    assert silencio.motivo([ate_breve, l("Mas ok tudo bem obrigada 🙏🏽")]) and silencio.motivo([ate_breve, l("🙏🏽")])
+    assert silencio.motivo([ate_breve, l("Boa tarde", 3 * 3600)]) is None                                    # horas depois: está voltando
+    assert silencio.motivo([ate_breve, l("Obrigada", 3 * 3600)])                                             # agradecimento não tem prazo
+    assert silencio.motivo([ate_breve, l("Boa tarde, qual o endereço de vocês?")]) is None                   # tem assunto
+    assert silencio.motivo([ate_breve, l("Ainda está sem áudio"), l("Mas ok tudo bem obrigada", 8)]) is None
+    assert silencio.motivo([c("Qual dia da semana fica melhor para você?"), l("Boa tarde")]) is None          # pergunta em aberto
+    assert silencio.motivo([c("A consulta é paga no dia, em cartão, pix ou dinheiro."), l("Ok obrigada")]) is None   # a Celeste não se despediu
+    assert silencio.motivo([c("Olá, Ana. Vamos encerrar a sua solicitação.", direcao="template", tipo="template"), l("Obrigada")]) is None
+    assert silencio.motivo([ate_breve, l("Sim, tenho interesse", tipo="button")]) is None
+
+    # reações
+    dados = c("Por gentileza, poderia me informar os dados abaixo para reservar o horário?", wid="q1")
+    info = c("Sua consulta ficou marcada para segunda, 30/11, às 11h, com o Dr. Lucas Vieira.", wid="i1")
+    assert silencio.motivo([info, l("🙏", tipo="reaction", alvo="i1")]) == "reação a mensagem que não era pergunta"
+    assert silencio.motivo([dados, info, l("👍", tipo="reaction", alvo="q1")]) is None                         # pode ser a resposta: modelo decide
+    assert silencio.motivo([dados, l("👍", tipo="reaction", alvo="fora-da-janela")]) is None                   # alvo desconhecido: vale o último balão
+    assert silencio.motivo([info, l("", tipo="reaction", alvo="i1")]) == "reação removida"
+    assert silencio.motivo([c("Quer que a gente avalie?", direcao="template", tipo="template", wid="t1"), l("👍", tipo="reaction", alvo="t1")]) is None
+
+    # marca que o modelo escreve quando decide não responder
+    for marca in ("[sem resposta]", "[sem_resposta]", " [Sem resposta]. ", "sem resposta"):
+        assert silencio.MARCA_SEM_RESPOSTA.match(marca)
+    assert not silencio.MARCA_SEM_RESPOSTA.match("Fiquei sem resposta do sistema, Ana.")
+    regras = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8") if hasattr(config, "RAIZ") else open("prompts/leads-perdidos-v0.md", encoding="utf-8").read()
+    assert regras.count("`[sem resposta]`") >= 2 and "Reação com emoji não é mensagem" in regras
+
+    # webhook da Meta: a reação chega com o emoji e a mensagem reagida
+    ev = meta.normalizar_webhook({"entry": [{"changes": [{"value": {"contacts": [{"wa_id": "5511900000001", "profile": {"name": "Ana"}}], "messages": [
+        {"id": "wr", "from": "5511900000001", "timestamp": "1", "type": "reaction", "reaction": {"message_id": "i1", "emoji": "🙏"}}]}}]}]})[0]
+    assert ev["tipo"] == "reaction" and ev["texto"] == "🙏" and ev["contexto"] == "i1"
+
+    # histórico: a reação diz o emoji e a mensagem; reação sem emoji não entra
+    from google.cloud import firestore
+    monkeypatch.setattr(firestore, "Client", MagicMock())
+    from celeste.orquestrador import app as orq
+    docs = [SimpleNamespace(id="q1", to_dict=lambda: {"direcao": "celeste", "tipo": "text", "texto": "Posso reservar para você?", "recebido_em": t0}),
+            SimpleNamespace(id="r0", to_dict=lambda: {"direcao": "lead", "tipo": "reaction", "texto": None, "recebido_em": t0}),
+            SimpleNamespace(id="r1", to_dict=lambda: {"direcao": "lead", "tipo": "reaction", "texto": "👍", "contexto_wamid": "q1", "recebido_em": t0})]
+    col = MagicMock(); col.order_by.return_value.stream.return_value = docs
+    ref = MagicMock(); ref.collection.return_value = col
+    turnos, ultimo = orq._historico(ref, MagicMock())
+    assert turnos[-1]["role"] == "user" and turnos[-1]["content"] == '[o lead reagiu com 👍 à sua mensagem "Posso reservar para você?"]' and ultimo == "r1"
+    col.order_by.return_value.stream.return_value = docs[:2]
+    turnos, _ = orq._historico(ref, MagicMock())
+    assert turnos[-1]["role"] == "assistant"   # só a reação removida: nada novo do lead

@@ -159,6 +159,7 @@ def formato_saida(agora: datetime | None = None) -> str:
             f"FORMATO: responda só com as mensagens para o lead, separando cada balão por uma linha contendo apenas ---. "
             f"Entre {p['baloes_por_resposta']['min']} e {p['baloes_por_resposta']['max']} balões, no máximo {p['emojis_max_por_mensagem']} emojis por balão. "
             "Nunca escreva nada além das mensagens (sem títulos, sem explicações). "
+            "Única exceção: quando a regra da despedida ou a da reação com emoji mandar não responder, escreva apenas [sem resposta] e nada mais (o sistema não envia nada ao lead). "
             "PONTUAÇÃO: nunca use travessão ou hífen como pontuação no meio da frase (nada de ' — ' ou ' - '), e não use dois-pontos para emendar frases ('conferi no sistema: não tem'); use vírgula ou ponto, como numa conversa de WhatsApp. "
             "FORMATAÇÃO: horários, datas e dias da semana sempre em texto normal, sem negrito (*...*), itálico (_..._) ou sublinhado; escreva 'terça, 14/10, às 14h'.\n"
             "REGRAS OPERACIONAIS: se disser que vai enviar um vídeo, chame enviar_video na MESMA resposta. "
