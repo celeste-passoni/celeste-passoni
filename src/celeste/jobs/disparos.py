@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 
 from google.cloud import firestore
 
-from celeste.comum import config
+from celeste.comum import config, nomes
 from celeste.ferramentas import meta, tisaude
 from celeste.jobs import templates_texto
 
@@ -335,7 +335,7 @@ def _rodar_travado(db, d: dict, resumo: dict, agora: datetime, dry_run: bool, li
             continue
         extras = _extras_template(dec.template, tarde, lead)
         try:
-            wamid = mt.enviar_template(lead["celular"], nome_tpl, templates_texto.parametros(dec.template, lead.get("primeiro_nome") or "", **extras),
+            wamid = mt.enviar_template(lead["celular"], nome_tpl, templates_texto.parametros(dec.template, nomes.nome_para_chamar(lead), **extras),
                                        imagem_cabecalho=templates_texto.TEMPLATES[dec.template].get("imagem"))
         except Exception as e:
             resumo["erros"] += 1
@@ -365,7 +365,7 @@ def _registrar_envio(db, lead_id: str, lead: dict, dec: Decisao, nome_tpl: str, 
         {"telefone": lead["celular"], "nome": lead.get("nome"), "origem": "leads_perdidos", "opt_out": False, "criado_em": agora}, merge=True)
     conv_ref.collection("mensagens").document(wamid).set({
         "direcao": "template", "tipo": "template", "template": nome_tpl, "codigo": dec.template,
-        "texto": templates_texto.renderizar(dec.template, lead.get("primeiro_nome") or "", **extras),
+        "texto": templates_texto.renderizar(dec.template, nomes.nome_para_chamar(lead), **extras),
         "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
     conv_ref.set({"status": status, "ultimo_template_em": agora, "template_origem": dec.template,
                   "ultima": {"texto": f"[template {dec.template}] " + templates_texto.TEMPLATES[dec.template]["corpo"][:120], "direcao": "template", "tipo": "template", "em": agora}}, merge=True)

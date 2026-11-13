@@ -21,7 +21,7 @@ from fastapi import FastAPI, HTTPException
 from google.cloud import firestore, storage
 from pydantic import BaseModel
 
-from celeste.comum import config
+from celeste.comum import config, nomes
 from celeste.ferramentas import meta, tisaude, transcricao
 from celeste.ferramentas.tisaude_simulado import TiSaudeSimulado
 from celeste.orquestrador import abertura, ferramentas_ia, lembretes_texto, motor, referencias
@@ -431,8 +431,9 @@ def _orientar_recepcao(ref, conv: dict, forcar: bool = False) -> dict:
 
 
 def primeiro_nome_conversa(conv: dict, padrao: str = "") -> str:
-    """Nome usado nas mensagens fixas: o que o lead disse (registrar_nome) ou o 1º do cadastro."""
-    return ((conv.get("nome_tratamento") or conv.get("nome") or "").strip().split() or [padrao])[0].title()
+    """Nome usado nas mensagens fixas: o que o lead disse (registrar_nome) ou o 1º do cadastro, só se for nome de pessoa
+    (13/11/2026: perfil "Deus É Fiel"); senão `padrao`."""
+    return nomes.nome_para_chamar(conv) or padrao.title()
 
 
 def _acao_botao_t1(ref, ultimo_wamid: str | None) -> str | None:
@@ -759,7 +760,7 @@ def _enviar_foto(mt: meta.Meta, ref, conv: dict, grupo: str, slug: str, arquivo:
 def _responder_abertura(ref, conv: dict, mt: meta.Meta, texto_lead: str) -> dict:
     """Dois balões fixos de apresentação, sem chamar o modelo (custo zero, resposta em segundos)."""
     nome_ia = config.parametros()["ia"].get("nome_atendente", "Celeste")
-    baloes = abertura.baloes_abertura(conv.get("nome") or "", texto_lead, nome_ia)
+    baloes = abertura.baloes_abertura(nomes.nome_para_chamar(conv), texto_lead, nome_ia)
     enviados = 0
     for i, texto in enumerate(baloes):
         if i and SIMULAR_DELAY:
@@ -850,6 +851,8 @@ def _espelhar_lead(conv: dict) -> None:
     campos = {"status_ia": conv.get("status"), "ultima_msg_lead_em": datetime.now(timezone.utc), "conversa_id": conv["id"]}
     if conv.get("opt_out"):
         campos["opt_out"] = True
+    if conv.get("nome_tratamento"):   # 13/11/2026: o nome que o lead disse vale também nos próximos templates da esteira
+        campos["nome_tratamento"] = conv["nome_tratamento"]
     if "proximo_recontato_em" in conv:
         campos["proximo_recontato_em"] = conv["proximo_recontato_em"]
     if conv.get("status") == "Agendado":
@@ -862,7 +865,7 @@ def _espelhar_lead(conv: dict) -> None:
         # e os demais recontatos poderem ser testados de verdade. `teste: true` o mantém fora da Gestão/Funil e da carga das 6h.
         nome = (conv.get("nome") or "").strip()
         agora = datetime.now(timezone.utc)
-        ref.set({"celular": conv["contato"], "nome": nome, "primeiro_nome": (nome.split() or [""])[0].title(), "frente": "leads_perdidos",
+        ref.set({"celular": conv["contato"], "nome": nome, "primeiro_nome": nomes.primeiro_nome_real(nome), "frente": "leads_perdidos",
                  "origem": "teste", "teste": True, "elegivel": True, "opt_out": False, "na_janela": False, "passo": 1, "ciclos": 1, "ciclo": 1,
                  "lead_created_at": agora, "carregado_em": agora, "disponibilizado_em": agora, **campos}, merge=True)
 

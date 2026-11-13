@@ -19,6 +19,7 @@ from typing import Any
 import yaml
 
 from celeste.comum import config
+from celeste.comum import nomes as nomes_pessoa
 
 ARQUIVOS_CONHECIMENTO = ["01-base-conhecimento-clinica.md", "02-guia-de-linguagem.md", "03-exemplos-de-conversas.md",
                          "04-referencias-imprensa-e-resultados.md"]
@@ -125,7 +126,12 @@ def contexto_lead(conversa: dict) -> str:
                           ("Objeção anterior", "objecao_anterior"), ("Modalidade de interesse", "modalidade_interesse"),
                           ("Template que originou", "template_origem"), ("Status atual", "status"), ("Paciente TI Saúde id", "id_paciente_tisaude")):
         v = conversa.get(chave) if chave else None
-        if v:
+        if v and chave == "nome" and not conversa.get("nome_tratamento") and not nomes_pessoa.primeiro_nome_real(v):
+            # 13/11/2026 (caso "Deus É Fiel"): o nome vem do perfil do WhatsApp e nem sempre é de pessoa
+            linhas.append(f"- Nome no perfil/cadastro: {v} (o sistema NÃO reconheceu como nome de pessoa. Se for frase, expressão religiosa, "
+                          "apelido de perfil, cargo, empresa ou emoji, NUNCA chame o lead por ele: fale sem nome e, na apresentação, pergunte "
+                          '"Por gentileza, com quem eu falo?"; quando ele responder, chame registrar_nome. Só use se for claramente o nome próprio de uma pessoa.)')
+        elif v:
             linhas.append(f"- {rotulo}: {v}")
     return "\n".join(linhas)
 

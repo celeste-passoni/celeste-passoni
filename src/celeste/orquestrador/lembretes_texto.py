@@ -7,6 +7,8 @@ ao agendamento?", "Ana, aguardo o seu retorno para darmos continuidade no seu ag
 """
 from __future__ import annotations
 
+from celeste.comum import nomes
+
 ESCASSEZ = ("Os agendamentos são realizados por todos os setores da clínica e as datas são preenchidas conforme a disponibilidade. "
             "Por isso, pedimos a gentileza de nos dar um retorno o mais breve possível, para que possamos verificar a disponibilidade "
             "e reservar sua data.\n\nFicamos no aguardo da sua confirmação, ok?")
@@ -50,8 +52,9 @@ def etapa(conv: dict) -> str:
 
 
 def texto_lembrete(conv: dict, n: int) -> str:
-    """n = número do lembrete neste fio (1 ou 2). Nome = primeiro nome do lead; sem nome, frase sem vocativo."""
-    nome = ((conv.get("nome") or "").strip().split() or [""])[0].title()
+    """n = número do lembrete neste fio (1 ou 2). Nome = o que o lead disse ou o do cadastro, só se for nome de pessoa
+    (13/11/2026: perfil "Deus É Fiel" recebeu "Aguardo seu retorno, Deus!"); sem nome, frase sem vocativo."""
+    nome = nomes.nome_para_chamar(conv)
     lista = TEXTOS[etapa(conv)]
     t = lista[min(max(n, 1), len(lista)) - 1]
     if not nome:

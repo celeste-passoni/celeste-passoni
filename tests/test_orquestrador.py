@@ -1224,14 +1224,14 @@ def test_buscar_horarios_prioridade_dra_luciana_depois_dr_lucas():
 def test_lembrete_depois_do_video_pergunta_se_conseguiu_assistir():
     """05/11/2026 (clínica): retomada de quem tocou 'Quero ver o vídeo' e sumiu: texto fixo novo, com a pergunta de diagnóstico."""
     from celeste.orquestrador import lembretes_texto as lt
-    conv = {"nome": "Any Souza", "ultima": {"direcao": "celeste", "texto": "Assista com calma e depois me conta o que achou! 😊"}}
+    conv = {"nome": "Ana Souza", "ultima": {"direcao": "celeste", "texto": "Assista com calma e depois me conta o que achou! 😊"}}
     assert lt.etapa(conv) == "video"
     t1 = lt.texto_lembrete(conv, 1)
-    assert t1.startswith("Oi, Any! Conseguiu assistir ao vídeo da Dra. Luciana? 💛") and "diagnóstico" in t1 and ":" not in t1
+    assert t1.startswith("Oi, Ana! Conseguiu assistir ao vídeo da Dra. Luciana? 💛") and "diagnóstico" in t1 and ":" not in t1
     t2 = lt.texto_lembrete(conv, 2)   # 10/11/2026 (clínica): envolve, pergunta do caso
-    assert t2.startswith("Any, me conta um pouquinho do seu caso?") and "tratamento" in t2 and ":" not in t2
+    assert t2.startswith("Ana, me conta um pouquinho do seu caso?") and "tratamento" in t2 and ":" not in t2
     # 10/11/2026: depois do lembrete 1 a última mensagem é o próprio lembrete; a etapa vem de `lembrete_etapa` (caso Claudia, 07/11)
-    depois = {"nome": "Any Souza", "lembretes_enviados": 1, "lembrete_etapa": "video", "ultima": {"direcao": "celeste", "texto": lt.texto_lembrete(conv, 1)}}
+    depois = {"nome": "Ana Souza", "lembretes_enviados": 1, "lembrete_etapa": "video", "ultima": {"direcao": "celeste", "texto": lt.texto_lembrete(conv, 1)}}
     assert lt.etapa(depois) == "video" and lt.texto_lembrete(depois, 2) == t2
     assert lt.etapa(dict(depois, lembretes_enviados=0)) == "geral"   # o lead respondeu (o gateway zera o contador): a etapa volta a ser lida da última mensagem
     sem_nome = lt.texto_lembrete({"nome": "", "ultima": conv["ultima"]}, 1)

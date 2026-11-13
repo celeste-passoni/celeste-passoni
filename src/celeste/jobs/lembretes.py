@@ -17,7 +17,7 @@ from google.auth.transport.requests import Request as GRequest
 from google.cloud import firestore
 from google.oauth2 import id_token
 
-from celeste.comum import config
+from celeste.comum import config, nomes
 from celeste.ferramentas import meta
 from celeste.jobs import disparos, templates_texto
 
@@ -162,7 +162,7 @@ def deve_encerrar(conv: dict, agora: datetime, cfg: dict | None = None) -> bool:
 
 
 def primeiro_nome(conv: dict) -> str:
-    return ((conv.get("nome") or "").strip().split() or [""])[0].title()
+    return nomes.nome_para_chamar(conv)   # 13/11/2026: o que o lead disse ou o do cadastro, só se for nome de pessoa
 
 
 def _registrar_template(db, conv_id: str, conv: dict, codigo: str, nome_tpl: str, wamid: str, nome_lead: str, agora: datetime) -> None:

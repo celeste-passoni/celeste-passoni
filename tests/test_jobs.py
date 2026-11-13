@@ -423,3 +423,30 @@ def test_recontato_por_status_so_uma_vez():
     assert disparos.decidir(ja, agora) is None                              # 2º não sai
     outro = dict(lead, templates_enviados=[{"codigo": "T2r", "motivo": "recontato após 'Irá nos retornar'", "em": agora - _td(days=9)}])
     assert disparos.decidir(outro, agora).template == "T2r"                 # o limite é por status
+
+
+def test_nome_so_entra_na_mensagem_se_for_nome_de_pessoa():
+    """13/11/2026 (clínica): perfil "Deus É Fiel" recebeu "Oi, Deus!" no T1 e "Aguardo seu retorno, Deus!" no lembrete.
+    Nome que não é de pessoa sai da mensagem; só volta quando o lead diz o nome (registrar_nome → nome_tratamento)."""
+    from celeste.comum import nomes
+    from celeste.jobs import lembretes, templates_texto
+    from celeste.orquestrador import lembretes_texto as lt, prompt
+    for ruim in ("Deus É Fiel", "Deus😍", "Glória a Deus", "Vitória Em Cristo", "Jesus Te Ama", "ECOLIFE INTERNATIONAL", "Gratidão", "Minha Vida",
+                 "Consultora Comercial", "Studio Bela", "5511999990000", "✨", "Digitando…", "", None):
+        assert nomes.primeiro_nome_real(ruim) == "", ruim
+    for bom, esperado in (("MARIA DA SILVA", "Maria"), ("Laís✨ 22", "Laís"), ("❤️Laura❤️", "Laura"), ("Maria de Deus", "Maria"),
+                          ("A. Carlos", "Carlos"), ("Dra Manuela Melo", "Manuela"), ("josé carlos", "José"), ("~Felipe", "Felipe")):
+        assert nomes.primeiro_nome_real(bom) == esperado, bom
+    lead = {"nome": "Deus É Fiel", "primeiro_nome": "Deus"}                     # `primeiro_nome` antigo do cadastro não é mais usado
+    assert nomes.nome_para_chamar(lead) == ""
+    assert templates_texto.parametros("T1", nomes.nome_para_chamar(lead), mes="novembro")[0] == "tudo bem"
+    assert "Deus" not in templates_texto.renderizar("T1", nomes.nome_para_chamar(lead), mes="novembro")
+    conv = {"nome": "Deus É Fiel", "ultima": {"direcao": "celeste", "texto": "ok"}}
+    assert lt.texto_lembrete(conv, 1) == "Aguardo seu retorno! 💛" and lt.texto_lembrete(conv, 2) == "Olá?"
+    assert lembretes.primeiro_nome(conv) == ""
+    ctx = prompt.contexto_lead(conv)
+    assert "NÃO reconheceu como nome de pessoa" in ctx and "- Nome: Deus" not in ctx
+    assert "- Nome: Ana Souza" in prompt.contexto_lead({"nome": "Ana Souza"})
+    dito = dict(conv, nome_tratamento="marcos")                                  # o lead respondeu "com quem eu falo?"
+    assert nomes.nome_para_chamar(dito) == "Marcos" and lt.texto_lembrete(dito, 1) == "Aguardo seu retorno, Marcos! 💛"
+    assert lembretes.primeiro_nome(dito) == "Marcos" and "NÃO reconheceu" not in prompt.contexto_lead(dito)

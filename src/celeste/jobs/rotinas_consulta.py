@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 
 from google.cloud import firestore
 
-from celeste.comum import config
+from celeste.comum import config, nomes
 from celeste.ferramentas import meta, tisaude
 from celeste.jobs import disparos
 
@@ -99,7 +99,7 @@ def decidir(conv: dict, agora: datetime) -> Optional[str]:
 
 def parametros(codigo: str, conv: dict) -> list[str]:
     ag = conv.get("agendamento") or {}
-    nome = ((conv.get("nome_tratamento") or conv.get("nome") or "").strip().split() or ["tudo bem"])[0].title()   # 28/10: nome dito pelo lead tem prioridade
+    nome = nomes.nome_para_chamar(conv) or "tudo bem"   # 28/10: nome dito pelo lead tem prioridade; 13/11: do cadastro, só nome de pessoa
     data = _data_consulta(conv)
     hora = formatar_hora(ag.get("hora", ""))
     if codigo == "CHOJ":

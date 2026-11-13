@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 
 from google.cloud import bigquery, firestore
 
-from celeste.comum import config
+from celeste.comum import config, nomes
 
 log = logging.getLogger(__name__)
 
@@ -189,8 +189,5 @@ def carregar(dry_run: bool = False) -> dict:
 
 
 def _primeiro_nome(nome: str) -> str:
-    limpo = re.sub(r"[^A-Za-zÀ-ÿ' -]", " ", nome)          # tira emojis, números e símbolos
-    partes = [x for x in re.split(r"\s+", limpo.strip()) if len(x) > 1]
-    if not partes:
-        return ""
-    return partes[0].capitalize()
+    """Primeiro nome para as mensagens: só se for nome de pessoa (13/11/2026: "Deus É Fiel" virou "Oi, Deus!"); senão vazio."""
+    return nomes.primeiro_nome_real(nome)

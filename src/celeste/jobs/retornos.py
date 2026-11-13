@@ -18,7 +18,7 @@ from typing import Optional
 
 from google.cloud import firestore
 
-from celeste.comum import config
+from celeste.comum import config, nomes
 from celeste.ferramentas import meta
 from celeste.jobs import disparos, templates_texto
 
@@ -65,7 +65,7 @@ def rodar(dry_run: bool = False, limite: Optional[int] = None) -> dict:
             resumo["enviados"] += 1
             continue
         try:
-            wamid = mt.enviar_template(lead["celular"], nome_tpl, templates_texto.parametros("TR", lead.get("primeiro_nome") or ""))
+            wamid = mt.enviar_template(lead["celular"], nome_tpl, templates_texto.parametros("TR", nomes.nome_para_chamar(lead)))
         except Exception as e:   # noqa: BLE001
             resumo["erros"] += 1
             log.warning("retornos: falha ao enviar TR para o lead %s: %s", lead_id[-4:], e)
