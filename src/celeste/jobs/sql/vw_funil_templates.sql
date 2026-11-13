@@ -12,6 +12,10 @@
 -- o espelho roda às 00:30 para a tabela da manhã ter o dia anterior completo. status_lead e status de entrega são os atuais.
 -- status_lead (06/11/2026): o mesmo status do painel da Celeste (leads.status_ia; opt-out → 'Não quer (opt-out)'), com
 -- 'Em conversa' dividido em 'Em conversa - Interagiu' quando o lead escreveu texto livre (não só clicou em botão).
+-- texto_livre (13/11/2026, pedido da clínica): o lead que respondeu escrevendo (sem botão) conta UMA vez, no último template da
+-- esteira (etapa T1, T2 ou T3) enviado antes da primeira resposta escrita dele. Retomada, recontato e retorno combinado não
+-- recebem o texto livre (vai para o template da esteira anterior), para o total da tabela T1–T3 bater com o gráfico de status.
+-- tipo_resposta continua sendo a resposta a cada envio.
 -- Gerada pelo espelho noturno (celeste.jobs.espelho); a fonte é este arquivo no repositório.
 WITH
 etapas AS (
@@ -200,6 +204,24 @@ status_lead AS (   -- status do painel (leads.status_ia), com 'Em conversa - Int
     LEFT JOIN ultima_msg_lead uml ON uml.contato = CAST(l.celular AS STRING)
   )
 ),
+tl_lead AS (   -- 13/11/2026: primeira resposta escrita (sem botão) de cada lead, e o envio a que ela respondeu
+  SELECT contato, MIN(primeira_resposta_em) AS em,
+    ARRAY_AGG(wamid ORDER BY primeira_resposta_em LIMIT 1)[OFFSET(0)] AS wamid_resposta
+  FROM linhas_envio
+  WHERE primeira_resposta_em IS NOT NULL AND primeiro_botao IS NULL
+  GROUP BY contato
+),
+tl_atrib AS (   -- último envio da esteira (T1, T2 ou T3) antes dessa resposta; sem nenhum, fica no próprio envio respondido
+  SELECT t.contato, COALESCE(e.wamid, t.wamid_resposta) AS wamid
+  FROM tl_lead t
+  LEFT JOIN (
+    SELECT eo.contato, eo.wamid, eo.enviado_em
+    FROM envios_ord eo
+    LEFT JOIN `vertical-theory-489419-a7.ia_atendimento.templates_de_para` dpe ON dpe.codigo = eo.codigo AND dpe.template = eo.template
+    WHERE COALESCE(dpe.etapa, eo.codigo) IN ('T1', 'T2', 'T3')
+  ) e ON e.contato = t.contato AND e.enviado_em <= t.em
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY t.contato ORDER BY e.enviado_em DESC NULLS LAST) = 1
+),
 em_uso AS (   -- versão em uso de cada etapa (para as linhas sem envio)
   SELECT codigo, template FROM `vertical-theory-489419-a7.ia_atendimento.templates_de_para` WHERE em_uso
 ),
@@ -247,7 +269,7 @@ SELECT
   END AS tipo_resposta,
   COALESCE(STRPOS(CONCAT(' | ', dp.botoes_com_interesse, ' | '), CONCAT(' | ', l.primeiro_botao, ' | ')) > 0, FALSE) AS com_interesse,
   COALESCE(STRPOS(CONCAT(' | ', dp.botoes_sem_interesse, ' | '), CONCAT(' | ', l.primeiro_botao, ' | ')) > 0, FALSE) AS sem_interesse,
-  l.primeira_resposta_em IS NOT NULL AND l.primeiro_botao IS NULL AS texto_livre,
+  ta.wamid IS NOT NULL AS texto_livre,   -- 13/11/2026: uma vez por lead, no último template da esteira antes da resposta escrita
   l.mensagens_do_lead,
   -- resultado (só na etapa a que a marcação foi atribuída)
   ma.contato IS NOT NULL AS marcou,
@@ -271,3 +293,4 @@ LEFT JOIN `vertical-theory-489419-a7.ia_atendimento.templates_de_para` dp
 LEFT JOIN marc_atrib ma ON ma.wamid = l.wamid
 LEFT JOIN venda_lead vl ON vl.contato = ma.contato
 LEFT JOIN status_lead sl ON sl.contato = l.contato
+LEFT JOIN tl_atrib ta ON ta.wamid = l.wamid
