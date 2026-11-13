@@ -1300,3 +1300,18 @@ def test_despedida_e_reacao_ficam_sem_resposta(monkeypatch):
     col.order_by.return_value.stream.return_value = docs[:2]
     turnos, _ = orq._historico(ref, MagicMock())
     assert turnos[-1]["role"] == "assistant"   # só a reação removida: nada novo do lead
+
+
+def test_prompt_ritmo_depois_do_nao_tenho_diagnostico():
+    # 13/11/2026 (conversa de teste): depois de "Boa noite" e "Não" (sem diagnóstico) a Celeste pediu o dia, repetiu a pergunta
+    # dois minutos depois, atribuiu a consulta à Dra. Luciana sem a lead escolher e reescreveu o texto de valor em dois balões.
+    pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
+    assert 'Depois de "não tenho diagnóstico" vem uma pergunta sobre o caso, não a agenda' in pr
+    assert "A pergunta do dia é feita uma vez só" in pr
+    assert "Esse texto sai palavra por palavra e em um balão só" in pr
+    assert "Resposta de uma palavra só do lead" in pr and "não atribua a consulta a um dos dois" in pr
+    regras = pr.split("\n")
+    i_diag = next(i for i, l in enumerate(regras) if l.startswith('- **Depois de "não tenho diagnóstico"'))
+    i_saud = next(i for i, l in enumerate(regras) if l.startswith("- **Lead que volta só com uma saudação"))
+    i_agenda = next(i for i, l in enumerate(regras) if l.startswith("- **Pedido de agenda pendente não se repete"))
+    assert i_diag < i_saud < i_agenda   # as referências "acima"/"abaixo" entre as regras dependem desta ordem
