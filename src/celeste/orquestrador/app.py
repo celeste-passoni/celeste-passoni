@@ -86,7 +86,11 @@ def responder(p: Pedido):
     inicio = time.time()
     mot, mt, ts = _svc()
 
+    lido_em = datetime.now(timezone.utc)   # tudo o que o lead mandar depois deste instante o modelo não viu nesta resposta
     historico, ultimo_wamid = _historico(ref, mt)
+    if historico and historico[-1]["role"] != "user" and _reposicionar_nao_lidas(ref):
+        # 13/11/2026 (caso Mí): a mensagem chegou enquanto a resposta anterior era enviada e ficou ANTES dela na ordem
+        historico, ultimo_wamid = _historico(ref, mt)
     if not historico or historico[-1]["role"] != "user":
         ref.set({"pendente_resposta": False}, merge=True)   # 13/11/2026: inclui a reação removida, que não entra no histórico
         return {"ok": True, "ignorado": "nada novo do lead"}
@@ -194,7 +198,7 @@ def responder(p: Pedido):
             time.sleep(min(2.0, 0.5 + len(texto) / 100))  # "digitando" proporcional ao tamanho (teto 2 s)
         wamid = mt.enviar_texto(destino(conv), texto)
         ref.collection("mensagens").document(wamid).set({
-            "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": res.modelo,
+            "direcao": "celeste", "tipo": "text", "texto": texto, "modelo": res.modelo, "lido_em": lido_em,
             "recebido_em": datetime.now(timezone.utc), "gravado_em": firestore.SERVER_TIMESTAMP})
         enviados += 1
 
@@ -224,6 +228,8 @@ def responder(p: Pedido):
     _midia()
     for texto in baloes[1:]:
         _balao(texto, True)
+    if n_midia:   # vídeos e fotos são gravados por outras funções: recebem o mesmo carimbo da resposta
+        _carimbar_lido_em(ref, lido_em)
     if conv.get("status") == "Encaminhado à recepção" and ctx.encerrar:
         rec = config.parametros()["ia"]["recepcao"]
         try:
@@ -658,6 +664,44 @@ def _ultimas_mensagens(ref, quantas: int = 15) -> list[dict]:
     """Últimas mensagens da conversa, em ordem cronológica, com `id` = wamid (para decidir se cabe resposta; ver silencio.py)."""
     docs = list(ref.collection("mensagens").order_by("recebido_em", direction=firestore.Query.DESCENDING).limit(quantas).stream())
     return [{**(d.to_dict() or {}), "id": d.id} for d in reversed(docs)]
+
+
+def _nao_lidas(msgs: list[dict]) -> list[dict]:
+    """Mensagens do lead que o modelo NÃO viu (13/11/2026, caso Mí).
+
+    A ordem do histórico usa o horário de envio informado pela Meta (em segundos). Uma mensagem enviada enquanto a Celeste
+    manda os balões fica antes deles na ordem, o histórico termina na Celeste e a mensagem ficava sem resposta para sempre.
+    Aqui: mensagem do lead seguida de balões cuja resposta leu o histórico (`lido_em`) ANTES de ela chegar (`gravado_em`),
+    sem nenhuma resposta posterior que a tenha lido."""
+    fora = []
+    for i, m in enumerate(msgs):
+        if m.get("direcao") != "lead" or not m.get("gravado_em"):
+            continue
+        lidos = [x["lido_em"] for x in msgs[i + 1:] if x.get("direcao") != "lead" and x.get("lido_em")]
+        if lidos and max(lidos) < m["gravado_em"]:
+            fora.append(m)
+    return fora
+
+
+def _reposicionar_nao_lidas(ref) -> bool:
+    """Põe as mensagens não lidas depois da resposta que não as viu (o horário original fica em `recebido_em_meta`)."""
+    msgs = _ultimas_mensagens(ref, 20)
+    fora = _nao_lidas(msgs)
+    if not fora:
+        return False
+    base = max(m["recebido_em"] for m in msgs if m.get("recebido_em"))
+    for k, m in enumerate(sorted(fora, key=lambda m: m["gravado_em"]), 1):
+        ref.collection("mensagens").document(m["id"]).set({
+            "recebido_em": base + timedelta(milliseconds=k), "recebido_em_meta": m.get("recebido_em"),
+            "reposicionada_em": datetime.now(timezone.utc)}, merge=True)
+    log.info("conversa %s: %d mensagem(ns) do lead chegaram durante o envio da resposta; reposicionadas e respondidas agora", ref.id, len(fora))
+    return True
+
+
+def _carimbar_lido_em(ref, lido_em: datetime) -> None:
+    for m in _ultimas_mensagens(ref, 8):
+        if m.get("direcao") == "celeste" and not m.get("lido_em") and m.get("recebido_em") and m["recebido_em"] >= lido_em:
+            ref.collection("mensagens").document(m["id"]).set({"lido_em": lido_em}, merge=True)
 
 
 def _historico(ref, mt: meta.Meta) -> tuple[list[dict], str | None]:

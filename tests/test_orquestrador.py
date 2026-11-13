@@ -1315,3 +1315,42 @@ def test_prompt_ritmo_depois_do_nao_tenho_diagnostico():
     i_saud = next(i for i, l in enumerate(regras) if l.startswith("- **Lead que volta só com uma saudação"))
     i_agenda = next(i for i, l in enumerate(regras) if l.startswith("- **Pedido de agenda pendente não se repete"))
     assert i_diag < i_saud < i_agenda   # as referências "acima"/"abaixo" entre as regras dependem desta ordem
+
+
+def test_mensagem_que_chega_durante_o_envio_nao_fica_sem_resposta(monkeypatch):
+    # 13/11/2026 (caso Mí): "Sim" às 16:04:02; a resposta saiu às 16:04:15,2 e no mesmo segundo chegou "Estou resolvendo um in no
+    # trabalho" (horário da Meta 16:04:15,0). Na ordem ela ficou antes da resposta, o histórico terminou na Celeste e ninguém respondeu.
+    from datetime import datetime, timedelta, timezone
+    from google.cloud import firestore
+    monkeypatch.setattr(firestore, "Client", MagicMock())
+    from celeste.orquestrador import app as orq
+    t0 = datetime(2026, 11, 13, 16, 4, 0, tzinfo=timezone.utc)
+
+    def m(wid, direcao, rec, grav, lido=None):
+        d = {"id": wid, "direcao": direcao, "tipo": "text", "texto": wid, "recebido_em": t0 + timedelta(seconds=rec), "gravado_em": t0 + timedelta(seconds=grav)}
+        if lido is not None:
+            d["lido_em"] = t0 + timedelta(seconds=lido)
+        return d
+
+    sim, resposta = m("sim", "lead", 2, 3), m("resposta", "celeste", 15.2, 15.2, lido=6)
+    no_trabalho = m("trabalho", "lead", 15.0, 16.2)
+    assert [x["id"] for x in orq._nao_lidas([sim, no_trabalho, resposta])] == ["trabalho"]          # o caso real
+    assert orq._nao_lidas([sim, resposta]) == []                                                     # conversa normal
+    b1, b2 = m("b1", "celeste", 15, 15, lido=6), m("b2", "celeste", 18, 18, lido=6)
+    entre = m("entre", "lead", 16, 16.5)
+    assert [x["id"] for x in orq._nao_lidas([sim, b1, entre, b2])] == ["entre"]                      # chegou entre dois balões
+    depois = m("r2", "celeste", 30, 30, lido=20)
+    assert orq._nao_lidas([sim, b1, entre, b2, depois]) == []                                        # outra resposta já leu
+    lembrete = {"id": "l", "direcao": "celeste", "tipo": "text", "modelo": "script", "recebido_em": t0 + timedelta(hours=3), "gravado_em": t0 + timedelta(hours=3)}
+    assert [x["id"] for x in orq._nao_lidas([sim, b1, entre, b2, lembrete])] == ["entre"]            # lembrete depois não conta como leitura
+    assert orq._nao_lidas([sim, m("antigo", "celeste", 15, 15), no_trabalho]) == []                  # balão sem carimbo (antes de 13/11) e mensagem no fim
+
+    # reposiciona depois da última mensagem, guardando o horário original
+    gravados = {}
+    ref = MagicMock(); ref.id = "c1"
+    ref.collection.return_value.document.side_effect = lambda wid: SimpleNamespace(set=lambda campos, merge=False: gravados.__setitem__(wid, campos))
+    monkeypatch.setattr(orq, "_ultimas_mensagens", lambda r, quantas=15: [sim, no_trabalho, resposta])
+    assert orq._reposicionar_nao_lidas(ref) is True
+    assert gravados["trabalho"]["recebido_em"] > resposta["recebido_em"] and gravados["trabalho"]["recebido_em_meta"] == no_trabalho["recebido_em"]
+    monkeypatch.setattr(orq, "_ultimas_mensagens", lambda r, quantas=15: [sim, resposta])
+    assert orq._reposicionar_nao_lidas(ref) is False
