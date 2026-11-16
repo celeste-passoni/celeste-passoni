@@ -1317,6 +1317,22 @@ def test_prompt_ritmo_depois_do_nao_tenho_diagnostico():
     assert i_diag < i_saud < i_agenda   # as referências "acima"/"abaixo" entre as regras dependem desta ordem
 
 
+def test_prompt_lead_em_outra_clinica_so_agradece_e_encerra():
+    # 15/11/2026 (caso real): "Já estou fazendo" recebeu apresentação + oferta, depois o lembrete "Aguardo seu retorno!" e, ao dizer
+    # que já tinha feito o transplante, um argumento clínico. Decisão da clínica (16/11/2026): só agradecer e encerrar.
+    from celeste.jobs import lembretes
+    from celeste.orquestrador import ferramentas_ia
+    pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
+    regra = next(l for l in pr.splitlines() if l.startswith("- **Lead que já trata em outro lugar ou já fez o tratamento: só agradeça e encerre"))
+    assert "um balão só, de agradecimento" in regra and '`atualizar_status` com "Está em outra clínica"' in regra
+    assert "`[sem resposta]`" in regra and "Não confunda com quem continua interessado" in regra
+    assert "Está em outra clínica" in lembretes.STATUS_FINAIS
+    ok, motivo = lembretes.elegivel({"frente": "leads_perdidos", "aberta": True, "status": "Está em outra clínica"}, None)
+    assert not ok and "Está em outra clínica" in motivo
+    desc = next(f for f in ferramentas_ia.FERRAMENTAS if f["name"] == "atualizar_status")["description"]
+    assert "Está em outra clínica" in desc
+
+
 def test_mensagem_que_chega_durante_o_envio_nao_fica_sem_resposta(monkeypatch):
     # 13/11/2026 (caso Mí): "Sim" às 16:04:02; a resposta saiu às 16:04:15,2 e no mesmo segundo chegou "Estou resolvendo um in no
     # trabalho" (horário da Meta 16:04:15,0). Na ordem ela ficou antes da resposta, o histórico terminou na Celeste e ninguém respondeu.
