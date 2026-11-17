@@ -1370,3 +1370,28 @@ def test_mensagem_que_chega_durante_o_envio_nao_fica_sem_resposta(monkeypatch):
     assert gravados["trabalho"]["recebido_em"] > resposta["recebido_em"] and gravados["trabalho"]["recebido_em_meta"] == no_trabalho["recebido_em"]
     monkeypatch.setattr(orq, "_ultimas_mensagens", lambda r, quantas=15: [sim, resposta])
     assert orq._reposicionar_nao_lidas(ref) is False
+
+
+def test_consulta_cancelada_pela_clinica_oferece_3_horarios_e_remarca():
+    # 17/11/2026 (caso real): a recepção desmarcou, a pedido da médica, uma consulta agendada pela Celeste. Decisão da clínica: template
+    # de cancelamento, pedido de desculpas e os 3 horários mais próximos do mesmo profissional (fora disso continuam 2).
+    import json
+    livres = [{"data": "2026-11-18", "hora": "16:00"}, {"data": "2026-11-23", "hora": "14:00"}, {"data": "2026-11-23", "hora": "15:00"},
+              {"data": "2026-11-24", "hora": "12:00"}]
+    ts = MagicMock(); ts.buscar_horarios.return_value = livres
+    ts.reagendar.return_value = {"data": "2026-11-23", "hora": "14:00:00"}
+    conv = {"id": "c1", "frente": "leads_perdidos", "status": "Agendado", "id_agendamento_tisaude": 47,
+            "agendamento": {"profissional": "dra_luciana", "data": "2026-11-17", "hora": "14:00", "status": "Desmarcado"},
+            "cancelada_pela_clinica": {"data": "2026-11-17", "hora": "14:00", "profissional": "dra_luciana"}}
+    ctx = _ctx(conv, ts=ts); ctx.atualizar = lambda campos: conv.update(campos)
+    saida, erro = ferramentas_ia.executar("buscar_horarios", {"profissional": "dra_luciana", "a_partir_de": "", "dias": 14}, ctx)
+    d = json.loads(saida)
+    assert not erro and [(l["data"], l["hora"]) for l in d["livres"]] == [("2026-11-18", "16:00"), ("2026-11-23", "14:00"), ("2026-11-23", "15:00")]
+    assert "cancelada PELA CLÍNICA" in d["aviso"] and "desculpas" in d["aviso"]
+    saida, erro = ferramentas_ia.executar("reagendar", {"id_agendamento": 47, "data": "2026-11-23", "hora": "14:00"}, ctx)
+    assert not erro and conv["cancelada_pela_clinica"] is None and conv["agendamento"]["data"] == "2026-11-23" and conv["rotinas_consulta"] == {}
+    saida, erro = ferramentas_ia.executar("buscar_horarios", {"profissional": "dra_luciana", "a_partir_de": "", "dias": 14}, ctx)
+    assert len(json.loads(saida)["livres"]) == 2   # remarcou: volta ao normal
+    pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
+    regra = next(l for l in pr.splitlines() if l.startswith("- **Consulta cancelada pela clínica (decisão da clínica, 17/11/2026"))
+    assert "peça desculpas pelo transtorno em uma frase" in regra and "os 3 horários que a ferramenta devolver" in regra and "`reagendar`" in regra

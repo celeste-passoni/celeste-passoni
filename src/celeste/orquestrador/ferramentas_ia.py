@@ -47,7 +47,7 @@ FERRAMENTAS: list[dict] = [
          "responsavel": {"type": "string"}, "parentesco_responsavel": {"type": "string"}, "cpf_responsavel": {"type": "string"}},
          "required": ["cpf", "email", "celular", "nascimento", "sexo", "cep", "numero", "complemento", "como_conheceu", "responsavel", "parentesco_responsavel", "cpf_responsavel"],
          "additionalProperties": False}},
-    {"name": "buscar_horarios", "description": "Devolve ATÉ 2 horários LIVRES de consulta. profissional: 'dra_luciana' ou 'dr_lucas' quando o lead ESCOLHEU o médico; 'prioridade' quando ele não falou em médico (regra da clínica, 04/11/2026): a busca olha a Dra. Luciana no dia e, só se ela não tiver vaga nesse dia, o Dr. Lucas no mesmo dia; se o dia render menos de 2 opções, completa com o dia seguinte que atende, com a mesma prioridade. Cada horário devolvido traz o profissional: ofereça com o nome dele e agende com ele. Se o lead pediu um dia da semana e/ou uma hora ('só consigo sexta', 'às 17h'), passe dia_semana e/ou hora: a busca olha até 60 dias e devolve as PRÓXIMAS datas que atendem ao pedido, mesmo que semanas à frente (só esse dia da semana, nunca outro); só diga que 'não tem' esse dia/hora se pedido_sem_vaga vier true. Chame assim que souber qual dia da semana fica melhor para o lead; não pergunte com quem ele prefere. Uma chamada por resposta. Ofereça só os horários devolvidos.",
+    {"name": "buscar_horarios", "description": "Devolve ATÉ 2 horários LIVRES de consulta (3 quando a consulta do lead foi cancelada pela clínica). profissional: 'dra_luciana' ou 'dr_lucas' quando o lead ESCOLHEU o médico; 'prioridade' quando ele não falou em médico (regra da clínica, 04/11/2026): a busca olha a Dra. Luciana no dia e, só se ela não tiver vaga nesse dia, o Dr. Lucas no mesmo dia; se o dia render menos de 2 opções, completa com o dia seguinte que atende, com a mesma prioridade. Cada horário devolvido traz o profissional: ofereça com o nome dele e agende com ele. Se o lead pediu um dia da semana e/ou uma hora ('só consigo sexta', 'às 17h'), passe dia_semana e/ou hora: a busca olha até 60 dias e devolve as PRÓXIMAS datas que atendem ao pedido, mesmo que semanas à frente (só esse dia da semana, nunca outro); só diga que 'não tem' esse dia/hora se pedido_sem_vaga vier true. Chame assim que souber qual dia da semana fica melhor para o lead; não pergunte com quem ele prefere. Uma chamada por resposta. Ofereça só os horários devolvidos.",
      "strict": True, "input_schema": {"type": "object", "properties": {
          "profissional": {"type": "string", "enum": ["dra_luciana", "dr_lucas", "prioridade"], "description": "o médico que o lead escolheu; 'prioridade' se ele não escolheu (Dra. Luciana primeiro, Dr. Lucas se ela não tem vaga no dia)"},
          "a_partir_de": {"type": "string", "description": "AAAA-MM-DD ou vazio para a partir de hoje"},
@@ -329,6 +329,9 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         por_prof = [(p, ctx.ts.buscar_horarios(p, dias=dias, a_partir_de=inicio)) for p in ordem]
         from celeste.comum import config as _cfg
         n = int(((_cfg.parametros().get("ia") or {}).get("horarios") or {}).get("opcoes_por_vez", 3))
+        cancelada_clinica = bool(ctx.conversa.get("cancelada_pela_clinica"))   # 17/11/2026 (clínica): consulta desmarcada pela clínica → 3 horários mais próximos
+        if cancelada_clinica:
+            n = max(n, 3)
         atendem_por_prof = [(p, filtrar_por_pedido(l, dia_semana, hora) if pedido else list(l)) for p, l in por_prof]
         pedido_sem_vaga = pedido and not any(l for _, l in atendem_por_prof)
         oferecer = selecionar_prioridade(por_prof if pedido_sem_vaga else atendem_por_prof, n)   # 22/10/2026: 2 horários do dia pedido (antes 3; em 14/10 a Celeste listava 12)
@@ -344,6 +347,8 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         descricao_pedido = " ".join(x for x in (dia_semana, ("às " + hora) if hora else "") if x).strip()
         profs = [p for p in ordem if any(l["profissional"] == p for l in oferecer)]
         aviso = "ofereça só estes, com o nome do profissional de cada um, e agende com esse profissional; se o lead quiser outro dia ou horário, chame de novo com a_partir_de, dia_semana ou hora"
+        if cancelada_clinica:
+            aviso += "; a consulta deste lead foi cancelada PELA CLÍNICA: peça desculpas pelo transtorno em uma frase (uma vez só) e ofereça os 3 horários acima, com dia da semana, data e hora"
         if prof_pedido == "prioridade" and profs == ["dr_lucas"]:
             aviso += "; a Dra. Luciana não tem vaga nesse(s) dia(s), estes são do Dr. Lucas: diga isso em uma frase e ofereça-os (não ofereça a Dra. Luciana em outro dia, a menos que o lead peça)"
         elif len(profs) > 1:
@@ -369,7 +374,8 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         a = ctx.ts.agendar_consulta(id_paciente=int(e["id_paciente"]), profissional_id=e["profissional"],
                                     data=date.fromisoformat(e["data"]), hora=e["hora"], observacoes=obs)
         ctx.atualizar({"id_agendamento_tisaude": a["id"], "status": "Agendado", "agendado_em": datetime.now(timezone.utc),
-                       "agendamento": {"data": e["data"], "hora": e["hora"], "profissional": e["profissional"]}})
+                       "agendamento": {"data": e["data"], "hora": e["hora"], "profissional": e["profissional"]},
+                       "cancelada_pela_clinica": None})
         return {"id_agendamento": a["id"], "data": e["data"], "hora": e["hora"], "status": ts.STATUS.get(a.get("status"))}
 
     if nome == "consultar_agendamento":
@@ -394,7 +400,8 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         a = ctx.ts.reagendar(int(e["id_agendamento"]), date.fromisoformat(e["data"]), e["hora"])
         ag = dict(ctx.conversa.get("agendamento") or {})   # 26/10/2026: mantém o profissional; nova data zera os lembretes (C48/C24/CHOJ) e a confirmação
         ag.update({"data": e["data"], "hora": e["hora"], "status": "Marcado"})
-        ctx.atualizar({"agendamento": ag, "status": "Agendado", "rotinas_consulta": {}, "reagendado_em": datetime.now(timezone.utc)})
+        ctx.atualizar({"agendamento": ag, "status": "Agendado", "rotinas_consulta": {}, "reagendado_em": datetime.now(timezone.utc),
+                       "cancelada_pela_clinica": None})   # 17/11/2026: remarcou, volta ao fluxo normal (2 horários)
         return {"ok": True, "data": a.get("data"), "hora": a.get("hora")}
 
     if nome == "cancelar":
