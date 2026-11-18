@@ -422,7 +422,12 @@ def test_recontato_por_status_so_uma_vez():
     ja = dict(lead, templates_enviados=[{"codigo": "T2r", "motivo": "recontato após 'Agora não'", "em": agora - _td(days=1)}])
     assert disparos.decidir(ja, agora) is None                              # 2º não sai
     outro = dict(lead, templates_enviados=[{"codigo": "T2r", "motivo": "recontato após 'Irá nos retornar'", "em": agora - _td(days=9)}])
-    assert disparos.decidir(outro, agora).template == "T2r"                 # o limite é por status
+    assert disparos.decidir(outro, agora) is None                           # 18/11/2026: o limite é por lead, não por status
+    caro = dict(lead, status_ia="Achou caro", ultima_msg_lead_em=agora - _td(days=40), ultimo_template_em=agora - _td(days=45),
+                templates_enviados=[{"codigo": "T2r", "motivo": "recontato após 'Irá nos retornar'", "em": agora - _td(days=45)}])
+    assert disparos.decidir(caro, agora) is None                            # vale para qualquer status seguinte
+    esteira = dict(lead, templates_enviados=[{"codigo": "T1", "motivo": "passo 1 (ciclo 1)", "em": agora - _td(days=3)}])
+    assert disparos.decidir(esteira, agora).template == "T2r"               # template da esteira não conta como recontato
 
 
 def test_nome_so_entra_na_mensagem_se_for_nome_de_pessoa():

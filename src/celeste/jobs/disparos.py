@@ -57,8 +57,9 @@ def decidir(lead: dict, agora: datetime, tarde_livre_hoje: Optional[bool] = None
     if status in d["template_por_status"]:
         # 13/11/2026: recontato por status só UMA vez por lead. O T2r também tem o botão "Agora não": quem tocava de novo voltava
         # para "Agora não" e recebia outro T2r no dia seguinte, em laço (um lead recebeu 2 seguidos e respondeu "De novo").
-        motivo_recontato = f"recontato após '{status}'"
-        if any(t.get("motivo") == motivo_recontato for t in (lead.get("templates_enviados") or [])):
+        # 18/11/2026 (clínica): o limite passou a ser por LEAD, não por status. Um lead recebeu o recontato de "Irá nos retornar",
+        # tocou "Agora não" e, com o status trocado, recebeu o mesmo T2r de novo no dia seguinte.
+        if any(str(t.get("motivo") or "").startswith("recontato após") for t in (lead.get("templates_enviados") or [])):
             return None
         dias = p["leads_perdidos"]["recontato_por_status_ia"].get(status)
         quando = lead.get("proximo_recontato_em")
