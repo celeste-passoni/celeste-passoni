@@ -1395,3 +1395,57 @@ def test_consulta_cancelada_pela_clinica_oferece_3_horarios_e_remarca():
     pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
     regra = next(l for l in pr.splitlines() if l.startswith("- **Consulta cancelada pela clínica (decisão da clínica, 17/11/2026"))
     assert "peça desculpas pelo transtorno em uma frase" in regra and "os 3 horários que a ferramenta devolver" in regra and "`reagendar`" in regra
+
+
+def test_agendar_horario_ja_do_proprio_lead_confirma_em_vez_de_recusar():
+    # 18/11/2026 (caso real): dados do lead + "qual o valor?" segundos depois. A 1ª resposta agendou e foi descartada; a 2ª recebeu
+    # "horário acabou de ser ocupado" (pelo próprio lead) e disse que a vaga tinha sido tomada.
+    import json
+    ts = MagicMock()
+    ts.agenda.return_value = [{"id": "77", "hora": "12:00:00", "idPcte": "6741", "status": "0"}, {"id": "78", "hora": "16:00:00", "idPcte": "1", "status": "0"}]
+    conv = {"id": "c1", "frente": "leads_perdidos", "horarios_oferecidos": ["2026-12-03 12:00"]}
+    ctx = _ctx(conv, ts); ctx.atualizar = lambda campos: conv.update(campos)
+    saida, erro = ferramentas_ia.executar("agendar_consulta", {"id_paciente": 6741, "profissional": "dra_luciana", "data": "2026-12-03", "hora": "12:00"}, ctx)
+    d = json.loads(saida)
+    assert not erro and d["id_agendamento"] == 77 and "já estava marcada" in d["aviso"] and conv["status"] == "Agendado"
+    ts.agendar_consulta.assert_not_called()
+    # corrida: as duas respostas conferem antes de qualquer uma gravar; a 2ª recebe "ocupado" e confere de novo
+    ts2 = MagicMock()
+    ts2.agenda.side_effect = [[], [{"id": "77", "hora": "12:00:00", "idPcte": "6741", "status": "0"}]]
+    ts2.agendar_consulta.side_effect = RuntimeError("horário acabou de ser ocupado")
+    conv2 = {"id": "c2", "frente": "leads_perdidos", "horarios_oferecidos": ["2026-12-03 12:00"]}
+    ctx2 = _ctx(conv2, ts2); ctx2.atualizar = lambda campos: conv2.update(campos)
+    saida, erro = ferramentas_ia.executar("agendar_consulta", {"id_paciente": 6741, "profissional": "dra_luciana", "data": "2026-12-03", "hora": "12:00"}, ctx2)
+    assert not erro and json.loads(saida)["id_agendamento"] == 77
+    # ocupado por OUTRA pessoa continua sendo erro
+    ts3 = MagicMock(); ts3.agenda.return_value = [{"id": "78", "hora": "12:00:00", "idPcte": "1", "status": "0"}]
+    ts3.agendar_consulta.side_effect = RuntimeError("horário acabou de ser ocupado")
+    conv3 = {"id": "c3", "frente": "leads_perdidos", "horarios_oferecidos": ["2026-12-03 12:00"]}
+    saida, erro = ferramentas_ia.executar("agendar_consulta", {"id_paciente": 6741, "profissional": "dra_luciana", "data": "2026-12-03", "hora": "12:00"}, _ctx(conv3, ts3))
+    assert erro and "ocupado" in saida
+
+
+def test_agendar_nao_cria_segunda_consulta_do_mesmo_paciente():
+    from datetime import date as _d, timedelta as _td
+    futuro = (_d.today() + _td(days=10)).isoformat()
+    outro_dia = (_d.today() + _td(days=12)).isoformat()
+    ts = MagicMock(); ts.agenda.return_value = []
+    ts.detalhe_agendamento.return_value = {"id": 50, "idPcte": 6741, "data": futuro, "hora": "12:00:00", "status": 0}
+    conv = {"id": "c1", "frente": "leads_perdidos", "id_agendamento_tisaude": 50, "horarios_oferecidos": [f"{outro_dia} 15:00"]}
+    saida, erro = ferramentas_ia.executar("agendar_consulta", {"id_paciente": 6741, "profissional": "dra_luciana", "data": outro_dia, "hora": "15:00"}, _ctx(conv, ts))
+    assert erro and "reagendar" in saida
+    ts.agendar_consulta.assert_not_called()
+    # desmarcada (ex.: cancelada pela clínica) ou de outra pessoa: pode agendar
+    for det in ({"id": 50, "idPcte": 6741, "data": futuro, "hora": "12:00:00", "status": -2}, {"id": 50, "idPcte": 999, "data": futuro, "hora": "12:00:00", "status": 0}):
+        ts.detalhe_agendamento.return_value = det; ts.agendar_consulta.return_value = {"id": 51, "status": 0}
+        conv = {"id": "c1", "frente": "leads_perdidos", "id_agendamento_tisaude": 50, "horarios_oferecidos": [f"{outro_dia} 15:00"]}
+        saida, erro = ferramentas_ia.executar("agendar_consulta", {"id_paciente": 6741, "profissional": "dra_luciana", "data": outro_dia, "hora": "15:00"}, _ctx(conv, ts))
+        assert not erro and '"id_agendamento": 51' in saida
+
+
+def test_prompt_nota_fiscal_nao_e_fracionada():
+    pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
+    regra = next(l for l in pr.splitlines() if l.startswith("- **Dividir a nota fiscal em duas ou mais"))
+    assert "não realizamos o fracionamento de notas fiscais" in regra and "sem `sinalizar_revisao`" in regra
+    kb = (config.RAIZ / "knowledge" / "01-base-conhecimento-clinica.md").read_text(encoding="utf-8")
+    assert "Nota fiscal não é fracionada" in kb

@@ -178,6 +178,42 @@ def selecionar_prioridade(por_profissional: list, n: int = 2) -> list:
     return out[:n]
 
 
+def _consulta_do_proprio_lead(ctx: "Contexto", profissional: str, data: str, hora: str, id_paciente: int) -> dict | None:
+    """18/11/2026 (caso real): o lead mandou os dados e, segundos depois, outra pergunta. A 1ª resposta agendou e foi descartada pela
+    mensagem nova; a 2ª tentou agendar de novo, recebeu "horário ocupado" (ocupado pelo próprio lead) e disse que a vaga tinha sido
+    tomada por outra pessoa. Se o horário já está com este paciente, a consulta existe: devolve o agendamento em vez de recusar."""
+    try:
+        dia = ctx.ts.agenda(profissional, date.fromisoformat(data), date.fromisoformat(data))
+    except Exception:   # noqa: BLE001  (sem a agenda, segue o fluxo normal)
+        return None
+    h = hora if len(hora) == 8 else f"{hora}:00"
+    for a in dia if isinstance(dia, list) else []:
+        if not isinstance(a, dict) or str(a.get("hora")) != h or str(a.get("idPcte")) != str(id_paciente):
+            continue
+        if a.get("deletado") or int(a.get("status") or 0) in (-1, -2):
+            continue
+        return {"id": int(a["id"]), "status": int(a.get("status") or 0)}
+    return None
+
+
+def _sem_outra_consulta_ativa(ctx: "Contexto", id_paciente: int, data: str, hora: str) -> None:
+    """18/11/2026: a conversa já tem consulta ativa deste mesmo paciente em outro horário → é troca (reagendar), não consulta nova."""
+    ida = ctx.conversa.get("id_agendamento_tisaude")
+    if not ida:
+        return
+    try:
+        d = ctx.ts.detalhe_agendamento(int(ida))
+    except Exception:   # noqa: BLE001
+        return
+    if not isinstance(d, dict) or str(d.get("idPcte")) != str(id_paciente) or d.get("deletado") or int(d.get("status") or 0) in (-1, -2):
+        return
+    dia, h = str(d.get("data") or "")[:10], str(d.get("hora") or "")[:5]
+    if not dia or dia < date.today().isoformat() or (dia == data and h == hora[:5]):
+        return
+    raise ValueError(f"este paciente já tem consulta marcada em {dia} às {h} (id_agendamento {int(ida)}): para trocar de horário use reagendar; "
+                     "consulta nova só para outra pessoa, com o cadastro dela")
+
+
 class Contexto:
     """Estado da conversa disponível às ferramentas (injetado pelo orquestrador)."""
     def __init__(self, conversa: dict, telefone: str, tisaude: ts.TiSaude, viacep: Callable[[str], dict],
@@ -370,13 +406,28 @@ def _executar(nome: str, e: dict, ctx: Contexto) -> Any:
         prof_do_horario = (ctx.conversa.get("horarios_oferecidos_prof") or {}).get(chave)
         if prof_do_horario and prof_do_horario != e["profissional"]:   # 04/11/2026: horário do Dr. Lucas não pode virar consulta com a Dra. Luciana
             raise ValueError(f"esse horário é de {prof_do_horario}, não de {e['profissional']}; agende com profissional={prof_do_horario}")
-        obs = f"Agendado pela Celeste (IA) via WhatsApp | frente {ctx.conversa.get('frente')} | conversa {ctx.conversa.get('id')}"
-        a = ctx.ts.agendar_consulta(id_paciente=int(e["id_paciente"]), profissional_id=e["profissional"],
-                                    data=date.fromisoformat(e["data"]), hora=e["hora"], observacoes=obs)
+        _sem_outra_consulta_ativa(ctx, int(e["id_paciente"]), e["data"], e["hora"])
+        existente = _consulta_do_proprio_lead(ctx, e["profissional"], e["data"], e["hora"], int(e["id_paciente"]))
+        if existente:
+            a = existente
+        else:
+            obs = f"Agendado pela Celeste (IA) via WhatsApp | frente {ctx.conversa.get('frente')} | conversa {ctx.conversa.get('id')}"
+            try:
+                a = ctx.ts.agendar_consulta(id_paciente=int(e["id_paciente"]), profissional_id=e["profissional"],
+                                            data=date.fromisoformat(e["data"]), hora=e["hora"], observacoes=obs)
+            except Exception:
+                existente = _consulta_do_proprio_lead(ctx, e["profissional"], e["data"], e["hora"], int(e["id_paciente"]))
+                if not existente:
+                    raise
+                a = existente
         ctx.atualizar({"id_agendamento_tisaude": a["id"], "status": "Agendado", "agendado_em": datetime.now(timezone.utc),
                        "agendamento": {"data": e["data"], "hora": e["hora"], "profissional": e["profissional"]},
                        "cancelada_pela_clinica": None})
-        return {"id_agendamento": a["id"], "data": e["data"], "hora": e["hora"], "status": ts.STATUS.get(a.get("status"))}
+        saida = {"id_agendamento": a["id"], "data": e["data"], "hora": e["hora"], "status": ts.STATUS.get(a.get("status"))}
+        if existente:
+            saida["aviso"] = ("esta consulta já estava marcada no sistema para este paciente (uma resposta anterior foi interrompida por "
+                              "mensagem nova): confirme ao lead que está agendada; nunca diga que o horário foi ocupado por outra pessoa")
+        return saida
 
     if nome == "consultar_agendamento":
         ida = ctx.conversa.get("id_agendamento_tisaude")
