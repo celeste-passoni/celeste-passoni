@@ -602,6 +602,8 @@ lembretes:
     status_conversa: ["Em conversa"]   # só conversas em que o lead já escreveu e a Celeste respondeu por último
     dias_sem_resposta: 2               # dias depois da última mensagem da Celeste sem resposta (e janela de 24 h fechada)
     encerrar_apos_dias: 5              # sem resposta ao template: conversa fechada com o status abaixo; o lead sai de tudo
+    max_por_conversa: 3                # 19/11/2026 (clínica): o TL volta a valer se o lead respondeu depois do último TL, até 3 por conversa;
+                                       # consulta cancelada pela clínica (status "Agendado" + cancelada_pela_clinica) também entra nos lembretes
     status_encerrada: "Sem resposta (conversa)"
 
 # Templates das rotinas de consulta (aprovados na Meta como UTILITY; conferido em 15/10/2026). Só para consultas agendadas pela Celeste.

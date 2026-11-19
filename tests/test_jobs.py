@@ -455,3 +455,29 @@ def test_nome_so_entra_na_mensagem_se_for_nome_de_pessoa():
     dito = dict(conv, nome_tratamento="marcos")                                  # o lead respondeu "com quem eu falo?"
     assert nomes.nome_para_chamar(dito) == "Marcos" and lt.texto_lembrete(dito, 1) == "Aguardo seu retorno, Marcos! 💛"
     assert lembretes.primeiro_nome(dito) == "Marcos" and "NÃO reconheceu" not in prompt.contexto_lead(dito)
+
+
+def test_lembrete_template_volta_se_o_lead_respondeu_depois_e_cancelada_pela_clinica_entra():
+    """19/11/2026 (clínica): (1) quem respondeu ao TL e parou de novo recebe outro TL (até 3); (2) consulta cancelada pela clínica
+    e não remarcada (status ainda "Agendado") recebe lembrete por texto e TL como uma conversa em aberto."""
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    from celeste.jobs import lembretes
+    cfg = {"ativo": True, "codigo": "TL", "status_conversa": ["Em conversa"], "dias_sem_resposta": 2, "encerrar_apos_dias": 5, "max_por_conversa": 3}
+    agora = _dt(2026, 11, 19, 15, 0, tzinfo=_tz.utc)
+    base = {"frente": "leads_perdidos", "aberta": True, "modo": "ia", "status": "Em conversa",
+            "ultima_msg_lead_em": agora - _td(days=6), "janela_24h_ate": agora - _td(days=5),
+            "ultima": {"direcao": "celeste", "tipo": "text", "em": agora - _td(days=5)}, "lembrete_template_em": agora - _td(days=7)}
+    assert lembretes.elegivel_template(dict(base), agora, cfg) == (True, "ok")                                   # respondeu depois do TL
+    assert not lembretes.elegivel_template(dict(base, ultima_msg_lead_em=agora - _td(days=8)), agora, cfg)[0]    # não respondeu ao TL
+    assert not lembretes.elegivel_template(dict(base, lembretes_template_enviados=3), agora, cfg)[0]            # teto
+    assert lembretes.tl_enviados({"lembrete_template_em": agora}) == 1 and lembretes.tl_enviados({}) == 0
+    assert not lembretes.deve_encerrar(dict(base), agora, cfg)                                                    # respondeu depois: não fecha
+    canc = dict(base, status="Agendado", cancelada_pela_clinica={"data": "2026-11-17"}, lembrete_template_em=None)
+    assert lembretes.elegivel_template(canc, agora, cfg) == (True, "ok")
+    assert not lembretes.elegivel_template(dict(canc, cancelada_pela_clinica=None), agora, cfg)[0]               # agendado de verdade
+    txt = dict(canc, ultima={"direcao": "celeste", "tipo": "text", "em": agora - _td(hours=3)}, ultima_msg_lead_em=agora - _td(hours=4),
+               janela_24h_ate=agora + _td(hours=20), primeira_msg_celeste_em=agora - _td(days=10), lembretes_enviados=0)
+    assert lembretes.elegivel(txt, agora)[0]
+    assert not lembretes.elegivel(dict(txt, cancelada_pela_clinica=None), agora)[0]
+    enviado = dict(canc, lembrete_template_em=agora - _td(days=6), ultima_msg_lead_em=agora - _td(days=8))
+    assert lembretes.deve_encerrar(enviado, agora, cfg)

@@ -32,6 +32,13 @@ def _cfg() -> dict:
     return config.parametros().get("lembretes") or {}
 
 
+def cancelada_pela_clinica(conv: dict) -> bool:
+    """19/11/2026 (clínica): consulta cancelada pela clínica e ainda não remarcada. O status continua "Agendado" até o lead
+    remarcar, mas a conversa está em aberto e recebe lembretes como "Em conversa" (caso real: lead disse "remarco depois",
+    recebeu 3 horários e ficou sem nenhum lembrete)."""
+    return conv.get("status") == "Agendado" and bool(conv.get("cancelada_pela_clinica"))
+
+
 def dentro_do_horario(agora: datetime | None = None) -> bool:
     c = _cfg()
     agora = agora or datetime.now(FUSO)
@@ -48,7 +55,7 @@ def elegivel(conv: dict, agora: datetime) -> tuple[bool, str]:
         return False, "fora das frentes da IA"
     if not conv.get("aberta") or conv.get("modo", "ia") != "ia" or conv.get("opt_out"):
         return False, "fechada/humano/opt-out"
-    if conv.get("status") in STATUS_FINAIS:
+    if conv.get("status") in STATUS_FINAIS and not cancelada_pela_clinica(conv):
         return False, f"status {conv.get('status')}"
     ultima = conv.get("ultima") or {}
     if ultima.get("direcao") not in ("celeste", "template"):
@@ -130,10 +137,17 @@ def elegivel_template(conv: dict, agora: datetime, cfg: dict | None = None) -> t
         return False, "fora das frentes da IA"
     if not conv.get("aberta") or conv.get("modo", "ia") != "ia" or conv.get("opt_out"):
         return False, "fechada/humano/opt-out"
-    if conv.get("status") not in set(cfg.get("status_conversa") or ["Em conversa"]):
+    if conv.get("status") not in set(cfg.get("status_conversa") or ["Em conversa"]) and not cancelada_pela_clinica(conv):
         return False, f"status {conv.get('status')}"
-    if conv.get("lembrete_template_em"):
-        return False, "já recebeu o lembrete por template"
+    em_tl = conv.get("lembrete_template_em")
+    if em_tl:
+        # 19/11/2026 (clínica): o TL era 1 por conversa; quem respondia ao TL e parava de novo (escolhendo horário) ficava sem nada.
+        # Agora vale de novo se o lead escreveu DEPOIS do último TL, até `max_por_conversa`.
+        ul = conv.get("ultima_msg_lead_em")
+        if not (ul and ul > em_tl):
+            return False, "já recebeu o lembrete por template"
+        if tl_enviados(conv) >= int(cfg.get("max_por_conversa", 3)):
+            return False, "máximo de lembretes por template"
     ultima = conv.get("ultima") or {}
     if ultima.get("direcao") != "celeste":   # se a última foi um template (ex.: T4 "vamos encerrar"), a esteira já cuidou; "ficou em aberto" contradiria
         return False, "última mensagem não é texto da Celeste"
@@ -154,12 +168,17 @@ def deve_encerrar(conv: dict, agora: datetime, cfg: dict | None = None) -> bool:
     em = conv.get("lembrete_template_em")
     if not em or not conv.get("aberta") or conv.get("modo", "ia") != "ia":
         return False
-    if conv.get("status") not in set(cfg.get("status_conversa") or ["Em conversa"]):
+    if conv.get("status") not in set(cfg.get("status_conversa") or ["Em conversa"]) and not cancelada_pela_clinica(conv):
         return False
     ul = conv.get("ultima_msg_lead_em")
     if ul and ul >= em:
         return False
     return (agora - em) >= timedelta(days=int(cfg.get("encerrar_apos_dias", 5)))
+
+
+def tl_enviados(conv: dict) -> int:
+    """Quantos TL esta conversa já recebeu (conversas anteriores a 19/11/2026 não têm o contador: 1 se já houve TL)."""
+    return int(conv.get("lembretes_template_enviados") or (1 if conv.get("lembrete_template_em") else 0))
 
 
 def primeiro_nome(conv: dict) -> str:
@@ -171,7 +190,7 @@ def _registrar_template(db, conv_id: str, conv: dict, codigo: str, nome_tpl: str
     conv_ref.collection("mensagens").document(wamid).set({
         "direcao": "template", "tipo": "template", "template": nome_tpl, "codigo": codigo,
         "texto": templates_texto.renderizar(codigo, nome_lead), "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
-    conv_ref.set({"lembrete_template_em": agora, "ultimo_template_em": agora,
+    conv_ref.set({"lembrete_template_em": agora, "ultimo_template_em": agora, "lembretes_template_enviados": tl_enviados(conv) + 1,
                   "ultima": {"texto": f"[template {codigo}] " + templates_texto.TEMPLATES[codigo]["corpo"][:120], "direcao": "template", "tipo": "template", "em": agora}}, merge=True)
     if conv.get("contato"):
         db.collection("leads").document(conv["contato"]).set({
