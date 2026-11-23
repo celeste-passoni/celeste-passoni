@@ -1455,3 +1455,11 @@ def test_prompt_nome_do_lead_com_moderacao():
     pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
     regra = next(l for l in pr.splitlines() if l.startswith("- **Nome do lead com moderação"))
     assert "nunca em duas respostas seguidas" in regra and "não copie essa frequência" in regra
+
+
+def test_prompt_chegar_antes_e_trabalhar_na_clinica():
+    pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
+    regra = next(l for l in pr.splitlines() if l.startswith("**Chegar mais cedo e esperar ou trabalhar na clínica"))
+    assert "Pode vir, sim!" in regra and "sem `sinalizar_revisao`" in regra and "não repita isso nas respostas seguintes" in regra
+    kb = (config.RAIZ / "knowledge" / "01-base-conhecimento-clinica.md").read_text(encoding="utf-8")
+    assert "Chegar bem antes e esperar ou trabalhar na clínica" in kb
