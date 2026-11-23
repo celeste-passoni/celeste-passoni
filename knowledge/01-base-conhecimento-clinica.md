@@ -69,6 +69,7 @@ Se um lead citar valores antigos (R$ 1.000, R$ 900 promocional, R$ 500): "foram 
 
 - **Atendimento particular.** Não aceita convênio. Emite nota fiscal/recibo com o valor total para o paciente pedir reembolso ao convênio.
 - **Nota fiscal não é fracionada (18/11/2026).** Política administrativa e fiscal da clínica: uma nota por atendimento, com o valor total da consulta, em nome do tomador do serviço; não emite duas notas para a mesma consulta.
+- **Só moeda nacional (23/11/2026).** A clínica trabalha exclusivamente com pagamentos em Real (R$); não recebe pagamentos em outras moedas (dólar, euro etc.).
 - **Consulta não parcela.** Formas de pagamento: cartão de crédito, débito, pix ou dinheiro.
 - **Tratamento parcela** em até 10x sem juros no cartão (`politicas.tratamento_parcela_max`; 10x é a versão consistente em todo o histórico).
 - **Não existe tabela de preços de tratamento** e não há tratamentos avulsos. Cada plano é 100% personalizado após tricoscopia + avaliação médica; só depois o setor comercial apresenta valores e parcelamento.

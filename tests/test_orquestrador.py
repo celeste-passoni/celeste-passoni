@@ -1463,3 +1463,11 @@ def test_prompt_chegar_antes_e_trabalhar_na_clinica():
     assert "Pode vir, sim!" in regra and "sem `sinalizar_revisao`" in regra and "não repita isso nas respostas seguintes" in regra
     kb = (config.RAIZ / "knowledge" / "01-base-conhecimento-clinica.md").read_text(encoding="utf-8")
     assert "Chegar bem antes e esperar ou trabalhar na clínica" in kb
+
+
+def test_prompt_pagamento_so_em_reais():
+    pr = (config.RAIZ / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
+    regra = next(l for l in pr.splitlines() if l.startswith("- **Pagamento em outra moeda"))
+    assert "exclusivamente com pagamentos em moeda nacional (Real – R$)" in regra and "sem `sinalizar_revisao`" in regra
+    kb = (config.RAIZ / "knowledge" / "01-base-conhecimento-clinica.md").read_text(encoding="utf-8")
+    assert "Só moeda nacional" in kb
