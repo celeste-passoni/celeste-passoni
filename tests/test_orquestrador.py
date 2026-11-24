@@ -1471,3 +1471,15 @@ def test_prompt_pagamento_so_em_reais():
     assert "exclusivamente com pagamentos em moeda nacional (Real – R$)" in regra and "sem `sinalizar_revisao`" in regra
     kb = (config.RAIZ / "knowledge" / "01-base-conhecimento-clinica.md").read_text(encoding="utf-8")
     assert "Só moeda nacional" in kb
+
+
+def test_prompt_wifi_da_clinica():
+    """24/11/2026 (clínica): tem Wi-Fi, sim; a Celeste responde sozinha, sem "vou confirmar com a equipe"."""
+    from pathlib import Path
+    raiz = Path(__file__).resolve().parents[1]
+    p = (raiz / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
+    assert "Wi-Fi: a clínica tem, sim (decisão da clínica, 24/11/2026)" in p
+    assert "Você pode usar o Wi-Fi da clínica enquanto espera." in p
+    assert "Não prometa sala privativa, mesa, tomada nem refeição" in p and "mesa, Wi-Fi, tomada" not in p
+    k = (raiz / "knowledge" / "01-base-conhecimento-clinica.md").read_text(encoding="utf-8")
+    assert "A clínica tem Wi-Fi e o paciente pode usar enquanto espera" in k and "mesa de trabalho, Wi-Fi" not in k
