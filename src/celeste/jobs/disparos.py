@@ -90,10 +90,12 @@ def decidir(lead: dict, agora: datetime, tarde_livre_hoje: Optional[bool] = None
     if lead.get("falha_entrega") in set(d.get("falhas_que_param_esteira") or []):
         return None
     if passo >= len(passos):
-        # fim da esteira: pausa e recomeça; depois de `max_ciclos` ciclos completos sem resposta, encerra para este lead
+        # fim da esteira: pausa e recomeça. 24/11/2026 (decisão da clínica): quem não respondeu continua recebendo, ciclo após
+        # ciclo; só o opt-out tira da esteira. `max_ciclos: 0` = sem limite (antes eram 2 ciclos e "Sem resposta (esteira encerrada)")
         if ultimo_tpl and _dt(ultimo_tpl) + timedelta(days=int(d["pausa_apos_ultimo_passo_dias"])) > agora:
             return None
-        if ciclo >= int(d.get("max_ciclos") or 99):
+        max_ciclos = int(d.get("max_ciclos") or 0)
+        if max_ciclos and ciclo >= max_ciclos:
             return Decisao(None, "esteira encerrada (sem resposta após os ciclos previstos)", passo, ciclo)
         passo = int(d["reiniciar_no_passo"]); ciclo += 1
     prox = passos[passo]

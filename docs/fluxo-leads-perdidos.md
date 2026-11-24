@@ -22,7 +22,7 @@ flowchart TD
     T3 -->|sem resposta · 7 dias| T4[T4 · resgate_solicitacao_encerramento_v2<br/>UTILITY · botões Sim, tenho interesse / Encerrar solicitação]
     T4 -->|toca Quero continuar<br/>ou escreve| C
     T4 -->|toca Encerrar solicitação| OUT
-    T4 -->|sem resposta| P[Pausa 15 dias → recomeça no T1<br/>2º ciclo; depois: Sem resposta, esteira encerrada]
+    T4 -->|sem resposta| P[Pausa 15 dias → recomeça no T1<br/>sem limite de ciclos desde 24/11/2026: só o opt-out tira da esteira]
     C --> F[Fluxo de atendimento · seção 2]
 ```
 

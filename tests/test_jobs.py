@@ -58,7 +58,7 @@ def test_esteira_segue_cadencia_da_atendente_de_referencia():
 
 
 def test_pausa_e_reinicio_da_esteira():
-    # fim do 1º ciclo: pausa de 15 dias e recomeça no T1 (2º ciclo); fim do 2º ciclo: encerra
+    # fim de cada ciclo: pausa de 15 dias e recomeça no T1. 24/11/2026 (clínica): sem limite de ciclos; só o opt-out tira da esteira
     fim = _lead(status_ia="Template enviado (1°)", passo=4, ciclos=1, ultimo_template_em=AGORA - timedelta(days=14))
     assert disparos.decidir(fim, AGORA) is None
     fim["ultimo_template_em"] = AGORA - timedelta(days=16)
@@ -66,7 +66,11 @@ def test_pausa_e_reinicio_da_esteira():
     assert r and r.template == "T1" and r.novo_passo == 1 and r.novo_ciclo == 2
     fim2 = _lead(status_ia="Template enviado (1°)", passo=4, ciclos=2, ultimo_template_em=AGORA - timedelta(days=16))
     r2 = disparos.decidir(fim2, AGORA)
-    assert r2 and r2.template is None and "encerrada" in r2.motivo
+    assert r2 and r2.template == "T1" and r2.novo_passo == 1 and r2.novo_ciclo == 3
+    r7 = disparos.decidir(dict(fim2, ciclos=7), AGORA)
+    assert r7 and r7.template == "T1" and r7.novo_ciclo == 8
+    assert disparos.decidir(dict(fim2, opt_out=True), AGORA) is None                      # opt-out: fora
+    assert disparos.decidir(dict(fim2, ultima_msg_lead_em=AGORA - timedelta(days=20)), AGORA) is None   # respondeu: fora da esteira (regra de 29/10)
 
 
 def test_templates_sao_os_da_clinica():
