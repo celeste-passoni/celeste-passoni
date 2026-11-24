@@ -469,7 +469,7 @@ leads_perdidos:
     "Não contatado": 0
     "Template enviado (1°)": 3
     "Template enviado (2°)": 10
-    "Template enviado (3°)": 15                           # depois do T4: pausa (disparos.pausa_apos_ultimo_passo_dias) e 2º ciclo
+    "Template enviado (3°)": 1                            # depois do T4: no dia seguinte recomeça no T1 (24/11/2026: sem pausa; disparos.pausa_apos_ultimo_passo_dias)
     "Irá nos retornar": 7
     "Agora não": 1                                        # tocou "Agora não" no T1 e não escreveu o motivo → T2 no dia seguinte
     "Vamos retornar na data solicitada": "na data"
@@ -550,7 +550,7 @@ disparos:
     T2: "1 dia depois do T1, só se o lead não respondeu nada (nem resposta automática) e a entrega do T1 não falhou de vez. 'Quero ver o vídeo' → vídeo da Dra. Luciana sobre queda de cabelo, na hora; 'Não tenho interesse' → despedida e opt-out."
     T2r: "Recontato de quem respondeu e parou: 7 dias depois de 'Irá nos retornar' ou 1 dia depois de 'Agora não' sem motivo."
     T3: "Fora da esteira desde 06/11/2026 (decisão da clínica). Antes: 3 dias depois do T2."
-    T4: "3 dias depois do T2, se não houve resposta (desde 06/11/2026; antes, 7 dias depois do T3). Depois: pausa de 15 dias e recomeça no T1, sem limite de ciclos (desde 24/11/2026: só o opt-out tira da esteira)."
+    T4: "3 dias depois do T2, se não houve resposta (desde 06/11/2026; antes, 7 dias depois do T3). Depois: recomeça no T1 no dia seguinte, sem pausa e sem limite de ciclos (desde 24/11/2026: só o opt-out tira da esteira)."
     TR: "Na data e hora exatas que o lead pediu ('me chama na segunda às 11h30'), em qualquer dia e horário, pelo job de retornos (a cada 5 min). A Celeste retoma a conversa de onde parou."
 
   passos:                               # cadência medida na atendente de referência (medianas): 3 d, 3 d, 8 d, 3 d
@@ -558,8 +558,9 @@ disparos:
     - { template: T2, apos_dias: 1,  ciclo: 1 }         # 1 dia após o T1 (decisão da clínica, 13/10/2026)
     - { template: T4, apos_dias: 3,  ciclo: 1 }         # dia 4: aviso de encerramento. 06/11/2026 (decisão da clínica): o T3 saiu da esteira; antes T3 +3 d e T4 +7 d
   reiniciar_no_passo: 0                 # após o último passo, pausa e recomeça no T1
-  pausa_apos_ultimo_passo_dias: 15      # decisão da clínica, 14/10/2026
-  max_ciclos: 0                         # 0 = sem limite. 24/11/2026 (decisão da clínica): quem não respondeu continua recebendo (T1 → T2 → T4, pausa de 15 dias,
+  pausa_apos_ultimo_passo_dias: 1       # 24/11/2026 (decisão da clínica): SEM pausa entre os ciclos. 1 dia = só o intervalo mínimo entre dois templates
+                                        # ao mesmo lead (igual ao T1 → T2); com 0 o T1 sairia na rodada seguinte ao T4, no mesmo dia. Antes: 15 dias (14/10/2026)
+  max_ciclos: 0                         # 0 = sem limite. 24/11/2026 (decisão da clínica): quem não respondeu continua recebendo (T1 → T2 → T4 → T1 no dia seguinte,
                                         # de novo); só o opt-out tira da esteira. Antes: 2 ciclos e status "Sem resposta (esteira encerrada)"
   # 29/10/2026 (decisão da clínica): a esteira (T2 em diante) só segue para quem NUNCA respondeu. Qualquer mensagem do lead
   # (normal, resposta automática, "não quero") tira da esteira. Falhas de entrega definitivas do último template também param:

@@ -523,7 +523,7 @@ def funil(request: Request, _=Depends(autenticar)):
             desc = f"recebeu até o {passos_cfg[i - 1]['template']}"
             prox = f"{passos_cfg[i]['template']} {passos_cfg[i]['apos_dias']} dia(s) depois do último template, se não responder"
         else:
-            desc, prox = f"recebeu o {passos_cfg[-1]['template']} (fim da esteira)", f"pausa de {d['pausa_apos_ultimo_passo_dias']} dias e recomeça uma vez"
+            desc, prox = f"recebeu o {passos_cfg[-1]['template']} (fim da esteira)", f"recomeça no {passos_cfg[0]['template']} em {d['pausa_apos_ultimo_passo_dias']} dia(s), sem limite de ciclos"
         passos.append({"passo": i, "desc": desc, "n": por_passo.get(i, 0), "proximo": prox})
 
     retornos = []

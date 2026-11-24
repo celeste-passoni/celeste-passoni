@@ -54,14 +54,14 @@ def test_esteira_segue_cadencia_da_atendente_de_referencia():
     d4 = disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=2, ultimo_template_em=AGORA - timedelta(days=3)), AGORA)
     assert d4 and d4.template == "T4" and d4.novo_passo == 3 and d4.novo_ciclo == 1
     # quem já recebeu o T3 no modelo antigo (passo 3) está no fim da esteira: pausa, não recebe T4 de novo pela esteira
-    assert disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=3, ciclos=1, ultimo_template_em=AGORA - timedelta(days=7)), AGORA) is None
+    assert disparos.decidir(_lead(status_ia="Template enviado (2°)", passo=3, ciclos=1, ultimo_template_em=AGORA - timedelta(hours=12)), AGORA) is None   # 24/11/2026: sem pausa; só não sai no mesmo dia do T4
 
 
 def test_pausa_e_reinicio_da_esteira():
-    # fim de cada ciclo: pausa de 15 dias e recomeça no T1. 24/11/2026 (clínica): sem limite de ciclos; só o opt-out tira da esteira
-    fim = _lead(status_ia="Template enviado (1°)", passo=4, ciclos=1, ultimo_template_em=AGORA - timedelta(days=14))
-    assert disparos.decidir(fim, AGORA) is None
-    fim["ultimo_template_em"] = AGORA - timedelta(days=16)
+    # 24/11/2026 (clínica): sem pausa entre os ciclos (o T1 volta 1 dia depois do T4) e sem limite de ciclos; só o opt-out tira da esteira
+    fim = _lead(status_ia="Template enviado (1°)", passo=4, ciclos=1, ultimo_template_em=AGORA - timedelta(hours=12))
+    assert disparos.decidir(fim, AGORA) is None                                           # mesmo dia do T4: nada
+    fim["ultimo_template_em"] = AGORA - timedelta(days=1, hours=1)
     r = disparos.decidir(fim, AGORA)
     assert r and r.template == "T1" and r.novo_passo == 1 and r.novo_ciclo == 2
     fim2 = _lead(status_ia="Template enviado (1°)", passo=4, ciclos=2, ultimo_template_em=AGORA - timedelta(days=16))
