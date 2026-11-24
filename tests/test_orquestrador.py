@@ -1483,3 +1483,13 @@ def test_prompt_wifi_da_clinica():
     assert "Não prometa sala privativa, mesa, tomada nem refeição" in p and "mesa, Wi-Fi, tomada" not in p
     k = (raiz / "knowledge" / "01-base-conhecimento-clinica.md").read_text(encoding="utf-8")
     assert "A clínica tem Wi-Fi e o paciente pode usar enquanto espera" in k and "mesa de trabalho, Wi-Fi" not in k
+
+
+def test_prompt_pergunta_direta_sem_emoji():
+    """24/11/2026 (clínica): resposta a pergunta direta sai sem emoji; os modelos de resposta direta não trazem emoji."""
+    from pathlib import Path
+    p = (Path(__file__).resolve().parents[1] / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
+    assert "Resposta a uma pergunta direta sai sem emoji" in p
+    assert "Tem, sim! Você pode usar o Wi-Fi da clínica enquanto espera." in p
+    assert "Pode vir, sim! Não temos uma sala reservada" in p
+    assert "Tem, sim! 😊" not in p and "Pode vir, sim! 😊" not in p and "Anotado! 😊" not in p
