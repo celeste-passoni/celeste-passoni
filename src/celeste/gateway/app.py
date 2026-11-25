@@ -16,7 +16,7 @@ from google.cloud import firestore, tasks_v2
 from google.protobuf import timestamp_pb2
 
 from celeste.comum import config, telefones
-from celeste.ferramentas import meta
+from celeste.ferramentas import canal, meta
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("gateway")
@@ -57,14 +57,26 @@ async def receber(request: Request):
 
 
 def _processar(ev: dict) -> None:
+    # 25/11/2026: o app da Celeste também recebe o webhook do número oficial (MarketZap). De lá, só entra mensagem de lead com
+    # conversa da Celeste nesse canal (aberta por template dela); todo o resto (recepção, pacientes, status) é descartado sem gravar.
+    origem = canal.canal_do_numero(ev.get("phone_number_id"))
+    if origem is None:
+        log.warning("evento de número desconhecido (%s) descartado", ev.get("phone_number_id"))
+        return
     if ev["kind"] == "status":
-        _gravar_status(ev)
+        if origem == "meta":
+            _gravar_status(ev)
         return
     if _antiga(ev["timestamp"]):
         log.info("mensagem %s descartada: anterior ao corte", ev.get("wamid"))
         return
     telefone = ev["de"]
-    conv_ref = _conversa_aberta(telefone, ev.get("nome"))
+    if origem == "mktzap":
+        conv_ref = _conversa_mktzap(telefone)
+        if conv_ref is None:
+            return   # não é conversa da Celeste: o MarketZap cuida; nada é gravado
+    else:
+        conv_ref = _conversa_aberta(telefone, ev.get("nome"))
     msg_ref = conv_ref.collection("mensagens").document(ev["wamid"])
     if msg_ref.get().exists:  # idempotência: a Meta reenvia webhooks
         return
@@ -107,11 +119,9 @@ def _conversa_aberta(telefone: str, nome: str | None):
     """Conversa aberta do número, pelas duas grafias brasileiras (com e sem o 9º dígito; 03/11/2026, casos Adryano e Steffany).
     `contato` é o número da base da clínica (chave de leads/ e contatos/); `wa_id` é o que a Meta usa quando difere."""
     numeros = telefones.variantes(telefone)
-    for n in numeros:
-        for c in db.collection("conversas").where("contato", "==", n).where("aberta", "==", True).limit(1).stream():
-            if n != telefone and (c.to_dict() or {}).get("wa_id") != telefone:
-                c.reference.set({"wa_id": telefone}, merge=True)   # a resposta da Celeste vai para o número que a Meta usa
-            return c.reference
+    achada = _aberta_do_canal(numeros, telefone, "meta")
+    if achada is not None:
+        return achada
     recente = _conversa_fechada_recente(numeros)
     if recente is not None:
         # 03/11/2026 (caso Rute): "Obrigada" logo depois do encerramento abria uma conversa nova, sem histórico, e a Celeste se
@@ -156,7 +166,41 @@ def _conversa_aberta(telefone: str, nome: str | None):
     return ref
 
 
-def _conversa_fechada_recente(numeros: list[str]):
+def _canal(d: dict) -> str:
+    return d.get("canal") or "meta"
+
+
+def _aberta_do_canal(numeros: list[str], telefone: str, nome_canal: str):
+    """Conversa aberta destes números NESTE canal (o mesmo lead pode ter uma no número atual e outra no oficial)."""
+    for n in numeros:
+        for c in db.collection("conversas").where("contato", "==", n).where("aberta", "==", True).stream():
+            d = c.to_dict() or {}
+            if _canal(d) != nome_canal:
+                continue
+            if n != telefone and d.get("wa_id") != telefone:
+                c.reference.set({"wa_id": telefone}, merge=True)   # a resposta da Celeste vai para o número que a Meta usa
+            return c.reference
+    return None
+
+
+def _conversa_mktzap(telefone: str):
+    """Conversa da Celeste no número oficial: aberta, ou fechada há pouco (reaberta como no número atual). Nunca cria conversa:
+    no MarketZap a Celeste só atende quem ela mesma abordou por template (decisão de 25/11/2026)."""
+    numeros = telefones.variantes(telefone)
+    achada = _aberta_do_canal(numeros, telefone, "mktzap")
+    if achada is not None:
+        return achada
+    recente = _conversa_fechada_recente(numeros, "mktzap")
+    if recente is None or (recente.to_dict() or {}).get("status") == "Encaminhado à recepção":
+        return None   # lead já passado para a equipe: a conversa segue com as pessoas no MarketZap
+    campos = {"aberta": True, "reaberta_em": firestore.SERVER_TIMESTAMP}
+    if (recente.to_dict() or {}).get("contato") != telefone:
+        campos["wa_id"] = telefone
+    recente.reference.set(campos, merge=True)
+    return recente.reference
+
+
+def _conversa_fechada_recente(numeros: list[str], nome_canal: str = "meta"):
     """A conversa fechada mais recente destes números, se o último movimento foi há menos de N horas (config ia.reabrir_conversa_fechada_horas).
     Conversa encerrada pelo botão do painel (status 'Encerrada (reiniciada)') nunca é reaberta: a próxima mensagem abre uma nova."""
     horas = float(config.parametros()["ia"].get("reabrir_conversa_fechada_horas") or 0)
@@ -167,6 +211,8 @@ def _conversa_fechada_recente(numeros: list[str]):
     for n in numeros:
         for c in db.collection("conversas").where("contato", "==", n).stream():
             d = c.to_dict() or {}
+            if _canal(d) != nome_canal:
+                continue
             if d.get("aberta") or d.get("status") == "Encerrada (reiniciada)":   # 04/11/2026: 'Encerrar e reiniciar' no painel = conversa nova de verdade, mesmo dentro das 24 h
                 continue
             em = max((v for v in (d.get("ultima_msg_celeste_em"), d.get("ultima_msg_lead_em"), d.get("opt_out_em"), d.get("criado_em"))

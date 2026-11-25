@@ -22,7 +22,7 @@ from google.cloud import firestore, storage
 from pydantic import BaseModel
 
 from celeste.comum import config, nomes
-from celeste.ferramentas import meta, tisaude, transcricao
+from celeste.ferramentas import canal, meta, tisaude, transcricao
 from celeste.ferramentas.tisaude_simulado import TiSaudeSimulado
 from celeste.orquestrador import abertura, ferramentas_ia, lembretes_texto, motor, referencias, silencio
 
@@ -85,6 +85,10 @@ def responder(p: Pedido):
     conv["id"] = p.conversa_id
     inicio = time.time()
     mot, mt, ts = _svc()
+    mt = canal.para_conversa(conv, mt)   # 25/11/2026: conversa do número oficial responde pelo MarketZap
+    bloqueio = _bloqueio_mktzap(ref, conv, mt)
+    if bloqueio:
+        return bloqueio
 
     lido_em = datetime.now(timezone.utc)   # tudo o que o lead mandar depois deste instante o modelo não viu nesta resposta
     historico, ultimo_wamid = _historico(ref, mt)
@@ -230,7 +234,9 @@ def responder(p: Pedido):
         _balao(texto, True)
     if n_midia:   # vídeos e fotos são gravados por outras funções: recebem o mesmo carimbo da resposta
         _carimbar_lido_em(ref, lido_em)
-    if conv.get("status") == "Encaminhado à recepção" and ctx.encerrar:
+    if conv.get("status") == "Encaminhado à recepção" and ctx.encerrar and getattr(mt, "nome", "meta") == "mktzap":
+        _passar_para_equipe_mktzap(ref, conv, mt)   # 25/11/2026: no MarketZap a passagem é a mudança de setor, não o botão
+    elif conv.get("status") == "Encaminhado à recepção" and ctx.encerrar:
         rec = config.parametros()["ia"]["recepcao"]
         try:
             wamid = mt.enviar_botao_url(destino(conv), rec["botao_texto"], rec["botao_rotulo"], rec["link_wa"])
@@ -326,6 +332,7 @@ def enviar_humano(p: PedidoEnviar):
     if conv.get("modo") != "humano":
         raise HTTPException(400, "libere a conversa para humano antes de enviar")
     _, mt, _ = _svc()
+    mt = canal.para_conversa(conv, mt)
     try:
         wamid = mt.enviar_texto(destino(conv), texto)
     except Exception as e:
@@ -362,6 +369,9 @@ def lembrete(p: PedidoLembrete):
     etapa = lembretes_texto.etapa(conv)   # 10/11/2026: gravada na conversa para o 2º lembrete herdar
     texto = lembretes_texto.texto_lembrete(conv, n)
     _, mt, _ = _svc()
+    mt = canal.para_conversa(conv, mt)
+    if _bloqueio_mktzap(ref, conv, mt):
+        raise HTTPException(400, "MarketZap: atendimento fechado ou fora do setor da Celeste")
     wamid = mt.enviar_texto(destino(conv), texto)
     agora = datetime.now(timezone.utc)
     ref.collection("mensagens").document(wamid).set({
@@ -387,6 +397,7 @@ def aviso_recebimento(p: PedidoAviso):
         raise HTTPException(404, "conversa não existe")
     texto = config.parametros()["ia"]["recepcao"]["aviso_recebimento_texto"]
     _, mt, _ = _svc()
+    mt = canal.para_conversa(conv, mt)
     try:
         wamid = mt.enviar_texto(destino(conv), texto)
     except Exception as e:
@@ -422,6 +433,9 @@ def orientar_manual(p: PedidoOrientar):
 def _orientar_recepcao(ref, conv: dict, forcar: bool = False) -> dict:
     """Quem não está na base de leads recebe, uma vez por conversa, a orientação + botão 'Falar com Recepção'. Sem IA, sem custo."""
     rec = config.parametros()["ia"]["recepcao"]
+    if conv.get("canal") == "mktzap":   # 25/11/2026: no número oficial a Celeste não orienta ninguém (a recepção está lá)
+        ref.set({"pendente_resposta": False}, merge=True)
+        return {"ok": True, "ignorado": "conversa do MarketZap: sem orientação à recepção"}
     cfg = _cfg_atendimento()
     automatico = cfg.get("orientar_automatico", rec.get("orientar_nao_leads", False))
     if not forcar and not automatico:
@@ -860,7 +874,10 @@ def _avisar_recepcao(mt: meta.Meta, conv: dict, motivo: str, resumo: str) -> Non
     nome = conv.get("nome") or "lead sem nome"
     db.collection("encaminhamentos").document().set({
         "conversa_id": conv["id"], "contato": conv["contato"], "nome": nome, "frente": conv.get("frente"),
-        "motivo": motivo, "resumo": resumo, "em": firestore.SERVER_TIMESTAMP, "atendido": False})
+        "motivo": motivo, "resumo": resumo, "em": firestore.SERVER_TIMESTAMP, "atendido": False,
+        "canal": getattr(mt, "nome", "meta")})
+    if getattr(mt, "nome", "meta") == "mktzap":
+        return   # 25/11/2026: o aviso é a própria passagem do atendimento para o setor da equipe, feita depois dos balões
     try:
         mt.enviar_template(rec["whatsapp"], rec["template_aviso"],
                            [nome, f"https://wa.me/{conv['contato']}", motivo.replace("_", " "), resumo[:300], conv.get("frente") or ""])
@@ -871,6 +888,41 @@ def _avisar_recepcao(mt: meta.Meta, conv: dict, motivo: str, resumo: str) -> Non
                                              f"Motivo: {motivo.replace('_', ' ')}\nResumo: {resumo}")
         except Exception as e2:
             log.error("aviso à recepção não entregue: %s", e2)
+
+
+def _bloqueio_mktzap(ref, conv: dict, mt) -> dict | None:
+    """Conversa do MarketZap: a Celeste só fala se o atendimento estiver aberto e no setor dela (25/11/2026).
+    Devolve o resultado de 'não respondeu' ou None (pode responder; o atendimento atual fica gravado na conversa)."""
+    if getattr(mt, "nome", "meta") != "mktzap":
+        return None
+    try:
+        ok, motivo = mt.confirmar_atendimento(destino(conv))
+    except Exception as e:   # noqa: BLE001  (MarketZap fora do ar: não responde agora; a mensagem fica pendente no histórico)
+        ok, motivo = False, f"falha ao consultar o MarketZap: {str(e)[:160]}"
+    if not ok:
+        ref.set({"pendente_resposta": False, "mktzap_bloqueio": motivo, "mktzap_bloqueio_em": datetime.now(timezone.utc)}, merge=True)
+        log.warning("conversa %s sem resposta: %s", conv.get("id"), motivo)
+        return {"ok": True, "ignorado": f"MarketZap: {motivo}"}
+    campos = mt.campos_conversa()
+    conv.update(campos)
+    ref.set(campos, merge=True)
+    return None
+
+
+def _passar_para_equipe_mktzap(ref, conv: dict, mt) -> None:
+    """Lead encaminhado no MarketZap: atendimento vai para o setor de passagem (Comercial - resgate) e entra na distribuição."""
+    agora = datetime.now(timezone.utc)
+    try:
+        r = mt.passar_para_equipe(destino(conv))
+    except Exception as e:   # noqa: BLE001
+        log.error("passagem para a equipe no MarketZap falhou (conversa %s): %s", conv.get("id"), e)
+        ref.set({"revisar": True, "revisar_motivo": f"passagem no MarketZap falhou: {str(e)[:160]}"}, merge=True)
+        return
+    ref.set({"mktzap_setor_id": r["setor"], "mktzap_passado_em": agora, "modo": "humano"}, merge=True)
+    ref.collection("mensagens").document(f"mktzap-passagem-{int(agora.timestamp())}").set({
+        "direcao": "sistema", "tipo": "passagem", "texto": f"[atendimento {r['protocolo']} transferido para o setor {r['setor']} no MarketZap]",
+        "recebido_em": agora, "gravado_em": firestore.SERVER_TIMESTAMP})
+    log.info("conversa %s passada para a equipe no MarketZap (setor %s)", conv.get("id"), r["setor"])
 
 
 def destino(conv: dict) -> str:

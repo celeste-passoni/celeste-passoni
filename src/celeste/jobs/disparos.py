@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 from google.cloud import firestore
 
 from celeste.comum import config, nomes
-from celeste.ferramentas import meta, tisaude
+from celeste.ferramentas import canal, meta, tisaude
 from celeste.jobs import templates_texto
 
 log = logging.getLogger(__name__)
@@ -293,7 +293,7 @@ def _rodar_travado(db, d: dict, resumo: dict, agora: datetime, dry_run: bool, li
 
     precisa_tarde = any(x.get("so_se_horario_livre_hoje_a_tarde") for x in d["passos"])
     tarde = _tarde_livre_hoje(tisaude.TiSaude()) if precisa_tarde and not dry_run else False
-    mt = None if dry_run else meta.Meta()
+    mt = None if dry_run else canal.para_envio(d.get("canal"))   # 25/11/2026: "mktzap" = número oficial, setor da Celeste
     aprovados = None if dry_run else templates_aprovados(mt)   # 06/11/2026: T2 v3 em análise; se não estiver aprovado, sai a reserva (v2)
     ordem = firestore.Query.DESCENDING if d.get("priorizar", "mais_recentes") == "mais_recentes" else firestore.Query.ASCENDING
     consulta = db.collection("leads").where("elegivel", "==", True).where("opt_out", "==", False).order_by("lead_created_at", direction=ordem)
@@ -345,25 +345,38 @@ def _rodar_travado(db, d: dict, resumo: dict, agora: datetime, dry_run: bool, li
             log.warning("falha ao enviar %s para lead: %s", dec.template, e)
             db.collection("leads").document(doc.id).set({"ultimo_erro_envio": str(e)[:300], "ultimo_erro_em": agora}, merge=True)
             continue
-        _registrar_envio(db, doc.id, lead, dec, nome_tpl, wamid, datetime.now(timezone.utc), extras)   # 09/11/2026: hora real do envio, não a do início da rodada
+        _registrar_envio(db, doc.id, lead, dec, nome_tpl, wamid, datetime.now(timezone.utc), extras,
+                         campos_canal(mt))   # 09/11/2026: hora real do envio, não a do início da rodada
         resumo["enviados"] += 1
         time.sleep(random.uniform(*d["intervalo_entre_envios_segundos"]))
     log.info("disparos: %s", resumo)
     return resumo
 
 
-def _registrar_envio(db, lead_id: str, lead: dict, dec: Decisao, nome_tpl: str, wamid: str, agora: datetime, extras: dict) -> None:
+def campos_canal(mt) -> dict:
+    """Campos de canal da conversa (25/11/2026): MarketZap grava canal + atendimento; Meta não grava nada (padrão)."""
+    f = getattr(mt, "campos_conversa", None)
+    return f() if callable(f) else {}
+
+
+def _registrar_envio(db, lead_id: str, lead: dict, dec: Decisao, nome_tpl: str, wamid: str, agora: datetime, extras: dict,
+                     campos_conv: Optional[dict] = None) -> None:
     d = config.parametros()["disparos"]
     status = d["status_apos_template"][dec.template]
+    campos_conv = campos_conv or {}
     conv_id = lead.get("conversa_id")
     conv_ref = db.collection("conversas").document(conv_id) if conv_id else None
-    if not conv_ref or not (conv_ref.get().to_dict() or {}).get("aberta"):
+    atual = (conv_ref.get().to_dict() or {}) if conv_ref else {}
+    # 25/11/2026: conversa aberta em OUTRO canal (número atual × oficial) não recebe o template; nasce uma conversa no canal novo
+    if not conv_ref or not atual.get("aberta") or (atual.get("canal") or "meta") != campos_conv.get("canal", "meta"):
         conv_ref = db.collection("conversas").document()
         conv_ref.set({"contato": lead["celular"], "nome": lead.get("nome"), "frente": "leads_perdidos", "modo": "ia",
                       "status": status, "aberta": True, "criado_em": agora, "origem": "disparo", "template_origem": dec.template,
                       "primeira_msg_celeste_em": agora,
                       "ciclo": next((x["ciclo"] for x in d["passos"] if x["template"] == dec.template), None)})
         conv_id = conv_ref.id
+    if campos_conv:
+        conv_ref.set(campos_conv, merge=True)
     db.collection("contatos").document(lead["celular"]).set(
         {"telefone": lead["celular"], "nome": lead.get("nome"), "origem": "leads_perdidos", "opt_out": False, "criado_em": agora}, merge=True)
     conv_ref.collection("mensagens").document(wamid).set({

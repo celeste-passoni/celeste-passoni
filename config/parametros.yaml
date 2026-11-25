@@ -525,8 +525,26 @@ portao:                                # 26/10/2026 (aprovado pela clínica): re
 # ---------------------------------------------------------------------
 # Disparos de templates (Leads Perdidos) — controlados pelo painel
 # ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# MarketZap (25/11/2026): a Celeste no número oficial da clínica, dentro do setor exclusivo dela.
+# Entrada = webhook da Meta (app da Celeste inscrito na WABA 1470345631783377); saída = API pública do MarketZap.
+# Credenciais: MKTZAP_COMPANY_ID e MKTZAP_CLIENT_KEY (.env / Secret Manager). A Celeste NÃO tem usuário no MarketZap.
+# ---------------------------------------------------------------------
+mktzap:
+  api: "https://api.mktzap.com.br"
+  canal_id: 934                         # canal waent "Passoni Clinic"
+  broker_phone: "5511916069009"
+  phone_number_id: "658241090708883"    # número oficial na Meta (o webhook chega com este id)
+  setor_celeste_id: 40523               # "Celeste Maria | IA": todo template da Celeste abre (ou move) o atendimento para cá
+  setor_passagem_id: 38306              # "Comercial - resgate": para onde vai o lead quando a Celeste passa para a equipe
+  atendimento_automatico: true          # is_auto no send-hsm: o atendimento fica sem operador (confirmar no 1º teste)
+  video: "link"                         # "link" = texto com o link do vídeo (fica no MarketZap) | "meta" = vídeo direto pela Meta (não aparece no MarketZap)
+  templates: {}                         # nome do template na Meta atual → nome no número oficial, quando forem diferentes
+  procurar_atendimento_minutos: 30      # janela da busca do atendimento pelo telefone (updatedFrom), quando não há contact_id
+
 disparos:
   ativo: false                          # chave geral: nada sai enquanto false
+  canal: "meta"                         # 25/11/2026: "meta" = número atual da Celeste | "mktzap" = número oficial, pelo MarketZap, no setor da Celeste (bloco mktzap)
   limite_diario: 100                    # templates por dia (todas as frentes)
   limite_por_execucao: 25               # por rodada do job (roda de hora em hora no horário permitido; 25/10/2026: era a cada 30 min)
   horario: { dias_uteis: false, inicio: 9, fim: 18 }  # hora local (America/Sao_Paulo). 06/11/2026 (clínica): todos os dias, fim de semana também

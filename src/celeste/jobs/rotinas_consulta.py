@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 from google.cloud import firestore
 
 from celeste.comum import config, nomes
-from celeste.ferramentas import meta, tisaude
+from celeste.ferramentas import canal, meta, tisaude
 from celeste.jobs import disparos
 
 log = logging.getLogger(__name__)
@@ -162,7 +162,7 @@ def rodar(dry_run: bool = False, forcar_horario: bool = False) -> dict:
             resumo["enviados"] += 1
             continue
         try:
-            wamid = mt.enviar_template(conv.get("wa_id") or conv["contato"], nomes[cod], parametros(cod, conv))
+            wamid = canal.para_conversa(conv, mt).enviar_template(conv.get("wa_id") or conv["contato"], nomes[cod], parametros(cod, conv))   # 25/11/2026
         except Exception as e:   # noqa: BLE001
             resumo["erros"] += 1
             log.warning("rotinas: falha ao enviar %s para a conversa %s: %s", cod, doc.id, e)

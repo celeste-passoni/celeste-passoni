@@ -19,7 +19,7 @@ from typing import Optional
 from google.cloud import firestore
 
 from celeste.comum import config, nomes
-from celeste.ferramentas import meta
+from celeste.ferramentas import canal
 from celeste.jobs import disparos, templates_texto
 
 log = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ def rodar(dry_run: bool = False, limite: Optional[int] = None) -> dict:
     if not fila:
         return resumo
     nome_tpl = d["templates"]["TR"]
-    mt = None if dry_run else meta.Meta()
+    mt = None if dry_run else canal.para_envio(d.get("canal"))   # 25/11/2026: mesmo canal da esteira
     for lead_id, lead in fila:
         dec = disparos.Decisao("TR", "retorno combinado na hora pedida", int(lead.get("passo") or 0), int(lead.get("ciclos") or 1))
         resumo["detalhe"].append({"lead": lead_id[-4:].rjust(len(lead_id), "*"), "combinado": str(lead.get("proximo_recontato_em"))})
@@ -70,7 +70,7 @@ def rodar(dry_run: bool = False, limite: Optional[int] = None) -> dict:
             resumo["erros"] += 1
             log.warning("retornos: falha ao enviar TR para o lead %s: %s", lead_id[-4:], e)
             continue
-        disparos._registrar_envio(db, lead_id, lead, dec, nome_tpl, wamid, agora, {})
+        disparos._registrar_envio(db, lead_id, lead, dec, nome_tpl, wamid, agora, {}, disparos.campos_canal(mt))
         resumo["enviados"] += 1
     log.info("retornos: %s", resumo)
     return resumo

@@ -18,7 +18,7 @@ from google.cloud import firestore
 from google.oauth2 import id_token
 
 from celeste.comum import config, nomes
-from celeste.ferramentas import meta
+from celeste.ferramentas import canal, meta
 from celeste.jobs import disparos, templates_texto
 
 log = logging.getLogger(__name__)
@@ -240,7 +240,7 @@ def rodar_por_template(db, docs, agora: datetime, dry_run: bool, teste: set) -> 
                                  "parada_ha_dias": round((agora - conv["ultima"]["em"]).total_seconds() / 86400, 1)})
             continue
         try:
-            wamid = mt.enviar_template(conv["contato"], nome_tpl, templates_texto.parametros(codigo, nome_lead))
+            wamid = canal.para_conversa(conv, mt).enviar_template(conv["contato"], nome_tpl, templates_texto.parametros(codigo, nome_lead))   # 25/11/2026
         except Exception as e:
             r["erros"] += 1; log.warning("lembrete por template %s: %s", doc.id, e)
             continue

@@ -28,6 +28,8 @@ SEGREDOS = {
     "META_VERIFY_TOKEN": "meta-verify-token",
     "META_APP_SECRET": "meta-app-secret",
     "ANTHROPIC_API_KEY": "anthropic-api-key",
+    "MKTZAP_COMPANY_ID": "mktzap-company-id",
+    "MKTZAP_CLIENT_KEY": "mktzap-client-key",
 }
 
 

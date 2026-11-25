@@ -30,8 +30,12 @@ def assinatura_valida(corpo: bytes, cabecalho: str) -> bool:
 
 
 class Meta:
-    def __init__(self, session: Optional[requests.Session] = None):
+    nome = "meta"
+    phone_id = PHONE_ID   # padrão de classe (instâncias criadas sem __init__ nos testes)
+
+    def __init__(self, session: Optional[requests.Session] = None, phone_id: str = PHONE_ID):
         self.http = session or requests.Session()
+        self.phone_id = phone_id   # 25/11/2026: o número do MarketZap (658241090708883) usa a mesma classe para ler mídia e marcar como lida
 
     def _h(self) -> dict:
         return {"Authorization": f"Bearer {config.segredo('META_TOKEN')}"}
@@ -46,7 +50,7 @@ class Meta:
     # ----------------------------------------------------------- envio
     def enviar_texto(self, para: str, texto: str) -> str:
         # prévia (capa, título) só para o PRIMEIRO link da mensagem; por isso o roteiro manda um link por balão (14/10/2026)
-        d = self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "to": para, "type": "text",
+        d = self._post(f"{self.phone_id}/messages", {"messaging_product": "whatsapp", "to": para, "type": "text",
                                                 "text": {"preview_url": "http" in texto, "body": texto}})
         return d["messages"][0]["id"]
 
@@ -57,7 +61,7 @@ class Meta:
             comp.append({"type": "header", "parameters": [{"type": "image", "image": {"link": imagem_cabecalho}}]})
         if parametros_corpo:
             comp.append({"type": "body", "parameters": [{"type": "text", "text": p} for p in parametros_corpo]})
-        d = self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "to": para, "type": "template",
+        d = self._post(f"{self.phone_id}/messages", {"messaging_product": "whatsapp", "to": para, "type": "template",
                                                 "template": {"name": nome, "language": {"code": idioma}, "components": comp}})
         return d["messages"][0]["id"]
 
@@ -65,12 +69,12 @@ class Meta:
         v: dict[str, Any] = {"id": media_id}
         if legenda:
             v["caption"] = legenda
-        d = self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "to": para, "type": "video", "video": v})
+        d = self._post(f"{self.phone_id}/messages", {"messaging_product": "whatsapp", "to": para, "type": "video", "video": v})
         return d["messages"][0]["id"]
 
     def enviar_botao_url(self, para: str, texto: str, rotulo: str, url: str) -> str:
         """Mensagem com botão que abre um link (interactive cta_url). Só dentro da janela de 24 h."""
-        d = self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "to": para, "type": "interactive",
+        d = self._post(f"{self.phone_id}/messages", {"messaging_product": "whatsapp", "to": para, "type": "interactive",
                                                 "interactive": {"type": "cta_url", "body": {"text": texto},
                                                                 "action": {"name": "cta_url", "parameters": {"display_text": rotulo[:20], "url": url}}}})
         return d["messages"][0]["id"]
@@ -78,7 +82,7 @@ class Meta:
     def enviar_botoes_resposta(self, para: str, texto: str, botoes: list[tuple[str, str]]) -> str:
         """Mensagem com até 3 botões de resposta rápida (interactive/button). botoes = [(id, título ≤ 20 chars)]. Só na janela de 24 h."""
         acao = {"buttons": [{"type": "reply", "reply": {"id": i[:256], "title": t[:20]}} for i, t in botoes[:3]]}
-        d = self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "to": para, "type": "interactive",
+        d = self._post(f"{self.phone_id}/messages", {"messaging_product": "whatsapp", "to": para, "type": "interactive",
                                                 "interactive": {"type": "button", "body": {"text": texto}, "action": acao}})
         return d["messages"][0]["id"]
 
@@ -87,7 +91,7 @@ class Meta:
         v = {"link": url}
         if legenda:
             v["caption"] = legenda
-        d = self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "to": para, "type": "video", "video": v})
+        d = self._post(f"{self.phone_id}/messages", {"messaging_product": "whatsapp", "to": para, "type": "video", "video": v})
         return d["messages"][0]["id"]
 
     def enviar_imagem_link(self, para: str, url: str, legenda: str = "") -> str:
@@ -95,12 +99,12 @@ class Meta:
         img: dict[str, Any] = {"link": url}
         if legenda:
             img["caption"] = legenda
-        d = self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "to": para, "type": "image", "image": img})
+        d = self._post(f"{self.phone_id}/messages", {"messaging_product": "whatsapp", "to": para, "type": "image", "image": img})
         return d["messages"][0]["id"]
 
     def marcar_lida(self, wamid: str) -> None:
         try:
-            self._post(f"{PHONE_ID}/messages", {"messaging_product": "whatsapp", "status": "read", "message_id": wamid})
+            self._post(f"{self.phone_id}/messages", {"messaging_product": "whatsapp", "status": "read", "message_id": wamid})
         except MetaErro as e:  # não é crítico
             log.warning("marcar_lida falhou: %s", e)
 
@@ -115,7 +119,7 @@ class Meta:
         return conteudo.content, info.get("mime_type", "application/octet-stream")
 
     def subir_midia(self, conteudo: bytes, mime: str, nome: str) -> str:
-        r = self.http.post(f"{GRAPH}/{PHONE_ID}/media", headers=self._h(),
+        r = self.http.post(f"{GRAPH}/{self.phone_id}/media", headers=self._h(),
                            data={"messaging_product": "whatsapp"}, files={"file": (nome, conteudo, mime)}, timeout=300)
         if r.status_code >= 300:
             raise MetaErro(f"upload mídia: HTTP {r.status_code} {r.text[:200]}")
@@ -123,7 +127,7 @@ class Meta:
 
     # ----------------------------------------------------------- conta
     def numero(self) -> dict:
-        r = self.http.get(f"{GRAPH}/{PHONE_ID}", headers=self._h(),
+        r = self.http.get(f"{GRAPH}/{self.phone_id}", headers=self._h(),
                           params={"fields": "display_phone_number,quality_rating,messaging_limit_tier,status"}, timeout=60)
         return r.json()
 
@@ -139,12 +143,13 @@ def normalizar_webhook(payload: dict) -> list[dict]:
     for entrada in payload.get("entry", []):
         for mud in entrada.get("changes", []):
             v = mud.get("value", {})
+            numero_id = (v.get("metadata") or {}).get("phone_number_id")   # 25/11/2026: número atual da Celeste ou o do MarketZap
             nomes = {c["wa_id"]: c.get("profile", {}).get("name") for c in v.get("contacts", [])}
             for m in v.get("messages", []):
                 tipo = m.get("type")
                 ev = {"kind": "mensagem", "wamid": m["id"], "de": m["from"], "nome": nomes.get(m["from"]),
                       "timestamp": int(m.get("timestamp", 0)), "tipo": tipo, "texto": None, "media_id": None, "mime": None,
-                      "botao": None, "contexto": (m.get("context") or {}).get("id")}
+                      "botao": None, "contexto": (m.get("context") or {}).get("id"), "phone_number_id": numero_id}
                 if tipo == "text":
                     ev["texto"] = m["text"]["body"]
                 elif tipo in ("audio", "image", "video", "document"):
@@ -162,5 +167,6 @@ def normalizar_webhook(payload: dict) -> list[dict]:
                 eventos.append({"kind": "status", "wamid": s["id"], "para": s.get("recipient_id"), "status": s.get("status"),
                                 "timestamp": int(s.get("timestamp", 0)), "erros": s.get("errors"),
                                 "conversa": (s.get("conversation") or {}).get("origin", {}).get("type"),
-                                "cobravel": (s.get("pricing") or {}).get("billable"), "categoria": (s.get("pricing") or {}).get("category")})
+                                "cobravel": (s.get("pricing") or {}).get("billable"), "categoria": (s.get("pricing") or {}).get("category"),
+                                "phone_number_id": numero_id})
     return eventos
