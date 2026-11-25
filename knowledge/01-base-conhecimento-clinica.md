@@ -169,7 +169,7 @@ Você envia vídeos pela ferramenta `enviar_video`. Catálogo e momento de cada 
 | dra_luciana | a Dra. fala sobre queda de cabelo e o trabalho dela | a Dra. Luciana | lead quer conhecer a Dra. |
 | dr_lucas | Dr. Lucas e Dra. Luciana apresentam a clínica juntos | o Dr. Lucas e a Dra. Luciana, juntos | lead pergunta quem é o Dr. Lucas |
 | sobre_clinica | sobre a clínica e currículo da Dra. | a Dra. Luciana | credibilidade |
-| tratamento_foliculo | a Dra. compara um tomatinho murcho ao folículo miniaturizado da alopecia e mostra como ele fica ao receber a medicação (44 s) | a Dra. Luciana | lead pergunta como o tratamento age no folículo ou por que o fio afina |
+| tratamento_foliculo | a Dra. compara um tomatinho murcho ao folículo miniaturizado da alopecia e mostra como ele fica ao receber a medicação (44 s) | a Dra. Luciana | lead pergunta como é a consulta ou como o tratamento age no folículo; sempre seguido da frase de ligação abaixo |
 | casos_sucesso | vários casos de sucesso | a Dra. Luciana | hesitação, "vale a pena?" |
 | tecnologias | tecnologias da clínica (PRP, laser) | ninguém fala; só os procedimentos (intradermoterapia, laser, Fotona, PRP, MMP e outros) | objeção de preço de tratamento |
 | protocolo_terapia_autologa | protocolo de terapia autóloga (medicina regenerativa) | a Dra. Luciana | lead pergunta como é o tratamento |
@@ -182,7 +182,7 @@ Você envia vídeos pela ferramenta `enviar_video`. Catálogo e momento de cada 
 | agendou_dra_luciana / agendou_dr_lucas | o profissional escolhido dá as boas-vindas a quem acabou de agendar | a Dra. Luciana ou o Dr. Lucas, o escolhido | logo após confirmar o agendamento, direto, no lugar de boas_vindas_consulta |
 | boas_vindas_consulta | a Dra. fala sobre o que esperar no dia | a Dra. Luciana | só se o lead pedir mais detalhes depois do agendamento |
 
-**Não existe vídeo que explique a consulta (25/11/2026).** Quando o lead perguntar como é ou como funciona a consulta, explique por texto e não ofereça vídeo para isso. O vídeo `tratamento_foliculo` fala só do tratamento do folículo e termina com "digite tratamento": se o lead escrever "tratamento" depois de assistir, responda como pergunta sobre os tratamentos da clínica.
+**Vídeo no momento "como é a consulta" (decisão da clínica, 25/11/2026; é o que as atendentes de referência fazem):** o vídeo é o `tratamento_foliculo` (o do tomatinho). Sozinho ele não explica a consulta, então a oferta descreve o que ele mostra ("Quer ver um vídeo curto da Dra. Luciana mostrando como tratamos o folículo?") e, logo depois do vídeo, vai a frase que faz a ligação: "Como é mostrado no vídeo, na consulta a Dra. Luciana entende qual é a causa da queda ou a doença capilar e trata diretamente o folículo piloso com as medicações certas e personalizadas. Assim esse folículo fica mais forte, o cabelo ganha densidade, a queda diminui e a qualidade do fio melhora." O vídeo termina com "digite tratamento": se o lead escrever "tratamento" depois de assistir, responda como pergunta sobre os tratamentos da clínica.
 
 **Resultado é vídeo primeiro** (decisão da clínica, 15/10/2026): pedido de resultado, caso ou antes e depois → 1º resultado_alopecia_androgenetica, 2º resultado_androgenetica_masculina, 3º a história da paciente (dois vídeos); transplante → resultado_transplante_capilar. Um por pedido, mais só se o lead pedir. Foto (`enviar_antes_e_depois` / `enviar_antes_e_depois_tratamento`) só se ele pedir foto ou se o assunto não tiver vídeo (areata, fibrosante, seborreica, psoríase etc., ou um tratamento pelo nome).
 

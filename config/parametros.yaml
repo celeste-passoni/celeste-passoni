@@ -179,12 +179,13 @@ videos:
     quem_aparece: "a Dra. Luciana"
     quando: "após confirmar o agendamento"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/boas_vindas_consulta.mp4"
-  # 25/11/2026: era `como_funciona_consulta` (nome errado desde 02/10/2026). O vídeo não fala da consulta nem de tricoscopia:
-  # é a comparação do tomatinho com o folículo. Não existe vídeo que explique a consulta; essa pergunta é respondida por texto.
+  # 25/11/2026: era `como_funciona_consulta`. É o vídeo do tomatinho: sozinho não fala da consulta nem de tricoscopia, mas é o que as
+  # atendentes de referência mandam quando o lead pergunta como é a consulta (150 de 155 vezes no MarketZap), sempre seguido da frase
+  # "Como é mostrado no vídeo, na consulta a Dra. Luciana entende qual a causa da queda..." (a frase está no prompt).
   tratamento_foliculo:
     descricao: "a Dra. Luciana compara um tomatinho murcho ao folículo miniaturizado da alopecia e mostra como ele fica ao receber a medicação, 44 s"
     quem_aparece: "a Dra. Luciana"
-    quando: "lead pergunta como o tratamento age no folículo ou por que o fio afina; não é vídeo sobre a consulta"
+    quando: "lead pergunta como é a consulta ou como o tratamento age no folículo; depois do vídeo vai a frase que liga o vídeo à consulta"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/tratamento_foliculo.mp4"
   casos_sucesso:
     descricao: "casos de sucesso"
