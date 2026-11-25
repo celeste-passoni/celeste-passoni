@@ -1493,3 +1493,20 @@ def test_prompt_pergunta_direta_sem_emoji():
     assert "Tem, sim! Você pode usar o Wi-Fi da clínica enquanto espera." in p
     assert "Pode vir, sim! Não temos uma sala reservada" in p
     assert "Tem, sim! 😊" not in p and "Pode vir, sim! 😊" not in p and "Anotado! 😊" not in p
+
+
+def test_video_do_tomatinho_nao_e_sobre_a_consulta():
+    """25/11/2026: o vídeo cadastrado como `como_funciona_consulta` era o do tomatinho (tratamento do folículo). Recadastrado como
+    `tratamento_foliculo`; não existe vídeo sobre como é a consulta, então a Celeste explica por texto e não oferece vídeo."""
+    from pathlib import Path
+    from celeste.comum import config
+    raiz = Path(__file__).resolve().parents[1]
+    videos = config.parametros()["videos"]
+    assert "como_funciona_consulta" not in videos and videos["tratamento_foliculo"]["url"].endswith("/tratamento_foliculo.mp4")
+    assert "tomatinho" in videos["tratamento_foliculo"]["descricao"] and "tricoscopia" not in videos["tratamento_foliculo"]["descricao"]
+    p = (raiz / "prompts" / "leads-perdidos-v0.md").read_text(encoding="utf-8")
+    k = (raiz / "knowledge" / "01-base-conhecimento-clinica.md").read_text(encoding="utf-8")
+    assert "como_funciona_consulta" not in p and "como_funciona_consulta" not in k
+    assert "explicando como funciona a consulta" not in p
+    assert "Não existe vídeo sobre como é a consulta (25/11/2026)" in p
+    assert "Não existe vídeo que explique a consulta (25/11/2026)" in k and "| tratamento_foliculo |" in k

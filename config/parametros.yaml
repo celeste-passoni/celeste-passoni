@@ -179,11 +179,13 @@ videos:
     quem_aparece: "a Dra. Luciana"
     quando: "após confirmar o agendamento"
     url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/boas_vindas_consulta.mp4"
-  como_funciona_consulta:
-    descricao: "explica tricoscopia e tratamento do folículo"
+  # 25/11/2026: era `como_funciona_consulta` (nome errado desde 02/10/2026). O vídeo não fala da consulta nem de tricoscopia:
+  # é a comparação do tomatinho com o folículo. Não existe vídeo que explique a consulta; essa pergunta é respondida por texto.
+  tratamento_foliculo:
+    descricao: "a Dra. Luciana compara um tomatinho murcho ao folículo miniaturizado da alopecia e mostra como ele fica ao receber a medicação, 44 s"
     quem_aparece: "a Dra. Luciana"
-    quando: "dúvida clínica"
-    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/como_funciona_consulta.mp4"
+    quando: "lead pergunta como o tratamento age no folículo ou por que o fio afina; não é vídeo sobre a consulta"
+    url: "https://storage.googleapis.com/celeste-videos-vertical-theory-489419-a7/tratamento_foliculo.mp4"
   casos_sucesso:
     descricao: "casos de sucesso"
     quem_aparece: "a Dra. Luciana"
