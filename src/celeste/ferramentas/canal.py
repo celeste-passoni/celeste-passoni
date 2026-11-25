@@ -9,11 +9,15 @@ Regras do MarketZap (decisões do usuário, 25/11/2026):
   lead responde; teste de 25/11/2026);
 - a Celeste só responde se o atendimento continuar aberto e no setor dela;
 - passar para a equipe = mudar para o setor de passagem (Comercial - resgate) e tirar do modo automático;
-- a entrada continua pelo webhook da Meta; mídia recebida e "lida" usam a Meta com o phone_number_id do número oficial.
+- a entrada continua pelo webhook da Meta; a mídia recebida é baixada pela Meta com o phone_number_id do número oficial
+  (funciona: teste de áudio de 25/11/2026). "Lida" não: o app da Celeste não tem permissão de envio nesse número (code 10).
+- texto: o send-message-waent recusa mais de 255 caracteres (HTTP 422, teste de 25/11/2026); textos maiores saem em
+  mensagens seguidas, quebradas em parágrafo, frase ou palavra (`dividir_texto`).
 """
 from __future__ import annotations
 
 import logging
+import re
 import time
 import uuid
 from typing import Any, Callable, Optional
@@ -27,6 +31,60 @@ log = logging.getLogger(__name__)
 
 def cfg() -> dict:
     return config.parametros()["mktzap"]
+
+
+def _tamanho(texto: str) -> int:
+    """Tamanho como o MarketZap (JavaScript) conta: unidades UTF-16, então emoji vale 2."""
+    return len(texto.encode("utf-16-le")) // 2
+
+
+def _cortar(texto: str, limite: int) -> list[str]:
+    """Pedaço maior que o limite: quebra por frase, depois por palavra, e só em último caso no meio."""
+    for padrao in (r"(?<=[.!?…])\s+", r"\s+"):
+        partes: list[str] = []
+        for x in (y for y in re.split(padrao, texto) if y):
+            if partes and not re.search(r"\w", x) and _tamanho(partes[-1] + " " + x) <= limite:
+                partes[-1] += " " + x   # emoji ou pontuação solta fica com a frase de antes, não vira mensagem sozinha
+            else:
+                partes.append(x)
+        if len(partes) > 1:
+            return _juntar(partes, " ", limite)
+    pedacos, atual = [], ""
+    for ch in texto:
+        if atual and _tamanho(atual + ch) > limite:
+            pedacos.append(atual)
+            atual = ""
+        atual += ch
+    return pedacos + ([atual] if atual else [])
+
+
+def _juntar(partes: list[str], sep: str, limite: int) -> list[str]:
+    saida: list[str] = []
+    for parte in partes:
+        if _tamanho(parte) > limite:
+            saida.extend(_cortar(parte, limite))
+        elif saida and _tamanho(saida[-1] + sep + parte) <= limite:
+            saida[-1] = saida[-1] + sep + parte
+        else:
+            saida.append(parte)
+    return saida
+
+
+def dividir_texto(texto: str, limite: Optional[int] = None) -> list[str]:
+    """Quebra o texto em pedaços que caibam no limite do MarketZap, preferindo parágrafo, depois linha, frase e palavra."""
+    limite = int(limite or cfg().get("limite_texto", 250))
+    texto = (texto or "").strip()
+    if _tamanho(texto) <= limite:
+        return [texto] if texto else []
+    pedacos: list[str] = []
+    for par in [x.strip() for x in re.split(r"\n\s*\n", texto) if x.strip()]:
+        if _tamanho(par) <= limite:
+            pedacos.append(par)
+        elif "\n" in par:
+            pedacos.extend(_juntar([x for x in par.split("\n") if x.strip()], "\n", limite))
+        else:
+            pedacos.extend(_cortar(par, limite))
+    return _juntar(pedacos, "\n\n", limite)
 
 
 def canal_do_numero(phone_number_id: Optional[str]) -> Optional[str]:
@@ -178,7 +236,12 @@ class CanalMktZap:
 
     # ----------------------------------------------------------- mesma interface de meta.Meta
     def enviar_texto(self, para: str, texto: str) -> str:
-        self.mz.enviar_texto(self._history_id(para), texto)
+        """Texto acima do limite do MarketZap sai em mensagens seguidas (o orquestrador grava o texto inteiro com um id só)."""
+        history_id = self._history_id(para)
+        for i, pedaco in enumerate(dividir_texto(texto)):
+            if i:
+                self.dormir(1.0)   # mantém a ordem e dá o ritmo de quem digita
+            self.mz.enviar_texto(history_id, pedaco)
         return self._novo_id()
 
     def enviar_imagem_link(self, para: str, url: str, legenda: str = "") -> str:
@@ -201,8 +264,8 @@ class CanalMktZap:
         return self.enviar_texto(para, texto)
 
     def marcar_lida(self, wamid: str) -> None:
-        if wamid and wamid.startswith("wamid."):
-            self.meta().marcar_lida(wamid)
+        """Desligado (25/11/2026): a Meta recusa "lida" do app da Celeste no número oficial (code 10, subcode 2593181)."""
+        return None
 
     def baixar_midia(self, media_id: str) -> tuple[bytes, str]:
         return self.meta().baixar_midia(media_id)

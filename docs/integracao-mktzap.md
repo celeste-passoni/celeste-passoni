@@ -90,13 +90,13 @@ o que permite aos dois números conviverem durante a transição:
 
 | Hoje (Meta) | Canal MarketZap |
 |---|---|
-| `enviar_texto` | `send-message-waent` type text, `operator_user_id` = Celeste |
+| `enviar_texto` | `send-message-waent` type text. O MarketZap recusa mais de 255 caracteres (HTTP 422, teste de 25/11/2026); acima de `mktzap.limite_texto` (250), o texto sai em mensagens seguidas, quebrado em parágrafo, frase ou palavra |
 | `enviar_imagem_link` (antes e depois) | `send-message-waent` media image (URL pública do bucket) |
 | `enviar_video_link` | **lacuna**: ver decisão D3 |
 | `enviar_botao_url` "Falar com Recepção" | deixa de existir: a passagem para a equipe vira transferência interna (2.4) |
 | `enviar_template` | `send-hsm` (`hsm_id` do MarketZap, `contact_already_exists: true`, `operator_user_id` = Celeste) |
-| `marcar_lida` | pela Meta, com `phone_number_id` 658241090708883 (opcional) |
-| `baixar_midia` | pela Meta (o `media_id` vem no webhook) |
+| `marcar_lida` | **desligado**: a Meta recusa o "lida" do app da Celeste no número oficial (code 10, subcode 2593181, 25/11/2026) |
+| `baixar_midia` | pela Meta (o `media_id` vem no webhook); funcionou no teste de áudio de 25/11/2026 |
 
 Como o MarketZap não devolve o wamid, a Celeste grava os próprios envios com id `mktzap-<uuid>`. Os status de entrega dessas
 mensagens chegam pela Meta, mas não dá para ligá-los a elas (perde-se só a estatística de entregue/lido no painel).

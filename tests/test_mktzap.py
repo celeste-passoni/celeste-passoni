@@ -225,11 +225,11 @@ def test_passagem_para_comercial_resgate():
     assert mz.chamadas[-2:] == [("setor", "1-10", SETOR_PASSAGEM), ("sem_operador", "1-10")]
 
 
-def test_lida_e_midia_pela_meta_do_numero_oficial():
+def test_lida_desligada_e_midia_pela_meta_do_numero_oficial():
     leitor = MagicMock()
     cz = _canal(MZ(), leitor=leitor)
     cz.marcar_lida("mktzap-abc"); cz.marcar_lida("wamid.X"); cz.baixar_midia("m1")
-    leitor.marcar_lida.assert_called_once_with("wamid.X")
+    assert not leitor.marcar_lida.called   # a Meta recusa (code 10) no número oficial
     leitor.baixar_midia.assert_called_once_with("m1")
     from celeste.ferramentas.canal import CanalMktZap
     assert CanalMktZap({}, mz=MZ()).meta().phone_id == NUM_OFICIAL
@@ -459,3 +459,43 @@ def test_template_sem_atendente_nao_mexe_no_operador():
     mz = MZ([_atendimento(10)])
     _canal(mz).enviar_template("5511999990000", "resgate_queda_3cm_v2", ["Ana"])
     assert not any(c[0] == "sem_operador" for c in mz.chamadas)
+
+
+def test_texto_curto_sai_inteiro():
+    from celeste.ferramentas.canal import dividir_texto
+    assert dividir_texto("Oi, tudo bem?") == ["Oi, tudo bem?"]
+    assert dividir_texto("   ") == []
+
+
+def test_texto_longo_quebra_por_paragrafo_e_frase_sem_passar_do_limite():
+    from celeste.ferramentas.canal import _tamanho, dividir_texto
+    p1 = "Tadeu, nossas consultas vão até as 17h, então depois das 19h não conseguimos. " * 2
+    p2 = "Na terça, 01/12, a Dra. Luciana tem às 15h ou às 16h. A agenda dela costuma lotar rápido, quer que eu reserve um desses? 💛"
+    texto = p1.strip() + "\n\n" + p2
+    pedacos = dividir_texto(texto, 120)
+    assert all(_tamanho(x) <= 120 for x in pedacos)
+    assert " ".join(" ".join(pedacos).split()) == " ".join(texto.split())   # nada se perde nem muda de ordem
+    assert all(x.endswith((".", "?", "💛")) for x in pedacos)                  # quebra no fim de frase
+
+
+def test_emoji_conta_como_dois_e_palavra_gigante_e_cortada():
+    from celeste.ferramentas.canal import _tamanho, dividir_texto
+    assert _tamanho("💛") == 2
+    assert all(_tamanho(x) <= 10 for x in dividir_texto("💛" * 8, 10))
+    assert "".join(dividir_texto("x" * 25, 10)) == "x" * 25
+
+
+def test_enviar_texto_longo_vira_varias_mensagens_no_mesmo_atendimento():
+    mz = MZ([_atendimento(10)])
+    cz = _canal(mz, {"contato": "5511999990000", "mktzap_history_id": 10})
+    texto = ("Frase de teste com algum tamanho razoável. " * 12).strip()
+    cz.enviar_texto("5511999990000", texto)
+    textos = [c[2] for c in mz.chamadas if c[0] == "texto"]
+    assert len(textos) >= 2 and all(len(t) <= 250 for t in textos) and " ".join(textos) == texto
+
+
+def test_emoji_do_fim_nao_vira_mensagem_sozinha():
+    from celeste.ferramentas.canal import dividir_texto
+    frase = "Se preferir outro dia da semana, me fala que eu vejo as opções."
+    pedacos = dividir_texto(("Uma frase qualquer de enchimento aqui. " * 5).strip() + " " + frase + " 💛", 200)
+    assert pedacos[-1].endswith(frase + " 💛") and all(len(p) > 5 for p in pedacos)

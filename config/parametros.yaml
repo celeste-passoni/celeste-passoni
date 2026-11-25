@@ -540,6 +540,7 @@ mktzap:
   atendimento_automatico: true          # is_auto no send-hsm: o atendimento fica sem operador (confirmar no 1º teste)
   video: "link"                         # "link" = texto com o link do vídeo (fica no MarketZap) | "meta" = vídeo direto pela Meta (não aparece no MarketZap)
   templates: {}                         # nome do template na Meta atual → nome no número oficial, quando forem diferentes
+  limite_texto: 250                     # send-message-waent recusa > 255 caracteres (25/11/2026); acima disso, mensagens seguidas
   procurar_atendimento_minutos: 30      # janela da busca do atendimento pelo telefone (updatedFrom), quando não há contact_id
 
 disparos:
