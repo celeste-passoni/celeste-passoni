@@ -4,7 +4,9 @@
 25/11/2026: `CanalMktZap` tem a mesma interface da classe `meta.Meta` (enviar_texto, enviar_template, baixar_midia…),
 então o orquestrador e os jobs só escolhem o canal pela conversa (`conv["canal"]`) e seguem iguais.
 Regras do MarketZap (decisões do usuário, 25/11/2026):
-- todo template da Celeste abre o atendimento NO SETOR DELA (setor_celeste_id); se cair em outro setor, é movido na hora;
+- todo template da Celeste leva o atendimento para o SETOR DELA (setor_celeste_id), mesmo que o lead já tenha atendimento aberto
+  com uma pessoa da equipe: o atendimento é movido e fica sem operador (senão o MarketZap o devolve ao setor da atendente quando o
+  lead responde; teste de 25/11/2026);
 - a Celeste só responde se o atendimento continuar aberto e no setor dela;
 - passar para a equipe = mudar para o setor de passagem (Comercial - resgate) e tirar do modo automático;
 - a entrada continua pelo webhook da Meta; mídia recebida e "lida" usam a Meta com o phone_number_id do número oficial.
@@ -69,6 +71,7 @@ class CanalMktZap:
         self.dormir = dormir
         self.atendimento: Optional[dict] = None
         self.setor_anterior: Optional[int] = None    # quando o template caiu em outro setor e foi movido
+        self.operador_removido: Optional[int] = None  # atendente que estava no atendimento antes do template da Celeste
         self._hsm: Optional[dict[str, int]] = None
 
     # ----------------------------------------------------------- apoio
@@ -110,6 +113,8 @@ class CanalMktZap:
                   "mktzap_contact_id": h.get("contact_id"), "mktzap_setor_id": h.get("sector_id")}
         if self.setor_anterior is not None:
             campos["mktzap_setor_movido_de"] = self.setor_anterior
+        if self.operador_removido is not None:
+            campos["mktzap_operador_removido"] = self.operador_removido
         return {k: v for k, v in campos.items() if v is not None}
 
     def confirmar_atendimento(self, telefone: str) -> tuple[bool, str]:
@@ -133,6 +138,19 @@ class CanalMktZap:
             self.setor_anterior = anterior
             log.warning("atendimento %s estava no setor %s; movido para o setor da Celeste", h.get("protocol"), self.setor_anterior)
             h["sector_id"] = alvo
+
+    def liberar_operador(self) -> None:
+        """Atendimento no setor da Celeste ainda com uma atendente: tira a atendente (decisão do usuário, 25/11/2026). Sempre DEPOIS
+        de mover para o setor da Celeste, que não tem pessoas: assim a distribuição do MarketZap não entrega o lead a ninguém."""
+        h = self.atendimento
+        if not h or not self.mover_setor or not h.get("operator_assigned_id"):
+            return
+        if int(h.get("sector_id") or 0) != int(cfg()["setor_celeste_id"]):
+            return
+        self.mz.tirar_do_automatico(h["protocol"])
+        self.operador_removido = h.get("operator_assigned_id")
+        log.warning("atendimento %s estava com o operador %s; liberado para a Celeste", h.get("protocol"), self.operador_removido)
+        h["operator_assigned_id"] = None
 
     def passar_para_equipe(self, telefone: str) -> dict:
         """Lead encaminhado: vai para o setor de passagem e sai do modo automático (entra na distribuição da equipe)."""
@@ -227,7 +245,7 @@ class CanalMktZap:
 
     def enviar_template(self, para: str, nome: str, parametros_corpo: list[str], idioma: str = "pt_BR",
                         imagem_cabecalho: Optional[str] = None) -> str:
-        self.atendimento, self.setor_anterior = None, None   # os jobs usam a mesma instância para vários leads
+        self.atendimento, self.setor_anterior, self.operador_removido = None, None, None   # os jobs usam a mesma instância para vários leads
         if imagem_cabecalho:
             log.warning("template %s com imagem no cabeçalho: a API do MarketZap não documenta como enviar a imagem (pergunta ao suporte)", nome)
         hsm_id = self._mapa_hsm().get(self.nome_no_mktzap(nome))
@@ -240,4 +258,5 @@ class CanalMktZap:
             log.error("template %s enviado pelo MarketZap, mas o atendimento não foi localizado (setor não conferido)", nome)
         else:
             self.garantir_setor_celeste()
+            self.liberar_operador()
         return self._novo_id()

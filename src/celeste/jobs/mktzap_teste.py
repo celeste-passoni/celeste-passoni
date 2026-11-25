@@ -25,9 +25,9 @@ log = logging.getLogger(__name__)
 
 
 def enviar(numero: str, codigo: str = "T1", nome: Optional[str] = None, dry_run: bool = True, db=None, canal_mz=None,
-           template: Optional[str] = None, parametros: Optional[list[str]] = None, mover_setor: bool = False) -> dict:
+           template: Optional[str] = None, parametros: Optional[list[str]] = None, mover_setor: bool = True) -> dict:
     """template/parametros: outro template já aprovado no número oficial (teste de 25/11/2026: os da Celeste ainda não existem lá).
-    mover_setor=False: se o atendimento cair fora do setor da Celeste, NÃO move (o usuário quer ser avisado antes)."""
+    mover_setor=True (regra de 25/11/2026): o atendimento vai para o setor da Celeste e fica sem operador, como nos disparos."""
     d = config.parametros()["disparos"]
     nome_tpl = template or d["templates"][codigo]
     extras = disparos._extras_template(codigo, False)
@@ -69,9 +69,9 @@ if __name__ == "__main__":
     ap.add_argument("--nome")
     ap.add_argument("--template", help="nome de outro template do número oficial (no lugar do template da Celeste)")
     ap.add_argument("--parametro", action="append", dest="parametros", help="parâmetro {{n}} do --template, na ordem (repetir)")
-    ap.add_argument("--mover-setor", action="store_true", help="se cair em outro setor, mover para o da Celeste (sem isso, só avisa)")
+    ap.add_argument("--nao-mover-setor", action="store_true", help="não mover nem tirar a atendente (só para diagnóstico)")
     ap.add_argument("--enviar", action="store_true")
     a = ap.parse_args()
     print(json.dumps(enviar(a.numero, a.codigo, a.nome, dry_run=not a.enviar, template=a.template,
-                            parametros=a.parametros if a.template else None, mover_setor=a.mover_setor),
+                            parametros=a.parametros if a.template else None, mover_setor=not a.nao_mover_setor),
                      ensure_ascii=False, indent=2, default=str))

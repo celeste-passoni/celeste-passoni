@@ -56,8 +56,9 @@ def _token():
     return ("GET", "/company/1/token", Resp(200, {"accessToken": "tok"}))
 
 
-def _atendimento(id_=10, setor=SETOR_CELESTE, tel="5511999990000", fechado=False, canal=CANAL, atualizado="2026-11-25T10:00:00.000Z"):
-    return {"id": id_, "protocol": f"1-{id_}", "contact_id": f"waent_934_{id_}", "sector_id": setor, "channelable_id": canal,
+def _atendimento(id_=10, setor=SETOR_CELESTE, tel="5511999990000", fechado=False, canal=CANAL, atualizado="2026-11-25T10:00:00.000Z",
+                 operador=None):
+    return {"id": id_, "operator_assigned_id": operador, "protocol": f"1-{id_}", "contact_id": f"waent_934_{id_}", "sector_id": setor, "channelable_id": canal,
             "closed_at": "2026-11-25T11:00:00.000Z" if fechado else None, "updated_at": atualizado,
             "external_ids": [{"key": "phone", "value": tel}]}
 
@@ -435,3 +436,26 @@ def test_envio_de_teste_nao_move_setor_sem_aviso_e_le_o_texto_do_template():
     assert cz.texto_do_template("resgate_lead_perdido", ["Ana"]) == "[imagem do template resgate_lead_perdido]\nOi Ana 🗓️"
     cz.enviar_template("5511999990000", "resgate_lead_perdido", ["Ana"])
     assert not any(c[0] == "setor" for c in mz.chamadas) and cz.campos_conversa()["mktzap_setor_id"] == 32139
+
+
+def test_template_em_atendimento_de_atendente_vai_para_a_celeste_sem_operador():
+    """Teste real de 25/11/2026: atendimento aberto desde 06/11 com atendente da recepção voltou ao setor dela quando o lead respondeu."""
+    mz = MZ([_atendimento(10, setor=32139, operador=555)])
+    cz = _canal(mz)
+    cz.enviar_template("5511999990000", "resgate_queda_3cm_v2", ["Ana"])
+    acoes = [c for c in mz.chamadas if c[0] in ("setor", "sem_operador")]
+    assert acoes == [("setor", "1-10", SETOR_CELESTE), ("sem_operador", "1-10")]     # primeiro o setor, depois tira a atendente
+    campos = cz.campos_conversa()
+    assert campos["mktzap_operador_removido"] == 555 and campos["mktzap_setor_movido_de"] == 32139
+
+
+def test_template_que_o_mktzap_ja_moveu_mas_com_atendente_tira_a_atendente():
+    mz = MZ([_atendimento(10, setor=SETOR_CELESTE, operador=555)])   # o sector_id do send-hsm já moveu; a atendente ficou
+    _canal(mz).enviar_template("5511999990000", "resgate_queda_3cm_v2", ["Ana"])
+    assert [c for c in mz.chamadas if c[0] in ("setor", "sem_operador")] == [("sem_operador", "1-10")]
+
+
+def test_template_sem_atendente_nao_mexe_no_operador():
+    mz = MZ([_atendimento(10)])
+    _canal(mz).enviar_template("5511999990000", "resgate_queda_3cm_v2", ["Ana"])
+    assert not any(c[0] == "sem_operador" for c in mz.chamadas)
