@@ -15,7 +15,11 @@ ESCASSEZ = ("Os agendamentos são realizados por todos os setores da clínica e 
 
 TEXTOS = {
     "horarios": ["{nome}, algum desses horários lhe atende?", ESCASSEZ],
-    "cadastro": ["Olá, gostaria de dar continuidade ao agendamento?", "{nome}, aguardo o seu retorno para darmos continuidade no seu agendamento."],
+    # 27/11/2026 (texto da clínica): o 1º lembrete do cadastro lembra que o horário só fica reservado com os dados e que a agenda é disputada.
+    # Antes: "Olá, gostaria de dar continuidade ao agendamento?"
+    "cadastro": ["{nome}, fico no aguardo dos seus dados para fazer a reserva do seu horário! Lembrando que a agenda é bem disputada e, "
+                 "a qualquer momento, o horário pode ser reservado por outro paciente.",
+                 "{nome}, aguardo o seu retorno para darmos continuidade no seu agendamento."],
     # 11/11/2026 (texto da clínica): o 2º lembrete geral é só o nome com interrogação ("Elaine?"); sem nome, "Olá?".
     # Antes: "{nome}, aqui a Celeste da Passoni Clinic e estou passando para dar continuidade ao seu atendimento" (10/11) e "Oi {nome}, conseguiu verificar?"
     "geral":    ["Aguardo seu retorno, {nome}! 💛", "{nome}?"],
@@ -44,7 +48,7 @@ def etapa(conv: dict) -> str:
     texto = (u.get("texto") or "").lower()
     if "assista com calma" in texto or conv.get("ultimo_fluxo") == "t2_quero_video":   # 05/11/2026: logo depois do vídeo do T2
         return "video"
-    if any(k in texto for k in ("dados abaixo", "pré-cadastro", "pre-cadastro", "cep", "nome completo", "cadastro")):
+    if any(k in texto for k in ("dados abaixo", "pré-cadastro", "pre-cadastro", "cep", "nome completo", "cadastro", "seus dados", "os dados")):
         return "cadastro"
     if _HORA.search(texto) and any(k in texto for k in ("horário", "horario", "reserv", "atende", "tenho às", "terei")) and conv.get("status") != "Agendado":
         return "horarios"

@@ -516,7 +516,11 @@ def test_lembrete_texto_por_etapa():
     assert lt.texto_lembrete(hor, 1) == "Ana, algum desses horários lhe atende?"
     assert lt.texto_lembrete(hor, 2).startswith("Os agendamentos são realizados por todos os setores")
     cad = {"nome": "ana", "ultima": {"direcao": "celeste", "texto": "Para atualizar seu endereço, me manda o CEP, o número e o complemento"}}
-    assert lt.texto_lembrete(cad, 1) == "Olá, gostaria de dar continuidade ao agendamento?"
+    assert lt.texto_lembrete(cad, 1) == ("Ana, fico no aguardo dos seus dados para fazer a reserva do seu horário! Lembrando que a agenda "
+                                         "é bem disputada e, a qualquer momento, o horário pode ser reservado por outro paciente.")
+    # 27/11/2026 (caso Erik): "fico no aguardo dos seus dados" também é etapa de cadastro; sem nome, a frase começa em maiúscula
+    erik = {"nome": "", "ultima": {"direcao": "celeste", "texto": "Combinado, fico no aguardo dos seus dados para garantir a sua consulta."}}
+    assert lt.etapa(erik) == "cadastro" and lt.texto_lembrete(erik, 1).startswith("Fico no aguardo dos seus dados para fazer a reserva")
     # lista antiga de horários na conversa, mas a última mensagem não fala de horário → NÃO é etapa de horários
     velho = {"nome": "tati", "ultima": {"direcao": "celeste", "texto": "Pode desconsiderar minha última mensagem, foi um engano meu, desculpa"}, "horarios_oferecidos": ["2026-10-07 11:00"]}
     assert lt.etapa(velho) == "geral" and lt.texto_lembrete(velho, 1) == "Aguardo seu retorno, Tati! 💛"
